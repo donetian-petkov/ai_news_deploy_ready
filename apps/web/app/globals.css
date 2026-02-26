@@ -8,3 +8,50 @@ html, body {
 * {
   box-sizing: border-box;
 }
+
+.reactPreviewWrap {
+  margin-top: 8px;
+  margin-bottom: 4px;
+}
+
+.reactPreviewHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.reactPreviewTitle {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(235, 240, 255, 0.76);
+}
+
+.reactPreviewStatus {
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(130, 150, 185, 0.35);
+  background: rgba(22, 30, 48, 0.5);
+  color: rgba(200, 214, 235, 0.86);
+}
+
+.reactPreviewStatus.ok {
+  border-color: rgba(65, 214, 141, 0.45);
+  color: rgba(148, 250, 194, 0.95);
+}
+
+.reactPreviewStatus.off {
+  border-color: rgba(255, 146, 146, 0.42);
+  color: rgba(255, 187, 187, 0.95);
+}
+
+.reactPreviewGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 12px;
+}
