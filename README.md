@@ -9,6 +9,7 @@ Next.js + Node.js conversion of the live AI news stream, with Prisma (SQLite) an
 - Validation: zod (`packages/shared`)
 - DB: Prisma + SQLite (`apps/api/prisma`)
 - State management (web): Redux Toolkit + React Redux
+- UI components (web): Material UI (MUI)
 
 ## Repo structure
 
@@ -17,6 +18,7 @@ Next.js + Node.js conversion of the live AI news stream, with Prisma (SQLite) an
   - News runtime shell is now native React: `apps/web/app/components/NewsRuntimeShell.tsx`.
   - First React live card/column renderer added: `apps/web/app/components/ReactColumnsPreview.tsx` (reads `config/news` over WS and renders preview columns/cards).
   - React preview now supports a working Summary action (`run_summary_item`) with pending state.
+  - React preview UI is now built with MUI components (`Card`, `Chip`, `Button`, `Typography`, etc.).
   - RTK store and slices:
     - `apps/web/app/store/store.ts`
     - `apps/web/app/store/slices/connectionSlice.ts`
