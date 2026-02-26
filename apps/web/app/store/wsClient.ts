@@ -5,7 +5,7 @@ import type { FeedInfo, NewsItem } from './types';
 import { FILTERED_FEED_URL } from './constants';
 import { setStatus } from './slices/connectionSlice';
 import { setFeeds } from './slices/feedsSlice';
-import { setHiddenIds, upsertNewsItem } from './slices/newsSlice';
+import { receiveAskReply, setHiddenIds, upsertNewsItem } from './slices/newsSlice';
 import { setUsage } from './slices/aiUsageSlice';
 
 let ws: WebSocket | null = null;
@@ -122,6 +122,22 @@ export function startWsConnection(dispatch: AppDispatch, explicitUrl: string) {
         inputTokens: typeof msg.inputTokens === 'number' ? msg.inputTokens : 0,
         outputTokens: typeof msg.outputTokens === 'number' ? msg.outputTokens : 0,
         totalTokens: typeof msg.totalTokens === 'number' ? msg.totalTokens : 0
+      }));
+      return;
+    }
+
+    if (msg.type === 'ask_agent_reply') {
+      const id = typeof msg.id === 'string' ? msg.id : '';
+      const feedUrl = typeof msg.feedUrl === 'string' ? msg.feedUrl : '';
+      if (!id || !feedUrl) return;
+      dispatch(receiveAskReply({
+        id,
+        feedUrl,
+        question: typeof msg.question === 'string' ? msg.question : '',
+        answer: typeof msg.answer === 'string' ? msg.answer : undefined,
+        error: typeof msg.error === 'string' ? msg.error : undefined,
+        used: typeof msg.used === 'number' ? msg.used : undefined,
+        remaining: typeof msg.remaining === 'number' ? msg.remaining : undefined
       }));
       return;
     }

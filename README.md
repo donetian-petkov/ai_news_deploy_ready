@@ -19,6 +19,7 @@ Next.js + Node.js conversion of the live AI news stream, with Prisma (SQLite) an
   - First React live card/column renderer added: `apps/web/app/components/ReactColumnsPreview.tsx` (reads `config/news` over WS and renders preview columns/cards).
   - React preview now supports a working Summary action (`run_summary_item`) with pending state.
   - React preview also supports Research action (`run_research_item`) with pending state and confidence subtitle extraction.
+  - React preview now supports Ask Agent flow (`ask_agent_item` + `ask_agent_reply`) with draft, pending, message history, and remaining-question display.
   - React preview UI is now built with MUI components (`Card`, `Chip`, `Button`, `Typography`, etc.).
   - Top header surface now uses MUI primitives (`Chip`, `Button`, `Typography`) while preserving legacy DOM ids for compatibility.
   - RTK store and slices:

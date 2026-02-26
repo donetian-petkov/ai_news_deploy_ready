@@ -2,19 +2,55 @@ import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import { MAX_ITEMS_PER_COLUMN } from '../constants';
 import type { NewsItem } from '../types';
 
+type AskMessage = {
+  q: string;
+  a?: string;
+  error?: string;
+};
+
+type AskItemState = {
+  open: boolean;
+  draft: string;
+  pending: boolean;
+  used: number;
+  remaining: number;
+  messages: AskMessage[];
+};
+
 type NewsState = {
   itemsByFeed: Record<string, NewsItem[]>;
   hiddenIds: string[];
   summaryPendingById: Record<string, true>;
   researchPendingById: Record<string, true>;
+  askByItem: Record<string, AskItemState>;
 };
 
 const initialState: NewsState = {
   itemsByFeed: {},
   hiddenIds: [],
   summaryPendingById: {},
-  researchPendingById: {}
+  researchPendingById: {},
+  askByItem: {}
 };
+
+function askKey(id: string, feedUrl: string): string {
+  return `${feedUrl}::${id}`;
+}
+
+function ensureAskState(state: NewsState, id: string, feedUrl: string): AskItemState {
+  const k = askKey(id, feedUrl);
+  if (!state.askByItem[k]) {
+    state.askByItem[k] = {
+      open: false,
+      draft: '',
+      pending: false,
+      used: 0,
+      remaining: 5,
+      messages: []
+    };
+  }
+  return state.askByItem[k];
+}
 
 const newsSlice = createSlice({
   name: 'news',
@@ -74,6 +110,58 @@ const newsSlice = createSlice({
         list[idx] = { ...list[idx], research: '' };
         state.itemsByFeed[feedUrl] = list;
       }
+    },
+    toggleAskOpen(state, action: PayloadAction<{ id: string; feedUrl: string }>) {
+      const a = ensureAskState(state, action.payload.id, action.payload.feedUrl);
+      a.open = !a.open;
+    },
+    setAskDraft(state, action: PayloadAction<{ id: string; feedUrl: string; draft: string }>) {
+      const a = ensureAskState(state, action.payload.id, action.payload.feedUrl);
+      a.draft = action.payload.draft;
+    },
+    enqueueAskQuestion(state, action: PayloadAction<{ id: string; feedUrl: string; question: string }>) {
+      const a = ensureAskState(state, action.payload.id, action.payload.feedUrl);
+      a.open = true;
+      a.pending = true;
+      a.draft = '';
+      a.messages.push({ q: action.payload.question });
+      a.used = Math.min(5, a.used + 1);
+      a.remaining = Math.max(0, 5 - a.used);
+    },
+    receiveAskReply(state, action: PayloadAction<{
+      id: string;
+      feedUrl: string;
+      question?: string;
+      answer?: string;
+      error?: string;
+      used?: number;
+      remaining?: number;
+    }>) {
+      const { id, feedUrl, question, answer, error, used, remaining } = action.payload;
+      const a = ensureAskState(state, id, feedUrl);
+      a.pending = false;
+      if (typeof used === 'number') a.used = Math.max(0, Math.min(5, Math.floor(used)));
+      if (typeof remaining === 'number') a.remaining = Math.max(0, Math.min(5, Math.floor(remaining)));
+
+      const q = String(question || '').trim();
+      let idx = -1;
+      if (q) {
+        for (let i = a.messages.length - 1; i >= 0; i--) {
+          if (a.messages[i].q === q && !a.messages[i].a && !a.messages[i].error) {
+            idx = i;
+            break;
+          }
+        }
+      }
+
+      const payload = {
+        q: q || (a.messages[a.messages.length - 1]?.q || ''),
+        a: answer ? String(answer) : undefined,
+        error: error ? String(error) : undefined
+      };
+
+      if (idx >= 0) a.messages[idx] = payload;
+      else a.messages.push(payload);
     }
   }
 });
@@ -86,7 +174,11 @@ export const {
   clearSummaryForItem,
   setResearchPending,
   clearResearchPending,
-  clearResearchForItem
+  clearResearchForItem,
+  toggleAskOpen,
+  setAskDraft,
+  enqueueAskQuestion,
+  receiveAskReply
 } = newsSlice.actions;
 
 export default newsSlice.reducer;

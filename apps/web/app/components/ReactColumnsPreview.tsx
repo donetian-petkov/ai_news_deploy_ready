@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef } from 'react';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import ManageSearchIcon from '@mui/icons-material/ManageSearch';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
+import SmartToyIcon from '@mui/icons-material/SmartToy';
 import {
   Alert,
   Box,
@@ -13,6 +14,7 @@ import {
   Chip,
   Link as MuiLink,
   Stack,
+  TextField,
   Typography
 } from '@mui/material';
 import { MAX_COLUMNS } from '../store/constants';
@@ -20,8 +22,12 @@ import { useAppDispatch, useAppSelector } from '../store/hooks';
 import {
   clearResearchForItem,
   clearResearchPending,
+  enqueueAskQuestion,
+  receiveAskReply,
   clearSummaryForItem,
   clearSummaryPending,
+  setAskDraft,
+  toggleAskOpen,
   setResearchPending,
   setSummaryPending
 } from '../store/slices/newsSlice';
@@ -64,6 +70,7 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
   const itemsByFeed = useAppSelector(s => s.news.itemsByFeed);
   const summaryPendingById = useAppSelector(s => s.news.summaryPendingById);
   const researchPendingById = useAppSelector(s => s.news.researchPendingById);
+  const askByItem = useAppSelector(s => s.news.askByItem);
   const pendingTimeoutsRef = useRef<Record<string, number>>({});
   const researchTimeoutsRef = useRef<Record<string, number>>({});
 
@@ -140,6 +147,38 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
     if (!ok) dispatch(clearResearchPending(it.id));
   };
 
+  const askKey = (it: NewsItem) => `${it.feedUrl}::${it.id}`;
+
+  const requestAsk = (it: NewsItem) => {
+    if (!connected) return;
+    const k = askKey(it);
+    const askState = askByItem[k] || { used: 0, remaining: 5, draft: '', pending: false };
+    const question = String(askState.draft || '').trim().slice(0, 400);
+    if (!question || askState.pending || askState.remaining <= 0) return;
+
+    const usedBefore = askState.used;
+    const remainingBefore = askState.remaining;
+    dispatch(enqueueAskQuestion({ id: it.id, feedUrl: it.feedUrl, question }));
+
+    const ok = sendWsMessage({
+      type: 'ask_agent_item',
+      id: it.id,
+      feedUrl: it.feedUrl,
+      question,
+      researchMode: 'auto'
+    });
+    if (!ok) {
+      dispatch(receiveAskReply({
+        id: it.id,
+        feedUrl: it.feedUrl,
+        question,
+        error: 'Socket unavailable. Try again.',
+        used: usedBefore,
+        remaining: remainingBefore
+      }));
+    }
+  };
+
   return (
     <Box className="container" sx={{ pt: 1, pb: 0.5 }}>
       <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.25 }}>
@@ -189,6 +228,18 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
                       }}
                     >
                       <CardContent sx={{ pb: '12px !important' }}>
+                        {(() => {
+                          const key = askKey(it);
+                          const askState = askByItem[key] || {
+                            open: false,
+                            draft: '',
+                            pending: false,
+                            used: 0,
+                            remaining: 5,
+                            messages: []
+                          };
+                          return (
+                            <>
                         <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 0.8 }}>
                           <Typography variant="caption" sx={{ color: 'rgba(210,219,235,0.74)' }}>
                             {formatTime(it.publishedMs)}
@@ -235,6 +286,15 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
                           >
                             {researchPendingById[it.id] ? 'Researching...' : 'Research'}
                           </Button>
+                          <Button
+                            size="small"
+                            variant={askState.open ? 'contained' : 'outlined'}
+                            startIcon={<SmartToyIcon />}
+                            onClick={() => dispatch(toggleAskOpen({ id: it.id, feedUrl: it.feedUrl }))}
+                            disabled={!connected}
+                          >
+                            Ask Agent
+                          </Button>
                         </Stack>
 
                         {it.summary ? (
@@ -254,6 +314,56 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
                             </Typography>
                           </Box>
                         ) : null}
+                        {askState.open ? (
+                          <Box sx={{ mt: 1.1, p: 1, border: '1px solid rgba(106,128,162,0.4)', borderRadius: 1.5 }}>
+                            <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 0.8 }}>
+                              <Typography variant="caption" sx={{ color: 'rgba(210,219,235,0.74)' }}>
+                                Ask Agent
+                              </Typography>
+                              <Typography variant="caption" sx={{ color: 'rgba(188,203,229,0.75)' }}>
+                                Questions left: {askState.remaining}
+                              </Typography>
+                            </Stack>
+                            <Stack spacing={0.8} sx={{ mb: 0.8, maxHeight: 180, overflow: 'auto' }}>
+                              {askState.messages.map((m, idx) => (
+                                <Box key={`${idx}-${m.q.slice(0, 18)}`}>
+                                  <Typography variant="caption" sx={{ color: 'rgba(146,204,255,0.92)', display: 'block' }}>
+                                    Q: {m.q}
+                                  </Typography>
+                                  <Typography variant="caption" sx={{ color: m.error ? 'rgba(255,168,168,0.95)' : 'rgba(216,227,246,0.92)', display: 'block' }}>
+                                    A: {m.error || m.a || '...'}
+                                  </Typography>
+                                </Box>
+                              ))}
+                            </Stack>
+                            <Stack direction="row" spacing={1}>
+                              <TextField
+                                size="small"
+                                fullWidth
+                                placeholder="Ask about this specific news..."
+                                value={askState.draft}
+                                onChange={e => dispatch(setAskDraft({ id: it.id, feedUrl: it.feedUrl, draft: e.target.value.slice(0, 400) }))}
+                                onKeyDown={e => {
+                                  if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    requestAsk(it);
+                                  }
+                                }}
+                              />
+                              <Button
+                                size="small"
+                                variant="contained"
+                                onClick={() => requestAsk(it)}
+                                disabled={!connected || askState.pending || askState.remaining <= 0 || !String(askState.draft || '').trim()}
+                              >
+                                {askState.pending ? 'Thinking...' : 'Send'}
+                              </Button>
+                            </Stack>
+                          </Box>
+                        ) : null}
+                            </>
+                          );
+                        })()}
                       </CardContent>
                     </Card>
                   ))}
