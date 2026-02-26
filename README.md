@@ -29,6 +29,7 @@ Next.js + Node.js conversion of the live AI news stream, with Prisma (SQLite) an
   - React preview cards now include item-level `Share Link` and `Hide News` actions (`hide_item` wired to backend).
   - React preview labels now follow interface language (EN/BG) for migrated controls and item actions.
   - React preview now supports per-stream delete-age cleanup (`Yesterday`, `Past week`, `Past month`, `Past year`) with `Delete old`.
+  - Unit tests cover Redux slices and WebSocket dispatch mapping (`apps/web/app/store/**/*.test.ts`).
   - Top header surface now uses MUI primitives (`Chip`, `Button`, `Typography`) while preserving legacy DOM ids for compatibility.
   - Topbar actions are now React-driven via a custom-event bridge (`ai-news:*`) into legacy runtime handlers.
   - Search/Add Stream quick buttons now stay in quick-section mode and no longer reopen the full extended controls panel.
@@ -75,6 +76,24 @@ Services:
 ```bash
 npm run build
 ```
+
+## Tests
+
+```bash
+npm run test
+```
+
+Current unit coverage includes:
+
+- Redux slices: `ui`, `feeds`, `news`, `connection`, `aiUsage`
+- WebSocket client dispatch flow: `apps/web/app/store/wsClient.ts`
+
+## CI
+
+GitHub Actions workflow:
+
+- `.github/workflows/ci.yml`
+- Runs on push/PR: install, Prisma client generation, unit tests, and full build
 
 ## Notes on this conversion
 
