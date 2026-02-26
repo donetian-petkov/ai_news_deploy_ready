@@ -15,8 +15,10 @@ import {
   Button,
   Card,
   CardContent,
+  Checkbox,
   Chip,
   FormControl,
+  FormControlLabel,
   Link as MuiLink,
   MenuItem,
   Select,
@@ -29,6 +31,7 @@ import { useAppDispatch, useAppSelector } from '../store/hooks';
 import {
   removeFeedLocally,
   setFeedBudgetSetting,
+  setFeedColumnSettings,
   setFeedResearchSetting,
   setFeedSummarySetting,
   toggleFeedControls,
@@ -47,7 +50,7 @@ import {
   setSummaryPending
 } from '../store/slices/newsSlice';
 import { sendWsMessage, startWsConnection, stopWsConnection } from '../store/wsClient';
-import type { BudgetMode, FeedInfo, NewsItem } from '../store/types';
+import type { BudgetMode, FeedInfo, NewsItem, SortMode } from '../store/types';
 
 type Props = {
   wsUrl: string;
@@ -236,6 +239,32 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
     if (ok) dispatch(setFeedBudgetSetting({ feedUrl: feed.url, budget }));
   };
 
+  const setFeedSortMode = (feed: FeedInfo, sortMode: SortMode) => {
+    if (!connected) return;
+    const ok = sendWsMessage({
+      type: 'set_feed_column_settings',
+      feedUrl: feed.url,
+      sortMode,
+      filters: feed.filters
+    });
+    if (ok) dispatch(setFeedColumnSettings({ feedUrl: feed.url, sortMode }));
+  };
+
+  const toggleFeedFilter = (feed: FeedInfo, key: keyof FeedInfo['filters']) => {
+    if (!connected) return;
+    const nextFilters = {
+      ...feed.filters,
+      [key]: !feed.filters[key]
+    };
+    const ok = sendWsMessage({
+      type: 'set_feed_column_settings',
+      feedUrl: feed.url,
+      sortMode: feed.sortMode,
+      filters: nextFilters
+    });
+    if (ok) dispatch(setFeedColumnSettings({ feedUrl: feed.url, filters: nextFilters }));
+  };
+
   return (
     <Box className="container" sx={{ pt: 1, pb: 0.5 }}>
       <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.25 }}>
@@ -330,6 +359,50 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
                         <MenuItem value="high">Budget: High</MenuItem>
                       </Select>
                     </FormControl>
+                    <FormControl size="small" sx={{ minWidth: 132 }}>
+                      <Select
+                        value={feed.sortMode}
+                        onChange={e => setFeedSortMode(feed, e.target.value as SortMode)}
+                        disabled={!connected}
+                      >
+                        <MenuItem value="newest">Sort: Newest</MenuItem>
+                        <MenuItem value="oldest">Sort: Oldest</MenuItem>
+                        <MenuItem value="matched">Sort: Matched</MenuItem>
+                      </Select>
+                    </FormControl>
+                    <FormControlLabel
+                      control={
+                        <Checkbox
+                          size="small"
+                          checked={feed.filters.onlyMatches}
+                          onChange={() => toggleFeedFilter(feed, 'onlyMatches')}
+                          disabled={!connected}
+                        />
+                      }
+                      label="Matches"
+                    />
+                    <FormControlLabel
+                      control={
+                        <Checkbox
+                          size="small"
+                          checked={feed.filters.onlyResearched}
+                          onChange={() => toggleFeedFilter(feed, 'onlyResearched')}
+                          disabled={!connected}
+                        />
+                      }
+                      label="Researched"
+                    />
+                    <FormControlLabel
+                      control={
+                        <Checkbox
+                          size="small"
+                          checked={feed.filters.onlySummaries}
+                          onChange={() => toggleFeedFilter(feed, 'onlySummaries')}
+                          disabled={!connected}
+                        />
+                      }
+                      label="Summaries"
+                    />
                   </Stack>
                 ) : null}
 

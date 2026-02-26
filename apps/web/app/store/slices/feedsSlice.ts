@@ -1,5 +1,5 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
-import type { BudgetMode, FeedInfo } from '../types';
+import type { BudgetMode, FeedInfo, SortMode } from '../types';
 
 type FeedsState = {
   feeds: FeedInfo[];
@@ -64,6 +64,23 @@ const feedsSlice = createSlice({
       const idx = state.feeds.findIndex(f => f.url === action.payload.feedUrl);
       if (idx < 0) return;
       state.feeds[idx].budget = action.payload.budget;
+    },
+    setFeedColumnSettings(state, action: PayloadAction<{
+      feedUrl: string;
+      sortMode?: SortMode;
+      filters?: Partial<FeedInfo['filters']>;
+    }>) {
+      const idx = state.feeds.findIndex(f => f.url === action.payload.feedUrl);
+      if (idx < 0) return;
+      if (action.payload.sortMode) {
+        state.feeds[idx].sortMode = action.payload.sortMode;
+      }
+      if (action.payload.filters) {
+        state.feeds[idx].filters = {
+          ...state.feeds[idx].filters,
+          ...action.payload.filters
+        };
+      }
     }
   }
 });
@@ -75,6 +92,7 @@ export const {
   removeFeedLocally,
   setFeedSummarySetting,
   setFeedResearchSetting,
-  setFeedBudgetSetting
+  setFeedBudgetSetting,
+  setFeedColumnSettings
 } = feedsSlice.actions;
 export default feedsSlice.reducer;
