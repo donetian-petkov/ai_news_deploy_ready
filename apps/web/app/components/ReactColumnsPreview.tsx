@@ -99,6 +99,7 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
   const dispatch = useAppDispatch();
   const connected = useAppSelector(s => s.connection.connected);
   const status = useAppSelector(s => s.connection.status);
+  const language = useAppSelector(s => s.ui.language);
   const feeds = useAppSelector(s => s.feeds.feeds);
   const pinnedByUrl = useAppSelector(s => s.feeds.pinnedByUrl);
   const controlsOpenByUrl = useAppSelector(s => s.feeds.controlsOpenByUrl);
@@ -112,6 +113,58 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
   const [hideAllResearch, setHideAllResearch] = useState(false);
   const [bodyModes, setBodyModes] = useState<Record<string, BodyMode>>({});
   const [shareNoticeOpen, setShareNoticeOpen] = useState(false);
+  const bg = language === 'bg';
+  const l = useMemo(() => ({
+    previewTitle: bg ? 'React Визуализация (Преглед)' : 'React Renderer Preview',
+    live: bg ? 'На живо през WebSocket' : 'Live via WebSocket',
+    disconnected: bg ? 'Разкачен' : 'Disconnected',
+    waiting: bg ? 'Изчакване на новини...' : 'Waiting for news...',
+    noMatches: bg ? 'Няма съвпадения за търсенето в този поток.' : 'No search matches in this stream.',
+    pinned: bg ? 'Закачена' : 'Pinned',
+    pin: bg ? 'Закачи' : 'Pin',
+    remove: bg ? 'Премахни' : 'Remove',
+    hideControls: bg ? 'Скрий контроли' : 'Hide controls',
+    showControls: bg ? 'Покажи контроли' : 'Show controls',
+    summariesOn: bg ? 'Резюмета: ВКЛ' : 'Summaries: ON',
+    summariesOff: bg ? 'Резюмета: ИЗКЛ' : 'Summaries: OFF',
+    researchOn: bg ? 'Авто проучване: ВКЛ' : 'Auto Research: ON',
+    researchOff: bg ? 'Авто проучване: ИЗКЛ' : 'Auto Research: OFF',
+    budgetLow: bg ? 'Бюджет: Нисък' : 'Budget: Low',
+    budgetStandard: bg ? 'Бюджет: Стандарт' : 'Budget: Standard',
+    budgetHigh: bg ? 'Бюджет: Висок' : 'Budget: High',
+    poll45: bg ? 'Проверка: 45с' : 'Poll: 45s',
+    poll60: bg ? 'Проверка: 60с' : 'Poll: 60s',
+    poll90: bg ? 'Проверка: 90с' : 'Poll: 90s',
+    poll120: bg ? 'Проверка: 120с' : 'Poll: 120s',
+    poll180: bg ? 'Проверка: 180с' : 'Poll: 180s',
+    poll300: bg ? 'Проверка: 300с' : 'Poll: 300s',
+    sortNewest: bg ? 'Сортиране: Най-нови' : 'Sort: Newest',
+    sortOldest: bg ? 'Сортиране: Най-стари' : 'Sort: Oldest',
+    sortMatched: bg ? 'Сортиране: Съвпадения' : 'Sort: Matched',
+    matches: bg ? 'Съвпадения' : 'Matches',
+    researched: bg ? 'Проучени' : 'Researched',
+    summaries: bg ? 'Резюмета' : 'Summaries',
+    match: bg ? 'СЪВПАДЕНИЕ' : 'MATCH',
+    shareLink: bg ? 'Сподели линк' : 'Share Link',
+    hideNews: bg ? 'Скрий новина' : 'Hide News',
+    generatingSummary: bg ? 'Генериране на резюме...' : 'Generating Summary...',
+    summary: bg ? 'Резюме' : 'Summary',
+    researching: bg ? 'Проучване...' : 'Researching...',
+    research: bg ? 'Проучване' : 'Research',
+    askAgent: bg ? 'Питай агента' : 'Ask Agent',
+    confidence: bg ? 'Увереност' : 'Confidence',
+    showSummary: bg ? 'Покажи резюме' : 'Show Summary',
+    hideSummary: bg ? 'Скрий резюме' : 'Hide Summary',
+    showResearch: bg ? 'Покажи проучване' : 'Show Research',
+    hideResearch: bg ? 'Скрий проучване' : 'Hide Research',
+    showMore: bg ? 'Покажи още' : 'Show More',
+    showLess: bg ? 'Покажи по-малко' : 'Show Less',
+    questionsLeft: bg ? 'Оставащи въпроси' : 'Questions left',
+    askPlaceholder: bg ? 'Питай за тази конкретна новина...' : 'Ask about this specific news...',
+    thinking: bg ? 'Мисля...' : 'Thinking...',
+    send: bg ? 'Изпрати' : 'Send',
+    linkCopied: bg ? 'Линкът е копиран' : 'Link copied'
+  }), [bg]);
 
   useEffect(() => {
     startWsConnection(dispatch, wsUrl);
@@ -345,11 +398,11 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
     <Box className="container" sx={{ pt: 1, pb: 0.5 }}>
       <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.25 }}>
         <Typography variant="overline" sx={{ color: 'rgba(235,240,255,0.8)', letterSpacing: '0.14em', fontWeight: 800 }}>
-          React Renderer Preview
+          {l.previewTitle}
         </Typography>
         <Chip
           size="small"
-          label={connected ? 'Live via WebSocket' : `Disconnected (${status})`}
+          label={connected ? l.live : `${l.disconnected} (${status})`}
           color={connected ? 'success' : 'default'}
           variant={connected ? 'filled' : 'outlined'}
         />
@@ -392,7 +445,7 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
                     startIcon={pinned ? <PushPinIcon /> : <PushPinOutlinedIcon />}
                     onClick={() => dispatch(togglePinned(feed.url))}
                   >
-                    {pinned ? 'Pinned' : 'Pin'}
+                    {pinned ? l.pinned : l.pin}
                   </Button>
                   <Button
                     size="small"
@@ -402,7 +455,7 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
                     onClick={() => removeFeed(feed.url)}
                     disabled={!connected}
                   >
-                    Remove
+                    {l.remove}
                   </Button>
                   <Button
                     size="small"
@@ -410,7 +463,7 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
                     startIcon={<TuneIcon />}
                     onClick={() => dispatch(toggleFeedControls(feed.url))}
                   >
-                    {controlsOpen ? 'Hide controls' : 'Show controls'}
+                    {controlsOpen ? l.hideControls : l.showControls}
                   </Button>
                 </Stack>
                 {controlsOpen ? (
@@ -421,7 +474,7 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
                       onClick={() => toggleFeedSummary(feed)}
                       disabled={!connected}
                     >
-                      {feed.summaryEnabled ? 'Summaries: ON' : 'Summaries: OFF'}
+                      {feed.summaryEnabled ? l.summariesOn : l.summariesOff}
                     </Button>
                     <Button
                       size="small"
@@ -429,7 +482,7 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
                       onClick={() => toggleFeedResearch(feed)}
                       disabled={!connected}
                     >
-                      {feed.researchEnabled ? 'Auto Research: ON' : 'Auto Research: OFF'}
+                      {feed.researchEnabled ? l.researchOn : l.researchOff}
                     </Button>
                     <FormControl size="small" sx={{ minWidth: 140 }}>
                       <Select
@@ -437,9 +490,9 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
                         onChange={e => setFeedBudget(feed, e.target.value as BudgetMode)}
                         disabled={!connected}
                       >
-                        <MenuItem value="low">Budget: Low</MenuItem>
-                        <MenuItem value="standard">Budget: Standard</MenuItem>
-                        <MenuItem value="high">Budget: High</MenuItem>
+                        <MenuItem value="low">{l.budgetLow}</MenuItem>
+                        <MenuItem value="standard">{l.budgetStandard}</MenuItem>
+                        <MenuItem value="high">{l.budgetHigh}</MenuItem>
                       </Select>
                     </FormControl>
                     <FormControl size="small" sx={{ minWidth: 110 }}>
@@ -448,12 +501,12 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
                         onChange={e => setFeedInterval(feed, Number(e.target.value) || 120)}
                         disabled={!connected}
                       >
-                        <MenuItem value="45">Poll: 45s</MenuItem>
-                        <MenuItem value="60">Poll: 60s</MenuItem>
-                        <MenuItem value="90">Poll: 90s</MenuItem>
-                        <MenuItem value="120">Poll: 120s</MenuItem>
-                        <MenuItem value="180">Poll: 180s</MenuItem>
-                        <MenuItem value="300">Poll: 300s</MenuItem>
+                        <MenuItem value="45">{l.poll45}</MenuItem>
+                        <MenuItem value="60">{l.poll60}</MenuItem>
+                        <MenuItem value="90">{l.poll90}</MenuItem>
+                        <MenuItem value="120">{l.poll120}</MenuItem>
+                        <MenuItem value="180">{l.poll180}</MenuItem>
+                        <MenuItem value="300">{l.poll300}</MenuItem>
                       </Select>
                     </FormControl>
                     <FormControl size="small" sx={{ minWidth: 132 }}>
@@ -462,9 +515,9 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
                         onChange={e => setFeedSortMode(feed, e.target.value as SortMode)}
                         disabled={!connected}
                       >
-                        <MenuItem value="newest">Sort: Newest</MenuItem>
-                        <MenuItem value="oldest">Sort: Oldest</MenuItem>
-                        <MenuItem value="matched">Sort: Matched</MenuItem>
+                        <MenuItem value="newest">{l.sortNewest}</MenuItem>
+                        <MenuItem value="oldest">{l.sortOldest}</MenuItem>
+                        <MenuItem value="matched">{l.sortMatched}</MenuItem>
                       </Select>
                     </FormControl>
                     <FormControlLabel
@@ -476,7 +529,7 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
                           disabled={!connected}
                         />
                       }
-                      label="Matches"
+                      label={l.matches}
                     />
                     <FormControlLabel
                       control={
@@ -487,7 +540,7 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
                           disabled={!connected}
                         />
                       }
-                      label="Researched"
+                      label={l.researched}
                     />
                     <FormControlLabel
                       control={
@@ -498,7 +551,7 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
                           disabled={!connected}
                         />
                       }
-                      label="Summaries"
+                      label={l.summaries}
                     />
                   </Stack>
                 ) : null}
@@ -506,7 +559,7 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
                 <Stack spacing={1.2}>
                   {itemsVisible.length === 0 ? (
                     <Alert severity="info" variant="outlined">
-                      {items.length === 0 ? 'Waiting for news...' : 'No search matches in this stream.'}
+                      {items.length === 0 ? l.waiting : l.noMatches}
                     </Alert>
                   ) : itemsVisible.map(it => (
                     <Card
@@ -535,8 +588,8 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
                             {formatTime(it.publishedMs)}
                           </Typography>
                           <Stack direction="row" spacing={0.6} alignItems="center">
-                            {it.isMatch ? <Chip size="small" label="MATCH" color="warning" variant="outlined" /> : null}
-                            <Tooltip title="Share Link">
+                            {it.isMatch ? <Chip size="small" label={l.match} color="warning" variant="outlined" /> : null}
+                            <Tooltip title={l.shareLink}>
                               <Button
                                 size="small"
                                 variant="outlined"
@@ -546,7 +599,7 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
                                 <ContentCopyIcon sx={{ fontSize: 15 }} />
                               </Button>
                             </Tooltip>
-                            <Tooltip title="Hide News">
+                            <Tooltip title={l.hideNews}>
                               <Button
                                 size="small"
                                 variant="outlined"
@@ -590,7 +643,7 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
                               onClick={() => requestSummary(it)}
                               disabled={!connected || !!summaryPendingById[it.id]}
                             >
-                              {summaryPendingById[it.id] ? 'Generating Summary...' : 'Summary'}
+                              {summaryPendingById[it.id] ? l.generatingSummary : l.summary}
                             </Button>
                             <Button
                               size="small"
@@ -599,7 +652,7 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
                               onClick={() => requestResearch(it)}
                               disabled={!connected || !!researchPendingById[it.id]}
                             >
-                              {researchPendingById[it.id] ? 'Researching...' : 'Research'}
+                              {researchPendingById[it.id] ? l.researching : l.research}
                             </Button>
                             <Button
                               size="small"
@@ -608,7 +661,7 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
                               onClick={() => dispatch(toggleAskOpen({ id: it.id, feedUrl: it.feedUrl }))}
                               disabled={!connected}
                             >
-                              Ask Agent
+                              {l.askAgent}
                             </Button>
                           </Stack>
                         ) : null}
@@ -629,11 +682,11 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
                               <Stack direction="row" spacing={1} sx={{ mt: 0.7 }} flexWrap="wrap">
                                 {mode === 'hidden' ? (
                                   <Button size="small" variant="outlined" onClick={() => setBodyMode(key, longText ? 'collapsed' : 'expanded')}>
-                                    Show Summary
+                                    {l.showSummary}
                                   </Button>
                                 ) : (
                                   <Button size="small" variant="outlined" color="warning" onClick={() => setBodyMode(key, 'hidden')}>
-                                    Hide Summary
+                                    {l.hideSummary}
                                   </Button>
                                 )}
                                 {visible && longText ? (
@@ -642,7 +695,7 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
                                     variant="outlined"
                                     onClick={() => setBodyMode(key, mode === 'collapsed' ? 'expanded' : 'collapsed')}
                                   >
-                                    {mode === 'collapsed' ? 'Show More' : 'Show Less'}
+                                    {mode === 'collapsed' ? l.showMore : l.showLess}
                                   </Button>
                                 ) : null}
                               </Stack>
@@ -659,7 +712,7 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
                             <Box sx={{ mt: 1 }}>
                               {extractConfidence(it.research) ? (
                                 <Typography variant="caption" sx={{ color: 'rgba(212,220,236,0.75)', display: 'block', mb: 0.35 }}>
-                                  Confidence: {extractConfidence(it.research)}
+                                  {l.confidence}: {extractConfidence(it.research)}
                                 </Typography>
                               ) : null}
                               {visible ? (
@@ -670,11 +723,11 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
                               <Stack direction="row" spacing={1} sx={{ mt: 0.7 }} flexWrap="wrap">
                                 {mode === 'hidden' ? (
                                   <Button size="small" variant="outlined" onClick={() => setBodyMode(key, longText ? 'collapsed' : 'expanded')}>
-                                    Show Research
+                                    {l.showResearch}
                                   </Button>
                                 ) : (
                                   <Button size="small" variant="outlined" color="warning" onClick={() => setBodyMode(key, 'hidden')}>
-                                    Hide Research
+                                    {l.hideResearch}
                                   </Button>
                                 )}
                                 {visible && longText ? (
@@ -683,7 +736,7 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
                                     variant="outlined"
                                     onClick={() => setBodyMode(key, mode === 'collapsed' ? 'expanded' : 'collapsed')}
                                   >
-                                    {mode === 'collapsed' ? 'Show More' : 'Show Less'}
+                                    {mode === 'collapsed' ? l.showMore : l.showLess}
                                   </Button>
                                 ) : null}
                               </Stack>
@@ -694,10 +747,10 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
                           <Box sx={{ mt: 1.1, p: 1, border: '1px solid rgba(106,128,162,0.4)', borderRadius: 1.5 }}>
                             <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 0.8 }}>
                               <Typography variant="caption" sx={{ color: 'rgba(210,219,235,0.74)' }}>
-                                Ask Agent
+                                {l.askAgent}
                               </Typography>
                               <Typography variant="caption" sx={{ color: 'rgba(188,203,229,0.75)' }}>
-                                Questions left: {askState.remaining}
+                                {l.questionsLeft}: {askState.remaining}
                               </Typography>
                             </Stack>
                             <Stack spacing={0.8} sx={{ mb: 0.8, maxHeight: 180, overflow: 'auto' }}>
@@ -716,7 +769,7 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
                               <TextField
                                 size="small"
                                 fullWidth
-                                placeholder="Ask about this specific news..."
+                                placeholder={l.askPlaceholder}
                                 value={askState.draft}
                                 onChange={e => dispatch(setAskDraft({ id: it.id, feedUrl: it.feedUrl, draft: e.target.value.slice(0, 400) }))}
                                 onKeyDown={e => {
@@ -732,7 +785,7 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
                                 onClick={() => requestAsk(it)}
                                 disabled={!connected || askState.pending || askState.remaining <= 0 || !String(askState.draft || '').trim()}
                               >
-                                {askState.pending ? 'Thinking...' : 'Send'}
+                                {askState.pending ? l.thinking : l.send}
                               </Button>
                             </Stack>
                           </Box>
@@ -753,7 +806,7 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
         open={shareNoticeOpen}
         autoHideDuration={1400}
         onClose={() => setShareNoticeOpen(false)}
-        message="Link copied"
+        message={l.linkCopied}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       />
     </Box>
