@@ -50,6 +50,7 @@ npm run build
 - Existing UX logic and behavior are preserved by reusing the mature UI code in `apps/web/public/legacy/app.js`.
 - WebSocket URL is configurable via `NEXT_PUBLIC_WS_URL` and query param fallback.
 - Backend JSON state fallback remains for safety, while primary persistence is now Prisma/SQLite.
+- `prisma:migrate` pre-creates `apps/api/prisma/dev.db` before applying migrations (required for SQLite startup in this setup).
 
 ## Host on your own computer
 
