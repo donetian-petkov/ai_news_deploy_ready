@@ -22,6 +22,8 @@ Next.js + Node.js conversion of the live AI news stream, with Prisma (SQLite) an
   - React preview now supports Ask Agent flow (`ask_agent_item` + `ask_agent_reply`) with draft, pending, message history, and remaining-question display.
   - React preview UI is now built with MUI components (`Card`, `Chip`, `Button`, `Typography`, etc.).
   - Top header surface now uses MUI primitives (`Chip`, `Button`, `Typography`) while preserving legacy DOM ids for compatibility.
+  - Topbar actions are now React-driven via a custom-event bridge (`ai-news:*`) into legacy runtime handlers.
+  - Search/Add Stream quick buttons now stay in quick-section mode and no longer reopen the full extended controls panel.
   - RTK store and slices:
     - `apps/web/app/store/store.ts`
     - `apps/web/app/store/slices/connectionSlice.ts`
@@ -66,6 +68,7 @@ npm run build
 ## Notes on this conversion
 
 - Existing UX logic and behavior are preserved by reusing the mature UI code in `apps/web/public/legacy/app.js`.
+- Top menu state (`menu/controls/search/add-stream/vibe`) is synchronized from legacy runtime into RTK `uiSlice` and used by React topbar labels.
 - Runtime DOM skeleton is now rendered by React components (topbar + grid/help/toast shell), while backend/websocket behavior and card/column rendering are still powered by `legacy/app.js`.
 - Incremental migration path active: React preview columns render from live backend messages in parallel while legacy renderer remains the source of truth for full interaction controls.
 - WebSocket event handling is now centralized via RTK dispatch flow for the React renderer; legacy script remains active in parallel until full migration.
