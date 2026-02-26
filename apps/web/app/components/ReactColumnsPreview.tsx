@@ -33,6 +33,7 @@ import {
   setAllFeedControlsOpen,
   setFeedBudgetSetting,
   setFeedColumnSettings,
+  setFeedIntervalSetting,
   setFeedResearchSetting,
   setFeedSummarySetting,
   toggleFeedControls,
@@ -265,6 +266,13 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
     if (ok) dispatch(setFeedBudgetSetting({ feedUrl: feed.url, budget }));
   };
 
+  const setFeedInterval = (feed: FeedInfo, intervalSec: number) => {
+    if (!connected) return;
+    const next = Math.max(20, Math.min(3600, Math.floor(intervalSec)));
+    const ok = sendWsMessage({ type: 'set_feed_interval', feedUrl: feed.url, intervalSec: next });
+    if (ok) dispatch(setFeedIntervalSetting({ feedUrl: feed.url, intervalSec: next }));
+  };
+
   const setFeedSortMode = (feed: FeedInfo, sortMode: SortMode) => {
     if (!connected) return;
     const ok = sendWsMessage({
@@ -390,6 +398,20 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
                         <MenuItem value="low">Budget: Low</MenuItem>
                         <MenuItem value="standard">Budget: Standard</MenuItem>
                         <MenuItem value="high">Budget: High</MenuItem>
+                      </Select>
+                    </FormControl>
+                    <FormControl size="small" sx={{ minWidth: 110 }}>
+                      <Select
+                        value={String(feed.intervalSec || 120)}
+                        onChange={e => setFeedInterval(feed, Number(e.target.value) || 120)}
+                        disabled={!connected}
+                      >
+                        <MenuItem value="45">Poll: 45s</MenuItem>
+                        <MenuItem value="60">Poll: 60s</MenuItem>
+                        <MenuItem value="90">Poll: 90s</MenuItem>
+                        <MenuItem value="120">Poll: 120s</MenuItem>
+                        <MenuItem value="180">Poll: 180s</MenuItem>
+                        <MenuItem value="300">Poll: 300s</MenuItem>
                       </Select>
                     </FormControl>
                     <FormControl size="small" sx={{ minWidth: 132 }}>

@@ -71,6 +71,11 @@ const feedsSlice = createSlice({
       if (idx < 0) return;
       state.feeds[idx].budget = action.payload.budget;
     },
+    setFeedIntervalSetting(state, action: PayloadAction<{ feedUrl: string; intervalSec: number }>) {
+      const idx = state.feeds.findIndex(f => f.url === action.payload.feedUrl);
+      if (idx < 0) return;
+      state.feeds[idx].intervalSec = Math.max(20, Math.min(3600, Math.floor(action.payload.intervalSec)));
+    },
     setFeedColumnSettings(state, action: PayloadAction<{
       feedUrl: string;
       sortMode?: SortMode;
@@ -100,6 +105,7 @@ export const {
   setFeedSummarySetting,
   setFeedResearchSetting,
   setFeedBudgetSetting,
+  setFeedIntervalSetting,
   setFeedColumnSettings
 } = feedsSlice.actions;
 export default feedsSlice.reducer;
