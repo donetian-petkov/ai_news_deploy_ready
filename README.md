@@ -13,6 +13,7 @@ Next.js + Node.js conversion of the live AI news stream, with Prisma (SQLite) an
 
 - `apps/web`: Next.js app, reuses legacy UI (`public/legacy`) rendered directly in-page (no iframe).
   - Top menu is now a native React component: `apps/web/app/components/TopMenu.tsx`.
+  - News runtime shell is now native React: `apps/web/app/components/NewsRuntimeShell.tsx`.
 - `apps/api`: Polling/AI/WebSocket server (migrated from the original project), now with:
   - zod WebSocket message validation
   - Prisma SQLite app-state persistence + AI usage snapshots
@@ -49,8 +50,7 @@ npm run build
 ## Notes on this conversion
 
 - Existing UX logic and behavior are preserved by reusing the mature UI code in `apps/web/public/legacy/app.js`.
-- Legacy HTML (without topbar) is injected into the Next page and bootstrapped via `next/script` (`window.__AI_NEWS_WS_URL` + `/legacy/app.js`), removing iframe isolation.
-- Topbar/header/controls are now rendered by React while backend/websocket behavior is still powered by the existing legacy script.
+- Runtime DOM skeleton is now rendered by React components (topbar + grid/help/toast shell), while backend/websocket behavior and card/column rendering are still powered by `legacy/app.js`.
 - WebSocket URL is configurable via `NEXT_PUBLIC_WS_URL` and query param fallback.
 - Backend JSON state fallback remains for safety, while primary persistence is now Prisma/SQLite.
 - `prisma:migrate` pre-creates `apps/api/prisma/dev.db` before applying migrations (required for SQLite startup in this setup).
