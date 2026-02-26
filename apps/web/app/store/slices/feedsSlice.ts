@@ -1,5 +1,5 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
-import type { FeedInfo } from '../types';
+import type { BudgetMode, FeedInfo } from '../types';
 
 type FeedsState = {
   feeds: FeedInfo[];
@@ -49,9 +49,32 @@ const feedsSlice = createSlice({
       state.feeds = state.feeds.filter(f => f.url !== feedUrl);
       delete state.pinnedByUrl[feedUrl];
       delete state.controlsOpenByUrl[feedUrl];
+    },
+    setFeedSummarySetting(state, action: PayloadAction<{ feedUrl: string; enabled: boolean }>) {
+      const idx = state.feeds.findIndex(f => f.url === action.payload.feedUrl);
+      if (idx < 0) return;
+      state.feeds[idx].summaryEnabled = action.payload.enabled;
+    },
+    setFeedResearchSetting(state, action: PayloadAction<{ feedUrl: string; enabled: boolean }>) {
+      const idx = state.feeds.findIndex(f => f.url === action.payload.feedUrl);
+      if (idx < 0) return;
+      state.feeds[idx].researchEnabled = action.payload.enabled;
+    },
+    setFeedBudgetSetting(state, action: PayloadAction<{ feedUrl: string; budget: BudgetMode }>) {
+      const idx = state.feeds.findIndex(f => f.url === action.payload.feedUrl);
+      if (idx < 0) return;
+      state.feeds[idx].budget = action.payload.budget;
     }
   }
 });
 
-export const { setFeeds, togglePinned, toggleFeedControls, removeFeedLocally } = feedsSlice.actions;
+export const {
+  setFeeds,
+  togglePinned,
+  toggleFeedControls,
+  removeFeedLocally,
+  setFeedSummarySetting,
+  setFeedResearchSetting,
+  setFeedBudgetSetting
+} = feedsSlice.actions;
 export default feedsSlice.reducer;

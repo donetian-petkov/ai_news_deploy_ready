@@ -16,14 +16,24 @@ import {
   Card,
   CardContent,
   Chip,
+  FormControl,
   Link as MuiLink,
+  MenuItem,
+  Select,
   Stack,
   TextField,
   Typography
 } from '@mui/material';
 import { MAX_COLUMNS } from '../store/constants';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
-import { removeFeedLocally, toggleFeedControls, togglePinned } from '../store/slices/feedsSlice';
+import {
+  removeFeedLocally,
+  setFeedBudgetSetting,
+  setFeedResearchSetting,
+  setFeedSummarySetting,
+  toggleFeedControls,
+  togglePinned
+} from '../store/slices/feedsSlice';
 import {
   clearResearchForItem,
   clearResearchPending,
@@ -37,7 +47,7 @@ import {
   setSummaryPending
 } from '../store/slices/newsSlice';
 import { sendWsMessage, startWsConnection, stopWsConnection } from '../store/wsClient';
-import type { FeedInfo, NewsItem } from '../store/types';
+import type { BudgetMode, FeedInfo, NewsItem } from '../store/types';
 
 type Props = {
   wsUrl: string;
@@ -114,7 +124,12 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
       url,
       label: url,
       kind: 'rss' as const,
-      intervalSec: 120
+      intervalSec: 120,
+      summaryEnabled: false,
+      researchEnabled: false,
+      budget: 'standard' as const,
+      sortMode: 'newest' as const,
+      filters: { onlyMatches: false, onlyResearched: false, onlySummaries: false }
     }));
     return fallback;
   }, [feeds, itemsByFeed, pinnedByUrl]);
@@ -201,6 +216,26 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
     }
   };
 
+  const toggleFeedSummary = (feed: FeedInfo) => {
+    if (!connected) return;
+    const nextEnabled = !feed.summaryEnabled;
+    const ok = sendWsMessage({ type: 'set_feed_summary', feedUrl: feed.url, enabled: nextEnabled });
+    if (ok) dispatch(setFeedSummarySetting({ feedUrl: feed.url, enabled: nextEnabled }));
+  };
+
+  const toggleFeedResearch = (feed: FeedInfo) => {
+    if (!connected) return;
+    const nextEnabled = !feed.researchEnabled;
+    const ok = sendWsMessage({ type: 'set_feed_research', feedUrl: feed.url, enabled: nextEnabled });
+    if (ok) dispatch(setFeedResearchSetting({ feedUrl: feed.url, enabled: nextEnabled }));
+  };
+
+  const setFeedBudget = (feed: FeedInfo, budget: BudgetMode) => {
+    if (!connected) return;
+    const ok = sendWsMessage({ type: 'set_feed_budget', feedUrl: feed.url, budget });
+    if (ok) dispatch(setFeedBudgetSetting({ feedUrl: feed.url, budget }));
+  };
+
   return (
     <Box className="container" sx={{ pt: 1, pb: 0.5 }}>
       <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.25 }}>
@@ -266,6 +301,37 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
                     {controlsOpen ? 'Hide controls' : 'Show controls'}
                   </Button>
                 </Stack>
+                {controlsOpen ? (
+                  <Stack direction="row" spacing={1} sx={{ mb: 1.1 }} flexWrap="wrap" alignItems="center">
+                    <Button
+                      size="small"
+                      variant={feed.summaryEnabled ? 'contained' : 'outlined'}
+                      onClick={() => toggleFeedSummary(feed)}
+                      disabled={!connected}
+                    >
+                      {feed.summaryEnabled ? 'Summaries: ON' : 'Summaries: OFF'}
+                    </Button>
+                    <Button
+                      size="small"
+                      variant={feed.researchEnabled ? 'contained' : 'outlined'}
+                      onClick={() => toggleFeedResearch(feed)}
+                      disabled={!connected}
+                    >
+                      {feed.researchEnabled ? 'Auto Research: ON' : 'Auto Research: OFF'}
+                    </Button>
+                    <FormControl size="small" sx={{ minWidth: 140 }}>
+                      <Select
+                        value={feed.budget}
+                        onChange={e => setFeedBudget(feed, e.target.value as BudgetMode)}
+                        disabled={!connected}
+                      >
+                        <MenuItem value="low">Budget: Low</MenuItem>
+                        <MenuItem value="standard">Budget: Standard</MenuItem>
+                        <MenuItem value="high">Budget: High</MenuItem>
+                      </Select>
+                    </FormControl>
+                  </Stack>
+                ) : null}
 
                 <Stack spacing={1.2}>
                   {items.length === 0 ? (

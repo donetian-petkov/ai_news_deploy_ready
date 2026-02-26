@@ -1,7 +1,7 @@
 'use client';
 
 import type { AppDispatch } from './store';
-import type { FeedInfo, NewsItem } from './types';
+import type { BudgetMode, FeedInfo, NewsItem, SortMode } from './types';
 import { FILTERED_FEED_URL } from './constants';
 import { setStatus } from './slices/connectionSlice';
 import { setFeeds } from './slices/feedsSlice';
@@ -12,19 +12,53 @@ let ws: WebSocket | null = null;
 let wsUrlCurrent = '';
 let hiddenIds = new Set<string>();
 
-function parseFeedInfos(v: unknown): FeedInfo[] {
+type FeedSettingsWire = {
+  summaryEnabled?: unknown;
+  researchEnabled?: unknown;
+  budget?: unknown;
+  sortMode?: unknown;
+  filters?: unknown;
+};
+
+function parseFeedInfos(v: unknown, feedSettingsRaw: unknown): FeedInfo[] {
   if (!Array.isArray(v)) return [];
+  const feedSettings = (feedSettingsRaw && typeof feedSettingsRaw === 'object')
+    ? (feedSettingsRaw as Record<string, FeedSettingsWire>)
+    : {};
   const out: FeedInfo[] = [];
   for (const x of v) {
     if (!x || typeof x !== 'object') continue;
     const m = x as Record<string, unknown>;
     const url = typeof m.url === 'string' ? m.url : '';
     if (!url || url === FILTERED_FEED_URL) continue;
+
+    const rawSettings = (feedSettings[url] && typeof feedSettings[url] === 'object')
+      ? feedSettings[url]
+      : {};
+    const budget = rawSettings.budget === 'low' || rawSettings.budget === 'standard' || rawSettings.budget === 'high'
+      ? rawSettings.budget as BudgetMode
+      : 'standard';
+    const sortMode = rawSettings.sortMode === 'newest' || rawSettings.sortMode === 'oldest' || rawSettings.sortMode === 'matched'
+      ? rawSettings.sortMode as SortMode
+      : 'newest';
+    const filtersRaw = (rawSettings.filters && typeof rawSettings.filters === 'object')
+      ? rawSettings.filters as Record<string, unknown>
+      : {};
+
     out.push({
       url,
       label: typeof m.label === 'string' && m.label.trim() ? m.label : url,
       kind: m.kind === 'reddit' || m.kind === 'youtube' ? m.kind : 'rss',
-      intervalSec: typeof m.intervalSec === 'number' ? m.intervalSec : 120
+      intervalSec: typeof m.intervalSec === 'number' ? m.intervalSec : 120,
+      summaryEnabled: typeof rawSettings.summaryEnabled === 'boolean' ? rawSettings.summaryEnabled : false,
+      researchEnabled: typeof rawSettings.researchEnabled === 'boolean' ? rawSettings.researchEnabled : false,
+      budget,
+      sortMode,
+      filters: {
+        onlyMatches: !!filtersRaw.onlyMatches,
+        onlyResearched: !!filtersRaw.onlyResearched,
+        onlySummaries: !!filtersRaw.onlySummaries
+      }
     });
   }
   return out;
@@ -98,7 +132,7 @@ export function startWsConnection(dispatch: AppDispatch, explicitUrl: string) {
     const msg = raw as Record<string, unknown>;
 
     if (msg.type === 'config') {
-      dispatch(setFeeds(parseFeedInfos(msg.feeds)));
+      dispatch(setFeeds(parseFeedInfos(msg.feeds, msg.feedSettings)));
 
       const hidden: string[] = [];
       if (Array.isArray(msg.hiddenIds)) {
