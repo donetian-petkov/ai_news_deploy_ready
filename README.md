@@ -28,6 +28,7 @@ Next.js + Node.js conversion of the live AI news stream, with Prisma (SQLite) an
   - Topbar actions are now React-driven via a custom-event bridge (`ai-news:*`) into legacy runtime handlers.
   - Search/Add Stream quick buttons now stay in quick-section mode and no longer reopen the full extended controls panel.
   - Search and Add Stream inputs are now rendered as React quick panels directly under the top menu and bridged to legacy handlers.
+  - Global search query is now mirrored into RTK state and applied to React preview stream filtering.
   - RTK store and slices:
     - `apps/web/app/store/store.ts`
     - `apps/web/app/store/slices/connectionSlice.ts`

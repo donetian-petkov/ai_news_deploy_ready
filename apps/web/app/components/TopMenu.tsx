@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Alert, Box, Button, Chip, FormControl, MenuItem, Select, Stack, TextField, Typography } from '@mui/material';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
-import { setLanguage, setTopUiState } from '../store/slices/uiSlice';
+import { setLanguage, setSearchQuery, setTopUiState } from '../store/slices/uiSlice';
 
 type VibeValue = 'default' | 'anime' | 'arcade' | 'cinema' | 'newspaper' | 'cyberwitch' | 'fantasy' | 'scifi';
 type TopStateDetail = {
@@ -117,8 +117,9 @@ export default function TopMenu() {
     const timer = window.setTimeout(() => {
       emit('ai-news:set-search-query', { query: searchDraft });
     }, 90);
+    dispatch(setSearchQuery(searchDraft));
     return () => window.clearTimeout(timer);
-  }, [searchDraft]);
+  }, [dispatch, searchDraft]);
 
   useEffect(() => {
     const onAddStatus = (event: Event) => {
@@ -161,6 +162,7 @@ export default function TopMenu() {
 
   const clearSearch = () => {
     setSearchDraft('');
+    dispatch(setSearchQuery(''));
     emit('ai-news:clear-search');
   };
 

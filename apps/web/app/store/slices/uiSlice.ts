@@ -13,6 +13,7 @@ const isVibe = (value: string): value is UiState['vibe'] =>
 type UiState = {
   language: 'en' | 'bg';
   colorMode: 'system' | 'dark' | 'light';
+  searchQuery: string;
   menuCollapsed: boolean;
   controlsCollapsed: boolean;
   searchVisible: boolean;
@@ -24,6 +25,7 @@ type UiState = {
 const initialState: UiState = {
   language: 'en',
   colorMode: 'system',
+  searchQuery: '',
   menuCollapsed: false,
   controlsCollapsed: false,
   searchVisible: true,
@@ -42,6 +44,9 @@ const uiSlice = createSlice({
     setColorMode(state, action: PayloadAction<'system' | 'dark' | 'light'>) {
       state.colorMode = action.payload;
     },
+    setSearchQuery(state, action: PayloadAction<string>) {
+      state.searchQuery = String(action.payload || '');
+    },
     setTopUiState(state, action: PayloadAction<Partial<Pick<UiState, 'menuCollapsed' | 'controlsCollapsed' | 'searchVisible' | 'addStreamVisible' | 'allColumnControlsHidden' | 'vibe'>>>) {
       const next = action.payload;
       if (typeof next.menuCollapsed === 'boolean') state.menuCollapsed = next.menuCollapsed;
@@ -54,5 +59,5 @@ const uiSlice = createSlice({
   }
 });
 
-export const { setLanguage, setColorMode, setTopUiState } = uiSlice.actions;
+export const { setLanguage, setColorMode, setSearchQuery, setTopUiState } = uiSlice.actions;
 export default uiSlice.reducer;

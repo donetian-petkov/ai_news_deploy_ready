@@ -88,6 +88,7 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
   const feeds = useAppSelector(s => s.feeds.feeds);
   const pinnedByUrl = useAppSelector(s => s.feeds.pinnedByUrl);
   const controlsOpenByUrl = useAppSelector(s => s.feeds.controlsOpenByUrl);
+  const searchQuery = useAppSelector(s => s.ui.searchQuery);
   const itemsByFeed = useAppSelector(s => s.news.itemsByFeed);
   const summaryPendingById = useAppSelector(s => s.news.summaryPendingById);
   const researchPendingById = useAppSelector(s => s.news.researchPendingById);
@@ -313,6 +314,13 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
       >
         {previewFeeds.map((feed: FeedInfo) => {
           const items = itemsByFeed[feed.url] || [];
+          const normalizedQuery = String(searchQuery || '').trim().toLowerCase();
+          const itemsVisible = normalizedQuery
+            ? items.filter(it => {
+              const hay = `${it.title}\n${it.summary || ''}\n${it.research || ''}`.toLowerCase();
+              return hay.includes(normalizedQuery);
+            })
+            : items;
           const pinned = !!pinnedByUrl[feed.url];
           const controlsOpen = typeof controlsOpenByUrl[feed.url] === 'boolean' ? !!controlsOpenByUrl[feed.url] : true;
           return (
@@ -323,7 +331,7 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
                     {feed.label}
                   </Typography>
                   <Stack direction="row" spacing={1} alignItems="center">
-                    <Chip size="small" label={items.length} />
+                    <Chip size="small" label={itemsVisible.length} />
                     <Chip size="small" variant="outlined" label={feed.kind} />
                   </Stack>
                 </Stack>
@@ -432,9 +440,11 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
                 ) : null}
 
                 <Stack spacing={1.2}>
-                  {items.length === 0 ? (
-                    <Alert severity="info" variant="outlined">Waiting for news...</Alert>
-                  ) : items.map(it => (
+                  {itemsVisible.length === 0 ? (
+                    <Alert severity="info" variant="outlined">
+                      {items.length === 0 ? 'Waiting for news...' : 'No search matches in this stream.'}
+                    </Alert>
+                  ) : itemsVisible.map(it => (
                     <Card
                       key={it.id}
                       variant="outlined"
