@@ -25,6 +25,7 @@ Next.js + Node.js conversion of the live AI news stream, with Prisma (SQLite) an
   - React preview now reads `feedSettings` and supports per-stream `Summaries`, `Auto Research`, and `Budget` controls via WebSocket.
   - React preview now supports per-stream `Sort` and filter toggles (`Matches`, `Researched`, `Summaries`) via `set_feed_column_settings`.
   - React preview now supports per-stream polling interval updates via `set_feed_interval`.
+  - React preview cards now support per-item `Show More / Show Less / Hide Summary / Hide Research` text controls.
   - Top header surface now uses MUI primitives (`Chip`, `Button`, `Typography`) while preserving legacy DOM ids for compatibility.
   - Topbar actions are now React-driven via a custom-event bridge (`ai-news:*`) into legacy runtime handlers.
   - Search/Add Stream quick buttons now stay in quick-section mode and no longer reopen the full extended controls panel.

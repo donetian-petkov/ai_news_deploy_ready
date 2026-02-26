@@ -58,6 +58,8 @@ type Props = {
   wsUrl: string;
 };
 
+type BodyMode = 'collapsed' | 'expanded' | 'hidden';
+
 function formatTime(ms: number): string {
   if (!Number.isFinite(ms)) return '';
   try {
@@ -82,6 +84,12 @@ function compactResearch(research: string): string {
   return normalized.length > 340 ? `${normalized.slice(0, 340)}...` : normalized;
 }
 
+function collapseText(text: string, maxChars: number): string {
+  const normalized = String(text || '').trim();
+  if (normalized.length <= maxChars) return normalized;
+  return `${normalized.slice(0, maxChars)}...`;
+}
+
 export default function ReactColumnsPreview({ wsUrl }: Props) {
   const dispatch = useAppDispatch();
   const connected = useAppSelector(s => s.connection.connected);
@@ -97,6 +105,7 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
   const pendingTimeoutsRef = useRef<Record<string, number>>({});
   const researchTimeoutsRef = useRef<Record<string, number>>({});
   const [hideAllResearch, setHideAllResearch] = useState(false);
+  const [bodyModes, setBodyModes] = useState<Record<string, BodyMode>>({});
 
   useEffect(() => {
     startWsConnection(dispatch, wsUrl);
@@ -209,6 +218,17 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
   };
 
   const askKey = (it: NewsItem) => `${it.feedUrl}::${it.id}`;
+  const bodyKey = (it: NewsItem, kind: 'summary' | 'research') => `${it.feedUrl}::${it.id}::${kind}`;
+
+  const getBodyMode = (key: string, text: string, threshold: number): BodyMode => {
+    const saved = bodyModes[key];
+    if (saved) return saved;
+    return String(text || '').trim().length > threshold ? 'collapsed' : 'expanded';
+  };
+
+  const setBodyMode = (key: string, mode: BodyMode) => {
+    setBodyModes(prev => ({ ...prev, [key]: mode }));
+  };
 
   const removeFeed = (feedUrl: string) => {
     if (!connected) return;
@@ -547,23 +567,83 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
                           </Stack>
                         ) : null}
 
-                        {it.summary ? (
-                          <Typography variant="body2" sx={{ color: 'rgba(226,234,250,0.95)', whiteSpace: 'pre-wrap' }}>
-                            {it.summary}
-                          </Typography>
-                        ) : null}
-                        {it.research && !hideAllResearch ? (
-                          <Box sx={{ mt: 1 }}>
-                            {extractConfidence(it.research) ? (
-                              <Typography variant="caption" sx={{ color: 'rgba(212,220,236,0.75)', display: 'block', mb: 0.35 }}>
-                                Confidence: {extractConfidence(it.research)}
-                              </Typography>
-                            ) : null}
-                            <Typography variant="body2" sx={{ color: 'rgba(205,218,238,0.92)', whiteSpace: 'pre-wrap' }}>
-                              {compactResearch(it.research)}
-                            </Typography>
-                          </Box>
-                        ) : null}
+                        {it.summary ? (() => {
+                          const key = bodyKey(it, 'summary');
+                          const mode = getBodyMode(key, it.summary, 260);
+                          const visible = mode !== 'hidden';
+                          const longText = String(it.summary).trim().length > 260;
+                          const text = mode === 'collapsed' ? collapseText(it.summary, 260) : it.summary;
+                          return (
+                            <Box>
+                              {visible ? (
+                                <Typography variant="body2" sx={{ color: 'rgba(226,234,250,0.95)', whiteSpace: 'pre-wrap' }}>
+                                  {text}
+                                </Typography>
+                              ) : null}
+                              <Stack direction="row" spacing={1} sx={{ mt: 0.7 }} flexWrap="wrap">
+                                {mode === 'hidden' ? (
+                                  <Button size="small" variant="outlined" onClick={() => setBodyMode(key, longText ? 'collapsed' : 'expanded')}>
+                                    Show Summary
+                                  </Button>
+                                ) : (
+                                  <Button size="small" variant="outlined" color="warning" onClick={() => setBodyMode(key, 'hidden')}>
+                                    Hide Summary
+                                  </Button>
+                                )}
+                                {visible && longText ? (
+                                  <Button
+                                    size="small"
+                                    variant="outlined"
+                                    onClick={() => setBodyMode(key, mode === 'collapsed' ? 'expanded' : 'collapsed')}
+                                  >
+                                    {mode === 'collapsed' ? 'Show More' : 'Show Less'}
+                                  </Button>
+                                ) : null}
+                              </Stack>
+                            </Box>
+                          );
+                        })() : null}
+                        {it.research && !hideAllResearch ? (() => {
+                          const key = bodyKey(it, 'research');
+                          const mode = getBodyMode(key, it.research, 340);
+                          const visible = mode !== 'hidden';
+                          const longText = String(it.research).trim().length > 340;
+                          const text = mode === 'collapsed' ? compactResearch(it.research) : it.research;
+                          return (
+                            <Box sx={{ mt: 1 }}>
+                              {extractConfidence(it.research) ? (
+                                <Typography variant="caption" sx={{ color: 'rgba(212,220,236,0.75)', display: 'block', mb: 0.35 }}>
+                                  Confidence: {extractConfidence(it.research)}
+                                </Typography>
+                              ) : null}
+                              {visible ? (
+                                <Typography variant="body2" sx={{ color: 'rgba(205,218,238,0.92)', whiteSpace: 'pre-wrap' }}>
+                                  {text}
+                                </Typography>
+                              ) : null}
+                              <Stack direction="row" spacing={1} sx={{ mt: 0.7 }} flexWrap="wrap">
+                                {mode === 'hidden' ? (
+                                  <Button size="small" variant="outlined" onClick={() => setBodyMode(key, longText ? 'collapsed' : 'expanded')}>
+                                    Show Research
+                                  </Button>
+                                ) : (
+                                  <Button size="small" variant="outlined" color="warning" onClick={() => setBodyMode(key, 'hidden')}>
+                                    Hide Research
+                                  </Button>
+                                )}
+                                {visible && longText ? (
+                                  <Button
+                                    size="small"
+                                    variant="outlined"
+                                    onClick={() => setBodyMode(key, mode === 'collapsed' ? 'expanded' : 'collapsed')}
+                                  >
+                                    {mode === 'collapsed' ? 'Show More' : 'Show Less'}
+                                  </Button>
+                                ) : null}
+                              </Stack>
+                            </Box>
+                          );
+                        })() : null}
                         {askState.open ? (
                           <Box sx={{ mt: 1.1, p: 1, border: '1px solid rgba(106,128,162,0.4)', borderRadius: 1.5 }}>
                             <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 0.8 }}>
