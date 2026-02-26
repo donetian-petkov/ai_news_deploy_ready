@@ -9,7 +9,7 @@ export default function Page() {
   return (
     <>
       <Script id="ai-news-ws-url" strategy="beforeInteractive">
-        {`window.__AI_NEWS_WS_URL = ${JSON.stringify(wsUrl)};`}
+        {`window.__AI_NEWS_WS_URL = ${JSON.stringify(wsUrl)}; window.__AI_NEWS_USE_REACT_TOPMENU = true;`}
       </Script>
       <TopMenu />
       <ReactColumnsPreview wsUrl={wsUrl} />

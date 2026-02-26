@@ -40,6 +40,7 @@
   const quickVibeSelect = document.getElementById('quickVibeSelect');
   const quickSearchBtn = document.getElementById('quickSearchBtn');
   const quickAddStreamBtn = document.getElementById('quickAddStreamBtn');
+  const useReactTopMenu = !!window.__AI_NEWS_USE_REACT_TOPMENU;
 
   const fontSelect = document.getElementById('fontSelect');
   const fontSizeSelect = document.getElementById('fontSizeSelect');
@@ -766,6 +767,7 @@
     clearCollapsedQuickSections();
     lsSet(CONTROLS_KEY, collapsed ? '1' : '0');
     if (controlsToggle) controlsToggle.textContent = collapsed ? t('show_top_controls') : t('hide_top_controls');
+    emitTopUiState();
     renderHelp();
   }
   function toggleControls() {
@@ -786,6 +788,7 @@
     if (!collapsed && document.body.classList.contains('controls-collapsed')) {
       setControlsCollapsed(false);
     }
+    emitTopUiState();
     renderHelp();
   }
   function toggleMenu() {
@@ -846,6 +849,7 @@
     applyColumnPalette(next, document.body.dataset.scheme || (schemeSelect?.value || 'classic'));
     // Re-render visible items so vibe-specific icon buttons update immediately.
     renderAllFeeds();
+    emitTopUiState();
     renderHelp();
   }
 
@@ -870,6 +874,21 @@
     if (quickAddStreamBtn && addStreamSectionEl) {
       quickAddStreamBtn.textContent = addShown ? t('hide_add_stream') : t('add_stream');
     }
+    emitTopUiState();
+  }
+
+  function emitTopUiState() {
+    window.dispatchEvent(new CustomEvent('ai-news:top-state', {
+      detail: {
+        menuCollapsed: document.body.classList.contains('menu-collapsed'),
+        controlsCollapsed: document.body.classList.contains('controls-collapsed'),
+        searchVisible: isSectionVisible(searchSectionEl),
+        addStreamVisible: isSectionVisible(addStreamSectionEl),
+        allColumnControlsHidden: !areAllColumnMenusOpen(),
+        vibe: document.body.dataset.vibe || 'default',
+        language: uiLang
+      }
+    }));
   }
 
   function clearCollapsedQuickSections() {
@@ -1061,6 +1080,7 @@
     renderAllFeeds();
     renderHelp();
     applyTheme(theme);
+    emitTopUiState();
   }
 
   function toggleSectionVisibility(sectionEl, focusEl) {
@@ -1462,6 +1482,7 @@
     if (!allColControlsToggle) return;
     const allOpen = areAllColumnMenusOpen();
     allColControlsToggle.textContent = allOpen ? t('hide_all_column_controls') : t('show_all_column_controls');
+    emitTopUiState();
     renderHelp();
   }
 
@@ -2769,11 +2790,13 @@
   if (vibeSelect) {
     vibeSelect.addEventListener('change', () => applyVibePreset(vibeSelect.value));
   }
-  if (quickVibeSelect) {
+  if (!useReactTopMenu && quickVibeSelect) {
     quickVibeSelect.addEventListener('change', () => applyVibePreset(quickVibeSelect.value));
   }
-  quickSearchBtn?.addEventListener('click', () => toggleQuickSection(searchSectionEl, searchInput));
-  quickAddStreamBtn?.addEventListener('click', () => toggleQuickSection(addStreamSectionEl, feedUrlEl));
+  if (!useReactTopMenu) {
+    quickSearchBtn?.addEventListener('click', () => toggleQuickSection(searchSectionEl, searchInput));
+    quickAddStreamBtn?.addEventListener('click', () => toggleQuickSection(addStreamSectionEl, feedUrlEl));
+  }
   searchSectionEl?.addEventListener('toggle', () => {
     if (document.body.classList.contains('controls-collapsed') && !searchSectionEl.open) {
       searchSectionEl.classList.remove('quickSectionVisible');
@@ -2870,10 +2893,26 @@
   }
 
   // Menu toggles
-  controlsToggle?.addEventListener('click', toggleControls);
-  allColControlsToggle?.addEventListener('click', toggleAllColumnMenus);
-  hideAllResearchBtn?.addEventListener('click', hideAllResearchBodies);
-  menuToggle?.addEventListener('click', toggleMenu);
+  if (!useReactTopMenu) {
+    controlsToggle?.addEventListener('click', toggleControls);
+    allColControlsToggle?.addEventListener('click', toggleAllColumnMenus);
+    hideAllResearchBtn?.addEventListener('click', hideAllResearchBodies);
+    menuToggle?.addEventListener('click', toggleMenu);
+  }
+
+  window.addEventListener('ai-news:request-top-state', emitTopUiState);
+  window.addEventListener('ai-news:toggle-controls', toggleControls);
+  window.addEventListener('ai-news:toggle-all-column-controls', toggleAllColumnMenus);
+  window.addEventListener('ai-news:hide-all-research', hideAllResearchBodies);
+  window.addEventListener('ai-news:toggle-menu', toggleMenu);
+  window.addEventListener('ai-news:toggle-search', () => toggleQuickSection(searchSectionEl, searchInput));
+  window.addEventListener('ai-news:toggle-add-stream', () => toggleQuickSection(addStreamSectionEl, feedUrlEl));
+  window.addEventListener('ai-news:set-vibe', e => {
+    const detail = (e && typeof e === 'object' && 'detail' in e) ? e.detail : null;
+    const next = detail && typeof detail.vibe === 'string' ? detail.vibe : '';
+    if (!next) return;
+    applyVibePreset(next);
+  });
 
   // Close only the extended controls section when clicking outside of it.
   document.addEventListener('pointerdown', e => {

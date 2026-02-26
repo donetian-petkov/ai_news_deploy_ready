@@ -1,7 +1,28 @@
 'use client';
 
+import { useEffect } from 'react';
 import { Box, Button, Chip, Stack, Typography } from '@mui/material';
-import { useAppSelector } from '../store/hooks';
+import { useAppDispatch, useAppSelector } from '../store/hooks';
+import { setLanguage, setTopUiState } from '../store/slices/uiSlice';
+
+type VibeValue = 'default' | 'anime' | 'arcade' | 'cinema' | 'newspaper' | 'cyberwitch' | 'fantasy' | 'scifi';
+type TopStateDetail = {
+  menuCollapsed?: boolean;
+  controlsCollapsed?: boolean;
+  searchVisible?: boolean;
+  addStreamVisible?: boolean;
+  allColumnControlsHidden?: boolean;
+  vibe?: VibeValue;
+  language?: 'en' | 'bg';
+};
+
+const VIBES: VibeValue[] = ['default', 'anime', 'arcade', 'cinema', 'newspaper', 'cyberwitch', 'fantasy', 'scifi'];
+
+declare global {
+  interface Window {
+    __AI_NEWS_USE_REACT_TOPMENU?: boolean;
+  }
+}
 
 function StatusPills() {
   const connected = useAppSelector(s => s.connection.connected);
@@ -18,40 +39,110 @@ function StatusPills() {
 }
 
 export default function TopMenu() {
+  const dispatch = useAppDispatch();
+  const ui = useAppSelector(s => s.ui);
+  const lang = ui.language;
+  const bg = lang === 'bg';
+  const labels = {
+    title: bg ? 'Поток Новини На Живо' : 'Live News Stream',
+    subHint: bg ? 'Влачи колони · ? Помощ · M Меню · / Търсене' : 'Drag columns · ? Help · M Menu · / Search',
+    vibe: bg ? 'Вайб:' : 'Vibe:',
+    search: bg ? 'Търсене' : 'Search',
+    hideSearch: bg ? 'Скрий търсене' : 'Hide Search',
+    addStream: bg ? 'Добави поток' : 'Add Stream',
+    hideAddStream: bg ? 'Скрий добавяне поток' : 'Hide Add Stream',
+    hideTopControls: bg ? 'Скрий горни контроли' : 'Hide top controls',
+    showTopControls: bg ? 'Покажи горни контроли' : 'Show top controls',
+    hideAllColumnControls: bg ? 'Скрий всички контроли на колони' : 'Hide all column controls',
+    showAllColumnControls: bg ? 'Покажи всички контроли на колони' : 'Show all column controls',
+    hideAllResearch: bg ? 'Скрий всички проучвания' : 'Hide all research',
+    hideMenu: bg ? 'Скрий меню' : 'Hide menu',
+    showMenu: bg ? 'Покажи меню' : 'Show menu',
+    anime: bg ? 'Аниме Поп' : 'Anime Pop',
+    arcade: bg ? 'Видео игра' : 'Video Game',
+    cinema: bg ? 'Кино вечер' : 'Movie Night',
+    newspaper: bg ? 'Вестник' : 'Newspaper',
+    cyberwitch: bg ? 'Кибер вещица' : 'Cyber Witch',
+    fantasy: bg ? 'Фентъзи' : 'Fantasy',
+    scifi: bg ? 'Научна фантастика' : 'Sci-Fi',
+    defaultVibe: bg ? 'По подразбиране' : 'Default'
+  } as const;
+
+  useEffect(() => {
+    window.__AI_NEWS_USE_REACT_TOPMENU = true;
+
+    const onTopState = (event: Event) => {
+      const detail = (event as CustomEvent<TopStateDetail>).detail || {};
+      const next: TopStateDetail = {};
+      if (typeof detail.menuCollapsed === 'boolean') next.menuCollapsed = detail.menuCollapsed;
+      if (typeof detail.controlsCollapsed === 'boolean') next.controlsCollapsed = detail.controlsCollapsed;
+      if (typeof detail.searchVisible === 'boolean') next.searchVisible = detail.searchVisible;
+      if (typeof detail.addStreamVisible === 'boolean') next.addStreamVisible = detail.addStreamVisible;
+      if (typeof detail.allColumnControlsHidden === 'boolean') next.allColumnControlsHidden = detail.allColumnControlsHidden;
+      if (typeof detail.vibe === 'string' && VIBES.includes(detail.vibe)) next.vibe = detail.vibe;
+      dispatch(setTopUiState(next));
+      if (detail.language === 'en' || detail.language === 'bg') {
+        dispatch(setLanguage(detail.language));
+      }
+    };
+
+    window.addEventListener('ai-news:top-state', onTopState as EventListener);
+    window.dispatchEvent(new CustomEvent('ai-news:request-top-state'));
+
+    return () => {
+      window.removeEventListener('ai-news:top-state', onTopState as EventListener);
+    };
+  }, [dispatch]);
+
+  const emit = (type: string, detail?: object) => {
+    window.dispatchEvent(new CustomEvent(type, { detail }));
+  };
+
+  const searchLabel = ui.searchVisible ? labels.hideSearch : labels.search;
+  const addStreamLabel = ui.addStreamVisible ? labels.hideAddStream : labels.addStream;
+  const controlsLabel = ui.controlsCollapsed ? labels.showTopControls : labels.hideTopControls;
+  const allColumnLabel = ui.allColumnControlsHidden ? labels.showAllColumnControls : labels.hideAllColumnControls;
+  const menuLabel = ui.menuCollapsed ? labels.showMenu : labels.hideMenu;
+
   return (
     <div className="topbar">
       <div className="topbarInner" id="topbarInner">
         <div className="headerRow">
           <Box className="headerLeft">
             <Typography id="appTitle" component="h1" sx={{ margin: 0, fontSize: 28, fontWeight: 900, lineHeight: 1.1 }}>
-              Live News Stream
+              {labels.title}
             </Typography>
             <div className="subHint" id="subHint">
-              Drag columns · <b>?</b> Help · <b>M</b> Menu · <b>/</b> Search
+              {labels.subHint}
             </div>
           </Box>
 
           <Stack className="headerRight" direction="row" flexWrap="wrap" gap={1.1} alignItems="center">
             <StatusPills />
             <label className="checkbox topQuickLabel" title="Quick vibe switch">
-              <span id="quickVibeLabelText">Vibe:</span>
-              <select id="quickVibeSelect" className="select topQuickSelect" defaultValue="default">
-                <option value="default">Default</option>
-                <option value="anime">Anime Pop</option>
-                <option value="arcade">Video Game</option>
-                <option value="cinema">Movie Night</option>
-                <option value="newspaper">Newspaper</option>
-                <option value="cyberwitch">Cyber Witch</option>
-                <option value="fantasy">Fantasy</option>
-                <option value="scifi">Sci-Fi</option>
+              <span id="quickVibeLabelText">{labels.vibe}</span>
+              <select
+                id="quickVibeSelect"
+                className="select topQuickSelect"
+                value={ui.vibe}
+                onChange={e => emit('ai-news:set-vibe', { vibe: e.target.value })}
+              >
+                <option value="default">{labels.defaultVibe}</option>
+                <option value="anime">{labels.anime}</option>
+                <option value="arcade">{labels.arcade}</option>
+                <option value="cinema">{labels.cinema}</option>
+                <option value="newspaper">{labels.newspaper}</option>
+                <option value="cyberwitch">{labels.cyberwitch}</option>
+                <option value="fantasy">{labels.fantasy}</option>
+                <option value="scifi">{labels.scifi}</option>
               </select>
             </label>
-            <Button id="quickSearchBtn" className="btn ghost" size="small" variant="outlined" type="button">Search</Button>
-            <Button id="quickAddStreamBtn" className="btn ghost" size="small" variant="outlined" type="button">Add Stream</Button>
-            <Button id="controlsToggle" className="btn ghost" size="small" variant="outlined" type="button">Hide top controls</Button>
-            <Button id="allColControlsToggle" className="btn ghost" size="small" variant="outlined" type="button">Hide all column controls</Button>
-            <Button id="hideAllResearchBtn" className="btn ghost" size="small" variant="outlined" type="button">Hide all research</Button>
-            <Button id="menuToggle" className="btn ghost" size="small" variant="outlined" type="button">Hide menu</Button>
+            <Button id="quickSearchBtn" className="btn ghost" size="small" variant="outlined" type="button" onClick={() => emit('ai-news:toggle-search')}>{searchLabel}</Button>
+            <Button id="quickAddStreamBtn" className="btn ghost" size="small" variant="outlined" type="button" onClick={() => emit('ai-news:toggle-add-stream')}>{addStreamLabel}</Button>
+            <Button id="controlsToggle" className="btn ghost" size="small" variant="outlined" type="button" onClick={() => emit('ai-news:toggle-controls')}>{controlsLabel}</Button>
+            <Button id="allColControlsToggle" className="btn ghost" size="small" variant="outlined" type="button" onClick={() => emit('ai-news:toggle-all-column-controls')}>{allColumnLabel}</Button>
+            <Button id="hideAllResearchBtn" className="btn ghost" size="small" variant="outlined" type="button" onClick={() => emit('ai-news:hide-all-research')}>{labels.hideAllResearch}</Button>
+            <Button id="menuToggle" className="btn ghost" size="small" variant="outlined" type="button" onClick={() => emit('ai-news:toggle-menu')}>{menuLabel}</Button>
           </Stack>
         </div>
 
