@@ -59,6 +59,16 @@ const newsSlice = createSlice({
     setHiddenIds(state, action: PayloadAction<string[]>) {
       state.hiddenIds = action.payload;
     },
+    hideItemLocally(state, action: PayloadAction<string>) {
+      const id = action.payload;
+      if (!id) return;
+      if (!state.hiddenIds.includes(id)) state.hiddenIds.push(id);
+      Object.keys(state.itemsByFeed).forEach(feedUrl => {
+        state.itemsByFeed[feedUrl] = (state.itemsByFeed[feedUrl] || []).filter(it => it.id !== id);
+      });
+      delete state.summaryPendingById[id];
+      delete state.researchPendingById[id];
+    },
     upsertNewsItem(state, action: PayloadAction<NewsItem>) {
       const item = action.payload;
       if (item.filteredOk === false) return;
@@ -168,6 +178,7 @@ const newsSlice = createSlice({
 
 export const {
   setHiddenIds,
+  hideItemLocally,
   upsertNewsItem,
   setSummaryPending,
   clearSummaryPending,

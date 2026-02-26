@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import ManageSearchIcon from '@mui/icons-material/ManageSearch';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
@@ -9,6 +10,7 @@ import PushPinIcon from '@mui/icons-material/PushPin';
 import PushPinOutlinedIcon from '@mui/icons-material/PushPinOutlined';
 import SmartToyIcon from '@mui/icons-material/SmartToy';
 import TuneIcon from '@mui/icons-material/Tune';
+import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import {
   Alert,
   Box,
@@ -22,8 +24,10 @@ import {
   Link as MuiLink,
   MenuItem,
   Select,
+  Snackbar,
   Stack,
   TextField,
+  Tooltip,
   Typography
 } from '@mui/material';
 import { MAX_COLUMNS } from '../store/constants';
@@ -43,6 +47,7 @@ import {
   clearResearchForItem,
   clearResearchPending,
   enqueueAskQuestion,
+  hideItemLocally,
   receiveAskReply,
   clearSummaryForItem,
   clearSummaryPending,
@@ -106,6 +111,7 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
   const researchTimeoutsRef = useRef<Record<string, number>>({});
   const [hideAllResearch, setHideAllResearch] = useState(false);
   const [bodyModes, setBodyModes] = useState<Record<string, BodyMode>>({});
+  const [shareNoticeOpen, setShareNoticeOpen] = useState(false);
 
   useEffect(() => {
     startWsConnection(dispatch, wsUrl);
@@ -228,6 +234,22 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
 
   const setBodyMode = (key: string, mode: BodyMode) => {
     setBodyModes(prev => ({ ...prev, [key]: mode }));
+  };
+
+  const hideItem = (it: NewsItem) => {
+    const ok = sendWsMessage({ type: 'hide_item', id: it.id });
+    if (ok) dispatch(hideItemLocally(it.id));
+  };
+
+  const copyLink = async (url: string) => {
+    const value = String(url || '').trim();
+    if (!value) return;
+    try {
+      await navigator.clipboard.writeText(value);
+      setShareNoticeOpen(true);
+    } catch {
+      window.open(value, '_blank', 'noopener,noreferrer');
+    }
   };
 
   const removeFeed = (feedUrl: string) => {
@@ -512,7 +534,31 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
                           <Typography variant="caption" sx={{ color: 'rgba(210,219,235,0.74)' }}>
                             {formatTime(it.publishedMs)}
                           </Typography>
-                          {it.isMatch ? <Chip size="small" label="MATCH" color="warning" variant="outlined" /> : null}
+                          <Stack direction="row" spacing={0.6} alignItems="center">
+                            {it.isMatch ? <Chip size="small" label="MATCH" color="warning" variant="outlined" /> : null}
+                            <Tooltip title="Share Link">
+                              <Button
+                                size="small"
+                                variant="outlined"
+                                sx={{ minWidth: 34, px: 0.75 }}
+                                onClick={() => copyLink(it.link)}
+                              >
+                                <ContentCopyIcon sx={{ fontSize: 15 }} />
+                              </Button>
+                            </Tooltip>
+                            <Tooltip title="Hide News">
+                              <Button
+                                size="small"
+                                variant="outlined"
+                                color="warning"
+                                sx={{ minWidth: 34, px: 0.75 }}
+                                onClick={() => hideItem(it)}
+                                disabled={!connected}
+                              >
+                                <VisibilityOffIcon sx={{ fontSize: 15 }} />
+                              </Button>
+                            </Tooltip>
+                          </Stack>
                         </Stack>
 
                         <MuiLink
@@ -703,6 +749,13 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
           );
         })}
       </Box>
+      <Snackbar
+        open={shareNoticeOpen}
+        autoHideDuration={1400}
+        onClose={() => setShareNoticeOpen(false)}
+        message="Link copied"
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      />
     </Box>
   );
 }
