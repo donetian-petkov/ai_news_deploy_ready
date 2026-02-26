@@ -11,6 +11,7 @@
     "dev:web": "npm run dev -w @ai-news/web",
     "dev:api": "npm run dev -w @ai-news/api",
     "build": "npm run build -w @ai-news/shared && npm run build -w @ai-news/api && npm run build -w @ai-news/web",
+    "test": "npm run test -w @ai-news/web",
     "start": "npm run start -w @ai-news/api & npm run start -w @ai-news/web",
     "prisma:generate": "npm run prisma:generate -w @ai-news/api",
     "prisma:migrate": "npm run prisma:migrate -w @ai-news/api"
