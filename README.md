@@ -75,6 +75,7 @@ npm run build
 - Existing UX logic and behavior are preserved by reusing the mature UI code in `apps/web/public/legacy/app.js`.
 - Top menu state (`menu/controls/search/add-stream/vibe`) is synchronized from legacy runtime into RTK `uiSlice` and used by React topbar labels.
 - Global top actions now also affect the React preview (`Hide all column controls`, `Hide all research`).
+- Keyboard shortcuts are now handled from React top-menu mode and dispatched through the same `ai-news:*` action bridge.
 - Runtime DOM skeleton is now rendered by React components (topbar + grid/help/toast shell), while backend/websocket behavior and card/column rendering are still powered by `legacy/app.js`.
 - Incremental migration path active: React preview columns render from live backend messages in parallel while legacy renderer remains the source of truth for full interaction controls.
 - WebSocket event handling is now centralized via RTK dispatch flow for the React renderer; legacy script remains active in parallel until full migration.

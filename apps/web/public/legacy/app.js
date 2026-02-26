@@ -2919,6 +2919,10 @@
   window.addEventListener('ai-news:toggle-all-column-controls', toggleAllColumnMenus);
   window.addEventListener('ai-news:hide-all-research', hideAllResearchBodies);
   window.addEventListener('ai-news:toggle-menu', toggleMenu);
+  window.addEventListener('ai-news:toggle-help', toggleHelp);
+  window.addEventListener('ai-news:close-help', closeHelp);
+  window.addEventListener('ai-news:cycle-theme', cycleTheme);
+  window.addEventListener('ai-news:cycle-vibe', cycleVibe);
   window.addEventListener('ai-news:toggle-search', () => toggleQuickSection(searchSectionEl, searchInput));
   window.addEventListener('ai-news:toggle-add-stream', () => toggleQuickSection(addStreamSectionEl, feedUrlEl));
   window.addEventListener('ai-news:set-search-query', e => {
@@ -2960,76 +2964,78 @@
     setControlsCollapsed(true);
   });
 
-  // Keyboard shortcuts
-  window.addEventListener('keydown', e => {
-    if (e.key === 'Escape') {
-      closeHelp();
-      return;
-    }
+  if (!useReactTopMenu) {
+    // Keyboard shortcuts
+    window.addEventListener('keydown', e => {
+      if (e.key === 'Escape') {
+        closeHelp();
+        return;
+      }
 
-    if (e.ctrlKey || e.metaKey || e.altKey) return;
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
 
-    const targetEl = e.target;
-    const typing =
-      targetEl &&
-      (targetEl.tagName === 'INPUT' ||
-        targetEl.tagName === 'TEXTAREA' ||
-        (targetEl.isContentEditable === true));
-    if (typing) return;
+      const targetEl = e.target;
+      const typing =
+        targetEl &&
+        (targetEl.tagName === 'INPUT' ||
+          targetEl.tagName === 'TEXTAREA' ||
+          (targetEl.isContentEditable === true));
+      if (typing) return;
 
-    const key = String(e.key || '');
-    const lower = key.toLowerCase();
+      const key = String(e.key || '');
+      const lower = key.toLowerCase();
 
-    if (key === '?') {
-      e.preventDefault();
-      toggleHelp();
-      return;
-    }
-    if (key === '/') {
-      e.preventDefault();
-      ensureSectionVisible(searchSectionEl, searchInput);
-      return;
-    }
-    if (lower === 'h') {
-      e.preventDefault();
-      toggleHelp();
-      return;
-    }
-    if (lower === 'm') {
-      e.preventDefault();
-      toggleMenu();
-      return;
-    }
-    if (lower === 'c') {
-      e.preventDefault();
-      toggleControls();
-      return;
-    }
-    if (lower === 'g') {
-      e.preventDefault();
-      toggleAllColumnMenus();
-      return;
-    }
-    if (lower === 's') {
-      e.preventDefault();
-      toggleQuickSection(searchSectionEl, searchInput);
-      return;
-    }
-    if (lower === 'a') {
-      e.preventDefault();
-      toggleQuickSection(addStreamSectionEl, feedUrlEl);
-      return;
-    }
-    if (lower === 't') {
-      e.preventDefault();
-      cycleTheme();
-      return;
-    }
-    if (lower === 'v') {
-      e.preventDefault();
-      cycleVibe();
-    }
-  });
+      if (key === '?') {
+        e.preventDefault();
+        toggleHelp();
+        return;
+      }
+      if (key === '/') {
+        e.preventDefault();
+        ensureSectionVisible(searchSectionEl, searchInput);
+        return;
+      }
+      if (lower === 'h') {
+        e.preventDefault();
+        toggleHelp();
+        return;
+      }
+      if (lower === 'm') {
+        e.preventDefault();
+        toggleMenu();
+        return;
+      }
+      if (lower === 'c') {
+        e.preventDefault();
+        toggleControls();
+        return;
+      }
+      if (lower === 'g') {
+        e.preventDefault();
+        toggleAllColumnMenus();
+        return;
+      }
+      if (lower === 's') {
+        e.preventDefault();
+        toggleQuickSection(searchSectionEl, searchInput);
+        return;
+      }
+      if (lower === 'a') {
+        e.preventDefault();
+        toggleQuickSection(addStreamSectionEl, feedUrlEl);
+        return;
+      }
+      if (lower === 't') {
+        e.preventDefault();
+        cycleTheme();
+        return;
+      }
+      if (lower === 'v') {
+        e.preventDefault();
+        cycleVibe();
+      }
+    });
+  }
 
   renderHelp();
   updateQuickSectionButtons();

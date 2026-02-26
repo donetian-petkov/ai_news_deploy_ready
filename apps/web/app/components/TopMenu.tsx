@@ -156,6 +156,84 @@ export default function TopMenu() {
     }
   }, [ui.addStreamVisible]);
 
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        emit('ai-news:close-help');
+        return;
+      }
+
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+
+      const targetEl = e.target as HTMLElement | null;
+      const typing = !!targetEl && (
+        targetEl.tagName === 'INPUT'
+        || targetEl.tagName === 'TEXTAREA'
+        || targetEl.isContentEditable
+      );
+      if (typing) return;
+
+      const key = String(e.key || '');
+      const lower = key.toLowerCase();
+
+      if (key === '?') {
+        e.preventDefault();
+        emit('ai-news:toggle-help');
+        return;
+      }
+      if (key === '/') {
+        e.preventDefault();
+        if (!ui.searchVisible) emit('ai-news:toggle-search');
+        window.setTimeout(() => searchInputRef.current?.focus(), 45);
+        return;
+      }
+      if (lower === 'h') {
+        e.preventDefault();
+        emit('ai-news:toggle-help');
+        return;
+      }
+      if (lower === 'm') {
+        e.preventDefault();
+        emit('ai-news:toggle-menu');
+        return;
+      }
+      if (lower === 'c') {
+        e.preventDefault();
+        emit('ai-news:toggle-controls');
+        return;
+      }
+      if (lower === 'g') {
+        e.preventDefault();
+        emit('ai-news:toggle-all-column-controls');
+        return;
+      }
+      if (lower === 's') {
+        e.preventDefault();
+        emit('ai-news:toggle-search');
+        return;
+      }
+      if (lower === 'a') {
+        e.preventDefault();
+        emit('ai-news:toggle-add-stream');
+        return;
+      }
+      if (lower === 't') {
+        e.preventDefault();
+        emit('ai-news:cycle-theme');
+        return;
+      }
+      if (lower === 'v') {
+        e.preventDefault();
+        emit('ai-news:cycle-vibe');
+      }
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+    };
+  }, [ui.searchVisible]);
+
   const emit = (type: string, detail?: object) => {
     window.dispatchEvent(new CustomEvent(type, { detail }));
   };
