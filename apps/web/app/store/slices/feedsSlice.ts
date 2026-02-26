@@ -44,6 +44,12 @@ const feedsSlice = createSlice({
       const current = state.controlsOpenByUrl[feedUrl];
       state.controlsOpenByUrl[feedUrl] = typeof current === 'boolean' ? !current : false;
     },
+    setAllFeedControlsOpen(state, action: PayloadAction<boolean>) {
+      const open = !!action.payload;
+      state.feeds.forEach(f => {
+        state.controlsOpenByUrl[f.url] = open;
+      });
+    },
     removeFeedLocally(state, action: PayloadAction<string>) {
       const feedUrl = action.payload;
       state.feeds = state.feeds.filter(f => f.url !== feedUrl);
@@ -89,6 +95,7 @@ export const {
   setFeeds,
   togglePinned,
   toggleFeedControls,
+  setAllFeedControlsOpen,
   removeFeedLocally,
   setFeedSummarySetting,
   setFeedResearchSetting,

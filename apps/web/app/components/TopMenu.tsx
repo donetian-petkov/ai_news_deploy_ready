@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect } from 'react';
-import { Box, Button, Chip, Stack, Typography } from '@mui/material';
+import { useEffect, useRef, useState } from 'react';
+import { Alert, Box, Button, Chip, FormControl, MenuItem, Select, Stack, TextField, Typography } from '@mui/material';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { setLanguage, setTopUiState } from '../store/slices/uiSlice';
 
@@ -43,6 +43,15 @@ export default function TopMenu() {
   const ui = useAppSelector(s => s.ui);
   const lang = ui.language;
   const bg = lang === 'bg';
+  const [searchDraft, setSearchDraft] = useState('');
+  const [feedType, setFeedType] = useState<'rss' | 'reddit' | 'youtube'>('rss');
+  const [feedUrl, setFeedUrl] = useState('');
+  const [feedLabel, setFeedLabel] = useState('');
+  const [feedInterval, setFeedInterval] = useState('120');
+  const [addStatus, setAddStatus] = useState<{ kind: 'info' | 'success' | 'error'; message: string } | null>(null);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
+  const addStreamInputRef = useRef<HTMLInputElement | null>(null);
+
   const labels = {
     title: bg ? 'Поток Новини На Живо' : 'Live News Stream',
     subHint: bg ? 'Влачи колони · ? Помощ · M Меню · / Търсене' : 'Drag columns · ? Help · M Menu · / Search',
@@ -65,11 +74,20 @@ export default function TopMenu() {
     cyberwitch: bg ? 'Кибер вещица' : 'Cyber Witch',
     fantasy: bg ? 'Фентъзи' : 'Fantasy',
     scifi: bg ? 'Научна фантастика' : 'Sci-Fi',
-    defaultVibe: bg ? 'По подразбиране' : 'Default'
+    defaultVibe: bg ? 'По подразбиране' : 'Default',
+    clear: bg ? 'Изчисти' : 'Clear',
+    add: bg ? 'Добави поток' : 'Add Stream',
+    adding: bg ? 'Добавяне...' : 'Adding...',
+    enterValue: bg ? 'Въведи стойност' : 'Enter a value',
+    searchPlaceholder: bg ? 'Търси (заглавие + резюме + проучване)...' : 'Search (title + summary + research)...',
+    addUrlPlaceholder: bg ? 'Постави RSS URL, subreddit или YouTube канал...' : 'Paste RSS URL, subreddit, or YouTube channel URL...',
+    addLabelPlaceholder: bg ? 'Етикет (по избор)' : 'Optional label',
+    intervalSuffix: bg ? 'с' : 's'
   } as const;
 
   useEffect(() => {
     window.__AI_NEWS_USE_REACT_TOPMENU = true;
+    document.body.dataset.reactTopQuickPanels = '1';
 
     const onTopState = (event: Event) => {
       const detail = (event as CustomEvent<TopStateDetail>).detail || {};
@@ -91,11 +109,73 @@ export default function TopMenu() {
 
     return () => {
       window.removeEventListener('ai-news:top-state', onTopState as EventListener);
+      delete document.body.dataset.reactTopQuickPanels;
     };
   }, [dispatch]);
 
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      emit('ai-news:set-search-query', { query: searchDraft });
+    }, 90);
+    return () => window.clearTimeout(timer);
+  }, [searchDraft]);
+
+  useEffect(() => {
+    const onAddStatus = (event: Event) => {
+      const detail = (event as CustomEvent<{ message?: string; type?: string }>).detail || {};
+      const message = typeof detail.message === 'string' ? detail.message.trim() : '';
+      if (!message) return;
+      const kind = detail.type === 'error'
+        ? 'error'
+        : detail.type === 'success'
+          ? 'success'
+          : 'info';
+      setAddStatus({ kind, message });
+      if (kind === 'success') {
+        setFeedUrl('');
+        setFeedLabel('');
+      }
+    };
+
+    window.addEventListener('ai-news:add-feed-status', onAddStatus as EventListener);
+    return () => {
+      window.removeEventListener('ai-news:add-feed-status', onAddStatus as EventListener);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (ui.searchVisible) {
+      window.setTimeout(() => searchInputRef.current?.focus(), 30);
+    }
+  }, [ui.searchVisible]);
+
+  useEffect(() => {
+    if (ui.addStreamVisible) {
+      window.setTimeout(() => addStreamInputRef.current?.focus(), 30);
+    }
+  }, [ui.addStreamVisible]);
+
   const emit = (type: string, detail?: object) => {
     window.dispatchEvent(new CustomEvent(type, { detail }));
+  };
+
+  const clearSearch = () => {
+    setSearchDraft('');
+    emit('ai-news:clear-search');
+  };
+
+  const addStream = () => {
+    if (!feedUrl.trim()) {
+      setAddStatus({ kind: 'error', message: labels.enterValue });
+      return;
+    }
+    setAddStatus({ kind: 'info', message: labels.adding });
+    emit('ai-news:add-feed', {
+      kind: feedType,
+      url: feedUrl.trim(),
+      label: feedLabel.trim(),
+      intervalSec: Number(feedInterval) || 120
+    });
   };
 
   const searchLabel = ui.searchVisible ? labels.hideSearch : labels.search;
@@ -145,6 +225,71 @@ export default function TopMenu() {
             <Button id="menuToggle" className="btn ghost" size="small" variant="outlined" type="button" onClick={() => emit('ai-news:toggle-menu')}>{menuLabel}</Button>
           </Stack>
         </div>
+
+        {ui.searchVisible ? (
+          <Box sx={{ mt: 1.1, mb: 0.9 }}>
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+              <TextField
+                inputRef={searchInputRef}
+                size="small"
+                fullWidth
+                value={searchDraft}
+                onChange={e => setSearchDraft(e.target.value)}
+                placeholder={labels.searchPlaceholder}
+              />
+              <Button variant="outlined" size="small" onClick={clearSearch}>
+                {labels.clear}
+              </Button>
+            </Stack>
+          </Box>
+        ) : null}
+
+        {ui.addStreamVisible ? (
+          <Box sx={{ mt: 0.3, mb: 1 }}>
+            <Stack direction={{ xs: 'column', md: 'row' }} spacing={1}>
+              <FormControl size="small" sx={{ minWidth: 150 }}>
+                <Select value={feedType} onChange={e => setFeedType(e.target.value as 'rss' | 'reddit' | 'youtube')}>
+                  <MenuItem value="rss">RSS</MenuItem>
+                  <MenuItem value="reddit">Reddit (subreddit)</MenuItem>
+                  <MenuItem value="youtube">YouTube (channel)</MenuItem>
+                </Select>
+              </FormControl>
+              <TextField
+                inputRef={addStreamInputRef}
+                size="small"
+                fullWidth
+                value={feedUrl}
+                onChange={e => setFeedUrl(e.target.value)}
+                placeholder={labels.addUrlPlaceholder}
+              />
+              <TextField
+                size="small"
+                value={feedLabel}
+                onChange={e => setFeedLabel(e.target.value)}
+                placeholder={labels.addLabelPlaceholder}
+                sx={{ minWidth: 180 }}
+              />
+              <FormControl size="small" sx={{ minWidth: 110 }}>
+                <Select value={feedInterval} onChange={e => setFeedInterval(String(e.target.value))}>
+                  <MenuItem value="45">45{labels.intervalSuffix}</MenuItem>
+                  <MenuItem value="60">60{labels.intervalSuffix}</MenuItem>
+                  <MenuItem value="90">90{labels.intervalSuffix}</MenuItem>
+                  <MenuItem value="120">120{labels.intervalSuffix}</MenuItem>
+                  <MenuItem value="180">180{labels.intervalSuffix}</MenuItem>
+                  <MenuItem value="300">300{labels.intervalSuffix}</MenuItem>
+                </Select>
+              </FormControl>
+              <Button variant="contained" size="small" onClick={addStream}>
+                {labels.add}
+              </Button>
+            </Stack>
+            {addStatus ? (
+              <Alert severity={addStatus.kind} sx={{ mt: 1, py: 0 }}>
+                {addStatus.message}
+              </Alert>
+            ) : null}
+          </Box>
+        ) : null}
 
         <div className="controls">
           <div className="controlsCompactRow controlsRow">

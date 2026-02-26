@@ -877,6 +877,21 @@
     emitTopUiState();
   }
 
+  function setAddFeedStatus(message, kind = 'info') {
+    const text = String(message || '').trim();
+    if (!text) return;
+    if (addFeedStatus) {
+      addFeedStatus.textContent = text;
+    }
+    window.dispatchEvent(new CustomEvent('ai-news:add-feed-status', {
+      detail: { message: text, type: kind }
+    }));
+    const timeout = kind === 'error' ? 3500 : 2200;
+    setTimeout(() => {
+      if (addFeedStatus) addFeedStatus.textContent = '';
+    }, timeout);
+  }
+
   function emitTopUiState() {
     window.dispatchEvent(new CustomEvent('ai-news:top-state', {
       detail: {
@@ -1150,6 +1165,46 @@
         sectionEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       }, 30);
     }
+  }
+
+  function submitAddFeed({ kind, raw, labelInput, intervalSec }) {
+    const feedKind = (kind === 'reddit' || kind === 'youtube') ? kind : 'rss';
+    const sourceRaw = String(raw || '').trim();
+    const sourceLabel = String(labelInput || '').trim();
+    const sourceInterval = Number.isFinite(Number(intervalSec)) ? Number(intervalSec) : 120;
+    const safeInterval = Math.max(45, Math.min(300, Math.floor(sourceInterval || 120)));
+
+    if (!sourceRaw) {
+      setAddFeedStatus(t('add_status_enter_value'), 'error');
+      return;
+    }
+
+    let url = sourceRaw;
+    let label = sourceLabel;
+
+    if (feedKind === 'reddit') {
+      const out = toRedditRss(sourceRaw);
+      if (!out) {
+        setAddFeedStatus(t('add_status_invalid_subreddit'), 'error');
+        return;
+      }
+      url = out.url;
+      if (!label) label = out.label;
+    } else if (feedKind === 'youtube') {
+      const out = toYoutubeRss(sourceRaw);
+      if (!out) {
+        setAddFeedStatus(t('add_status_invalid_channel'), 'error');
+        return;
+      }
+      url = out.url;
+      if (!label) label = out.label;
+    } else if (!/^https?:\/\//i.test(url)) {
+      setAddFeedStatus(t('add_status_invalid_url'), 'error');
+      return;
+    }
+
+    setAddFeedStatus(t('adding'), 'info');
+    send({ type: 'add_feed', url, label: label || undefined, kind: feedKind, intervalSec: safeInterval });
   }
 
   function selectedText(el) {
@@ -2678,17 +2733,11 @@
       if (m.type === 'news') handleNews(m);
 
       if (m.type === 'ok') {
-        if (addFeedStatus) {
-          addFeedStatus.textContent = m.message || 'OK';
-          setTimeout(() => (addFeedStatus.textContent = ''), 2200);
-        }
+        setAddFeedStatus(m.message || 'OK', 'success');
       }
 
       if (m.type === 'error') {
-        if (addFeedStatus) {
-          addFeedStatus.textContent = m.message || 'Error';
-          setTimeout(() => (addFeedStatus.textContent = ''), 3500);
-        }
+        setAddFeedStatus(m.message || 'Error', 'error');
       }
     };
   }
@@ -2814,47 +2863,12 @@
 
   if (addFeedBtn) {
     addFeedBtn.addEventListener('click', () => {
-      const kind = String(feedTypeEl?.value || 'rss');
-      const raw = String(feedUrlEl?.value || '').trim();
-      const labelInput = String(feedLabelEl?.value || '').trim();
-      const intervalSec = parseInt(String(feedIntervalEl?.value || '120'), 10) || 120;
-
-      if (!raw) {
-        if (addFeedStatus) {
-          addFeedStatus.textContent = t('add_status_enter_value');
-          setTimeout(() => (addFeedStatus.textContent = ''), 2000);
-        }
-        return;
-      }
-
-      let url = raw;
-      let label = labelInput;
-
-      if (kind === 'reddit') {
-        const out = toRedditRss(raw);
-        if (!out) {
-          if (addFeedStatus) addFeedStatus.textContent = t('add_status_invalid_subreddit');
-          return;
-        }
-        url = out.url;
-        if (!label) label = out.label;
-      } else if (kind === 'youtube') {
-        const out = toYoutubeRss(raw);
-        if (!out) {
-          if (addFeedStatus) addFeedStatus.textContent = t('add_status_invalid_channel');
-          return;
-        }
-        url = out.url;
-        if (!label) label = out.label;
-      } else {
-        if (!/^https?:\/\//i.test(url)) {
-          if (addFeedStatus) addFeedStatus.textContent = t('add_status_invalid_url');
-          return;
-        }
-      }
-
-      if (addFeedStatus) addFeedStatus.textContent = t('adding');
-      send({ type: 'add_feed', url, label: label || undefined, kind, intervalSec });
+      submitAddFeed({
+        kind: String(feedTypeEl?.value || 'rss'),
+        raw: String(feedUrlEl?.value || ''),
+        labelInput: String(feedLabelEl?.value || ''),
+        intervalSec: parseInt(String(feedIntervalEl?.value || '120'), 10) || 120
+      });
     });
   }
 
@@ -2907,6 +2921,25 @@
   window.addEventListener('ai-news:toggle-menu', toggleMenu);
   window.addEventListener('ai-news:toggle-search', () => toggleQuickSection(searchSectionEl, searchInput));
   window.addEventListener('ai-news:toggle-add-stream', () => toggleQuickSection(addStreamSectionEl, feedUrlEl));
+  window.addEventListener('ai-news:set-search-query', e => {
+    const detail = (e && typeof e === 'object' && 'detail' in e) ? e.detail : null;
+    const q = detail && typeof detail.query === 'string' ? detail.query : '';
+    if (searchInput) searchInput.value = q;
+    applySearch(q);
+  });
+  window.addEventListener('ai-news:clear-search', () => {
+    if (searchInput) searchInput.value = '';
+    applySearch('');
+  });
+  window.addEventListener('ai-news:add-feed', e => {
+    const detail = (e && typeof e === 'object' && 'detail' in e) ? e.detail : null;
+    submitAddFeed({
+      kind: detail && typeof detail.kind === 'string' ? detail.kind : 'rss',
+      raw: detail && typeof detail.url === 'string' ? detail.url : '',
+      labelInput: detail && typeof detail.label === 'string' ? detail.label : '',
+      intervalSec: detail && Number.isFinite(Number(detail.intervalSec)) ? Number(detail.intervalSec) : 120
+    });
+  });
   window.addEventListener('ai-news:set-vibe', e => {
     const detail = (e && typeof e === 'object' && 'detail' in e) ? e.detail : null;
     const next = detail && typeof detail.vibe === 'string' ? detail.vibe : '';

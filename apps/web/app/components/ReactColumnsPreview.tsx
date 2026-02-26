@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import ManageSearchIcon from '@mui/icons-material/ManageSearch';
@@ -30,6 +30,7 @@ import { MAX_COLUMNS } from '../store/constants';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import {
   removeFeedLocally,
+  setAllFeedControlsOpen,
   setFeedBudgetSetting,
   setFeedColumnSettings,
   setFeedResearchSetting,
@@ -93,6 +94,7 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
   const askByItem = useAppSelector(s => s.news.askByItem);
   const pendingTimeoutsRef = useRef<Record<string, number>>({});
   const researchTimeoutsRef = useRef<Record<string, number>>({});
+  const [hideAllResearch, setHideAllResearch] = useState(false);
 
   useEffect(() => {
     startWsConnection(dispatch, wsUrl);
@@ -111,6 +113,29 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
       researchTimeoutsRef.current = {};
     };
   }, [dispatch, wsUrl]);
+
+  useEffect(() => {
+    const onToggleAllColumnControls = () => {
+      const urls = feeds.map(f => f.url);
+      if (!urls.length) return;
+      const allOpen = urls.every(url => controlsOpenByUrl[url] !== false);
+      dispatch(setAllFeedControlsOpen(!allOpen));
+    };
+    const onHideAllResearch = () => {
+      setHideAllResearch(true);
+    };
+    const onSetVibe = () => {
+      // keep React preview in sync with top controls interactions
+    };
+    window.addEventListener('ai-news:toggle-all-column-controls', onToggleAllColumnControls);
+    window.addEventListener('ai-news:hide-all-research', onHideAllResearch);
+    window.addEventListener('ai-news:set-vibe', onSetVibe);
+    return () => {
+      window.removeEventListener('ai-news:toggle-all-column-controls', onToggleAllColumnControls);
+      window.removeEventListener('ai-news:hide-all-research', onHideAllResearch);
+      window.removeEventListener('ai-news:set-vibe', onSetVibe);
+    };
+  }, [dispatch, feeds, controlsOpenByUrl]);
 
   const previewFeeds = useMemo(() => {
     if (feeds.length) {
@@ -495,7 +520,7 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
                             {it.summary}
                           </Typography>
                         ) : null}
-                        {it.research ? (
+                        {it.research && !hideAllResearch ? (
                           <Box sx={{ mt: 1 }}>
                             {extractConfidence(it.research) ? (
                               <Typography variant="caption" sx={{ color: 'rgba(212,220,236,0.75)', display: 'block', mb: 0.35 }}>
