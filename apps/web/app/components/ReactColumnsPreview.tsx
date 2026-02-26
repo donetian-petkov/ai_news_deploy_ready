@@ -2,9 +2,13 @@
 
 import { useEffect, useMemo, useRef } from 'react';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import ManageSearchIcon from '@mui/icons-material/ManageSearch';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
+import PushPinIcon from '@mui/icons-material/PushPin';
+import PushPinOutlinedIcon from '@mui/icons-material/PushPinOutlined';
 import SmartToyIcon from '@mui/icons-material/SmartToy';
+import TuneIcon from '@mui/icons-material/Tune';
 import {
   Alert,
   Box,
@@ -19,6 +23,7 @@ import {
 } from '@mui/material';
 import { MAX_COLUMNS } from '../store/constants';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
+import { removeFeedLocally, toggleFeedControls, togglePinned } from '../store/slices/feedsSlice';
 import {
   clearResearchForItem,
   clearResearchPending,
@@ -67,6 +72,8 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
   const connected = useAppSelector(s => s.connection.connected);
   const status = useAppSelector(s => s.connection.status);
   const feeds = useAppSelector(s => s.feeds.feeds);
+  const pinnedByUrl = useAppSelector(s => s.feeds.pinnedByUrl);
+  const controlsOpenByUrl = useAppSelector(s => s.feeds.controlsOpenByUrl);
   const itemsByFeed = useAppSelector(s => s.news.itemsByFeed);
   const summaryPendingById = useAppSelector(s => s.news.summaryPendingById);
   const researchPendingById = useAppSelector(s => s.news.researchPendingById);
@@ -93,7 +100,16 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
   }, [dispatch, wsUrl]);
 
   const previewFeeds = useMemo(() => {
-    if (feeds.length) return feeds.slice(0, MAX_COLUMNS);
+    if (feeds.length) {
+      const list = [...feeds];
+      list.sort((a, b) => {
+        const aPinned = !!pinnedByUrl[a.url];
+        const bPinned = !!pinnedByUrl[b.url];
+        if (aPinned !== bPinned) return aPinned ? -1 : 1;
+        return 0;
+      });
+      return list.slice(0, MAX_COLUMNS);
+    }
     const fallback = Object.keys(itemsByFeed).slice(0, MAX_COLUMNS).map(url => ({
       url,
       label: url,
@@ -101,7 +117,7 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
       intervalSec: 120
     }));
     return fallback;
-  }, [feeds, itemsByFeed]);
+  }, [feeds, itemsByFeed, pinnedByUrl]);
 
   const requestSummary = (it: NewsItem) => {
     if (!connected) return;
@@ -148,6 +164,12 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
   };
 
   const askKey = (it: NewsItem) => `${it.feedUrl}::${it.id}`;
+
+  const removeFeed = (feedUrl: string) => {
+    if (!connected) return;
+    const ok = sendWsMessage({ type: 'remove_feed', feedUrl });
+    if (ok) dispatch(removeFeedLocally(feedUrl));
+  };
 
   const requestAsk = (it: NewsItem) => {
     if (!connected) return;
@@ -202,17 +224,47 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
       >
         {previewFeeds.map((feed: FeedInfo) => {
           const items = itemsByFeed[feed.url] || [];
+          const pinned = !!pinnedByUrl[feed.url];
+          const controlsOpen = typeof controlsOpenByUrl[feed.url] === 'boolean' ? !!controlsOpenByUrl[feed.url] : true;
           return (
             <Card key={feed.url} variant="outlined" sx={{ background: 'rgba(15, 22, 38, 0.8)', borderColor: 'rgba(97, 123, 161, 0.42)' }}>
               <CardContent sx={{ pb: '12px !important' }}>
                 <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.25 }}>
-                  <Typography variant="h6" sx={{ fontSize: 18, fontWeight: 800, lineHeight: 1.2 }}>
+                  <Typography variant="h6" sx={{ fontSize: 18, fontWeight: 800, lineHeight: 1.2, pr: 1 }}>
                     {feed.label}
                   </Typography>
-                  <Stack direction="row" spacing={1}>
+                  <Stack direction="row" spacing={1} alignItems="center">
                     <Chip size="small" label={items.length} />
                     <Chip size="small" variant="outlined" label={feed.kind} />
                   </Stack>
+                </Stack>
+                <Stack direction="row" spacing={1} sx={{ mb: 1.1 }} flexWrap="wrap">
+                  <Button
+                    size="small"
+                    variant={pinned ? 'contained' : 'outlined'}
+                    startIcon={pinned ? <PushPinIcon /> : <PushPinOutlinedIcon />}
+                    onClick={() => dispatch(togglePinned(feed.url))}
+                  >
+                    {pinned ? 'Pinned' : 'Pin'}
+                  </Button>
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    color="error"
+                    startIcon={<DeleteOutlineIcon />}
+                    onClick={() => removeFeed(feed.url)}
+                    disabled={!connected}
+                  >
+                    Remove
+                  </Button>
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    startIcon={<TuneIcon />}
+                    onClick={() => dispatch(toggleFeedControls(feed.url))}
+                  >
+                    {controlsOpen ? 'Hide controls' : 'Show controls'}
+                  </Button>
                 </Stack>
 
                 <Stack spacing={1.2}>
@@ -267,35 +319,37 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
                           <OpenInNewIcon sx={{ fontSize: 14 }} />
                         </MuiLink>
 
-                        <Stack direction="row" spacing={1} sx={{ mb: it.summary ? 1 : 0 }}>
-                          <Button
-                            size="small"
-                            variant={summaryPendingById[it.id] ? 'contained' : 'outlined'}
-                            startIcon={<AutoAwesomeIcon />}
-                            onClick={() => requestSummary(it)}
-                            disabled={!connected || !!summaryPendingById[it.id]}
-                          >
-                            {summaryPendingById[it.id] ? 'Generating Summary...' : 'Summary'}
-                          </Button>
-                          <Button
-                            size="small"
-                            variant={researchPendingById[it.id] ? 'contained' : 'outlined'}
-                            startIcon={<ManageSearchIcon />}
-                            onClick={() => requestResearch(it)}
-                            disabled={!connected || !!researchPendingById[it.id]}
-                          >
-                            {researchPendingById[it.id] ? 'Researching...' : 'Research'}
-                          </Button>
-                          <Button
-                            size="small"
-                            variant={askState.open ? 'contained' : 'outlined'}
-                            startIcon={<SmartToyIcon />}
-                            onClick={() => dispatch(toggleAskOpen({ id: it.id, feedUrl: it.feedUrl }))}
-                            disabled={!connected}
-                          >
-                            Ask Agent
-                          </Button>
-                        </Stack>
+                        {controlsOpen ? (
+                          <Stack direction="row" spacing={1} sx={{ mb: it.summary ? 1 : 0 }} flexWrap="wrap">
+                            <Button
+                              size="small"
+                              variant={summaryPendingById[it.id] ? 'contained' : 'outlined'}
+                              startIcon={<AutoAwesomeIcon />}
+                              onClick={() => requestSummary(it)}
+                              disabled={!connected || !!summaryPendingById[it.id]}
+                            >
+                              {summaryPendingById[it.id] ? 'Generating Summary...' : 'Summary'}
+                            </Button>
+                            <Button
+                              size="small"
+                              variant={researchPendingById[it.id] ? 'contained' : 'outlined'}
+                              startIcon={<ManageSearchIcon />}
+                              onClick={() => requestResearch(it)}
+                              disabled={!connected || !!researchPendingById[it.id]}
+                            >
+                              {researchPendingById[it.id] ? 'Researching...' : 'Research'}
+                            </Button>
+                            <Button
+                              size="small"
+                              variant={askState.open ? 'contained' : 'outlined'}
+                              startIcon={<SmartToyIcon />}
+                              onClick={() => dispatch(toggleAskOpen({ id: it.id, feedUrl: it.feedUrl }))}
+                              disabled={!connected}
+                            >
+                              Ask Agent
+                            </Button>
+                          </Stack>
+                        ) : null}
 
                         {it.summary ? (
                           <Typography variant="body2" sx={{ color: 'rgba(226,234,250,0.95)', whiteSpace: 'pre-wrap' }}>
