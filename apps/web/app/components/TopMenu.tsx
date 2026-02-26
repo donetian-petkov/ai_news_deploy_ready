@@ -16,6 +16,39 @@ type TopStateDetail = {
   language?: 'en' | 'bg';
 };
 
+type ControlsState = {
+  notifyEnabled: boolean;
+  notifyMode: 'matched' | 'matched_pinned' | 'pinned' | 'all';
+  aiAvailable: boolean;
+  aiEnabled: boolean;
+  summaryLang: 'bilingual' | 'bg' | 'en';
+  researchLang: 'bg' | 'en';
+  allBudget: 'mixed' | 'low' | 'standard' | 'high';
+  font: 'system' | 'manrope' | 'grotesk' | 'sora' | 'plex' | 'serif' | 'mono';
+  fontSize: 'sm' | 'md' | 'lg' | 'xl';
+  scheme: 'classic' | 'vivid' | 'sunset' | 'neon' | 'ocean' | 'forest';
+  buttonMode: 'icons' | 'text';
+  interfaceLang: 'en' | 'bg';
+  vibe: VibeValue;
+};
+
+type ControlsStateDetail = Partial<ControlsState>;
+type LegacyControlsStateDetail = {
+  notifyEnabled?: boolean;
+  notifyMode?: 'matched' | 'matched_pinned' | 'pinned' | 'all';
+  aiAvailable?: boolean;
+  aiEnabled?: boolean;
+  summaryLang?: 'bilingual' | 'bg' | 'en';
+  researchLang?: 'bg' | 'en';
+  allBudget?: 'mixed' | 'low' | 'standard' | 'high';
+  font?: 'system' | 'manrope' | 'grotesk' | 'sora' | 'plex' | 'serif' | 'mono';
+  fontSize?: 'sm' | 'md' | 'lg' | 'xl';
+  scheme?: 'classic' | 'vivid' | 'sunset' | 'neon' | 'ocean' | 'forest';
+  buttonMode?: 'icons' | 'text';
+  interfaceLang?: 'en' | 'bg';
+  vibe?: VibeValue;
+};
+
 const VIBES: VibeValue[] = ['default', 'anime', 'arcade', 'cinema', 'newspaper', 'cyberwitch', 'fantasy', 'scifi'];
 
 declare global {
@@ -49,6 +82,21 @@ export default function TopMenu() {
   const [feedLabel, setFeedLabel] = useState('');
   const [feedInterval, setFeedInterval] = useState('120');
   const [addStatus, setAddStatus] = useState<{ kind: 'info' | 'success' | 'error'; message: string } | null>(null);
+  const [controlsState, setControlsState] = useState<ControlsState>({
+    notifyEnabled: false,
+    notifyMode: 'matched',
+    aiAvailable: false,
+    aiEnabled: false,
+    summaryLang: 'bilingual',
+    researchLang: 'bg',
+    allBudget: 'standard',
+    font: 'system',
+    fontSize: 'md',
+    scheme: 'classic',
+    buttonMode: 'icons',
+    interfaceLang: 'en',
+    vibe: 'default'
+  });
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const addStreamInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -99,16 +147,42 @@ export default function TopMenu() {
       if (typeof detail.allColumnControlsHidden === 'boolean') next.allColumnControlsHidden = detail.allColumnControlsHidden;
       if (typeof detail.vibe === 'string' && VIBES.includes(detail.vibe)) next.vibe = detail.vibe;
       dispatch(setTopUiState(next));
+      if (next.vibe) {
+        setControlsState(prev => ({ ...prev, vibe: next.vibe! }));
+      }
       if (detail.language === 'en' || detail.language === 'bg') {
         dispatch(setLanguage(detail.language));
+        setControlsState(prev => ({ ...prev, interfaceLang: detail.language! }));
       }
     };
 
+    const onControlsState = (event: Event) => {
+      const detail = (event as CustomEvent<LegacyControlsStateDetail>).detail || {};
+      setControlsState(prev => ({
+        notifyEnabled: typeof detail.notifyEnabled === 'boolean' ? detail.notifyEnabled : prev.notifyEnabled,
+        notifyMode: detail.notifyMode || prev.notifyMode,
+        aiAvailable: typeof detail.aiAvailable === 'boolean' ? detail.aiAvailable : prev.aiAvailable,
+        aiEnabled: typeof detail.aiEnabled === 'boolean' ? detail.aiEnabled : prev.aiEnabled,
+        summaryLang: detail.summaryLang || prev.summaryLang,
+        researchLang: detail.researchLang || prev.researchLang,
+        allBudget: detail.allBudget || prev.allBudget,
+        font: detail.font || prev.font,
+        fontSize: detail.fontSize || prev.fontSize,
+        scheme: detail.scheme || prev.scheme,
+        buttonMode: detail.buttonMode || prev.buttonMode,
+        interfaceLang: detail.interfaceLang || prev.interfaceLang,
+        vibe: detail.vibe || prev.vibe
+      }));
+    };
+
     window.addEventListener('ai-news:top-state', onTopState as EventListener);
+    window.addEventListener('ai-news:controls-state', onControlsState as EventListener);
     window.dispatchEvent(new CustomEvent('ai-news:request-top-state'));
+    window.dispatchEvent(new CustomEvent('ai-news:request-controls-state'));
 
     return () => {
       window.removeEventListener('ai-news:top-state', onTopState as EventListener);
+      window.removeEventListener('ai-news:controls-state', onControlsState as EventListener);
       delete document.body.dataset.reactTopQuickPanels;
     };
   }, [dispatch]);
@@ -285,7 +359,11 @@ export default function TopMenu() {
                 id="quickVibeSelect"
                 className="select topQuickSelect"
                 value={ui.vibe}
-                onChange={e => emit('ai-news:set-vibe', { vibe: e.target.value })}
+                onChange={e => {
+                  const nextVibe = e.target.value as VibeValue;
+                  setControlsState(prev => ({ ...prev, vibe: nextVibe }));
+                  emit('ai-news:set-vibe', { vibe: nextVibe });
+                }}
               >
                 <option value="default">{labels.defaultVibe}</option>
                 <option value="anime">{labels.anime}</option>
@@ -386,7 +464,13 @@ export default function TopMenu() {
               </label>
               <button id="deleteAgeAllBtn" className="btn danger" type="button">Delete old (all columns)</button>
               <label className="checkbox" title="Embeddings matching, AI dedupe, summaries, research">
-                <input id="aiEnabled" type="checkbox" />
+                <input
+                  id="aiEnabled"
+                  type="checkbox"
+                  checked={controlsState.aiEnabled}
+                  disabled={!controlsState.aiAvailable}
+                  onChange={e => setControlsState(prev => ({ ...prev, aiEnabled: e.target.checked }))}
+                />
                 <span id="aiEnabledLabel">AI Enabled</span>
               </label>
               <button id="helpBtn" className="btn" type="button">Help</button>
@@ -401,12 +485,22 @@ export default function TopMenu() {
               <summary id="notificationsSummary">Notifications</summary>
               <div className="controlGroup">
                 <label className="checkbox">
-                  <input id="notifyEnabled" type="checkbox" />
+                  <input
+                    id="notifyEnabled"
+                    type="checkbox"
+                    checked={controlsState.notifyEnabled}
+                    onChange={e => setControlsState(prev => ({ ...prev, notifyEnabled: e.target.checked }))}
+                  />
                   <span id="notifyEnabledLabel">Enable notifications</span>
                 </label>
                 <label className="checkbox">
                   <span id="notifyPrefix">Notify:</span>
-                  <select id="notifyMode" className="select" defaultValue="matched">
+                  <select
+                    id="notifyMode"
+                    className="select"
+                    value={controlsState.notifyMode}
+                    onChange={e => setControlsState(prev => ({ ...prev, notifyMode: e.target.value as ControlsState['notifyMode'] }))}
+                  >
                     <option value="matched">Only matched</option>
                     <option value="matched_pinned">Matched + pinned columns</option>
                     <option value="pinned">Only pinned columns</option>
@@ -421,7 +515,13 @@ export default function TopMenu() {
               <div className="controlGroup">
                 <label className="checkbox">
                   <span id="summaryLangPrefix">Summary:</span>
-                  <select id="summaryLang" className="select" defaultValue="bilingual">
+                  <select
+                    id="summaryLang"
+                    className="select"
+                    value={controlsState.summaryLang}
+                    disabled={!controlsState.aiAvailable}
+                    onChange={e => setControlsState(prev => ({ ...prev, summaryLang: e.target.value as ControlsState['summaryLang'] }))}
+                  >
                     <option value="bilingual">BG / EN</option>
                     <option value="bg">BG</option>
                     <option value="en">EN</option>
@@ -429,14 +529,25 @@ export default function TopMenu() {
                 </label>
                 <label className="checkbox">
                   <span id="researchLangPrefix">Research:</span>
-                  <select id="researchLang" className="select" defaultValue="bg">
+                  <select
+                    id="researchLang"
+                    className="select"
+                    value={controlsState.researchLang}
+                    disabled={!controlsState.aiAvailable}
+                    onChange={e => setControlsState(prev => ({ ...prev, researchLang: e.target.value as ControlsState['researchLang'] }))}
+                  >
                     <option value="bg">BG</option>
                     <option value="en">EN</option>
                   </select>
                 </label>
                 <label className="checkbox" title="Apply one budget to all columns">
                   <span id="allBudgetPrefix">AI Budget (all):</span>
-                  <select id="allBudgetSelect" className="select" defaultValue="standard">
+                  <select
+                    id="allBudgetSelect"
+                    className="select"
+                    value={controlsState.allBudget}
+                    onChange={e => setControlsState(prev => ({ ...prev, allBudget: e.target.value as ControlsState['allBudget'] }))}
+                  >
                     <option value="mixed">Mixed</option>
                     <option value="low">Low</option>
                     <option value="standard">Standard</option>
@@ -451,7 +562,12 @@ export default function TopMenu() {
               <div className="controlGroup" id="appearanceGroup">
                 <label className="checkbox" title="Change UI font">
                   <span id="fontPrefix">Font:</span>
-                  <select id="fontSelect" className="select" defaultValue="system">
+                  <select
+                    id="fontSelect"
+                    className="select"
+                    value={controlsState.font}
+                    onChange={e => setControlsState(prev => ({ ...prev, font: e.target.value as ControlsState['font'] }))}
+                  >
                     <option value="system">System</option>
                     <option value="manrope">Manrope</option>
                     <option value="grotesk">Space Grotesk</option>
@@ -463,7 +579,12 @@ export default function TopMenu() {
                 </label>
                 <label className="checkbox" title="Scale text size">
                   <span id="fontSizePrefix">Font size:</span>
-                  <select id="fontSizeSelect" className="select" defaultValue="md">
+                  <select
+                    id="fontSizeSelect"
+                    className="select"
+                    value={controlsState.fontSize}
+                    onChange={e => setControlsState(prev => ({ ...prev, fontSize: e.target.value as ControlsState['fontSize'] }))}
+                  >
                     <option value="sm">Small</option>
                     <option value="md">Medium</option>
                     <option value="lg">Large</option>
@@ -472,7 +593,12 @@ export default function TopMenu() {
                 </label>
                 <label className="checkbox" title="Column accent scheme">
                   <span id="schemePrefix">Scheme:</span>
-                  <select id="schemeSelect" className="select" defaultValue="classic">
+                  <select
+                    id="schemeSelect"
+                    className="select"
+                    value={controlsState.scheme}
+                    onChange={e => setControlsState(prev => ({ ...prev, scheme: e.target.value as ControlsState['scheme'] }))}
+                  >
                     <option value="classic">Classic</option>
                     <option value="vivid">Vivid</option>
                     <option value="sunset">Sunset</option>
@@ -483,14 +609,24 @@ export default function TopMenu() {
                 </label>
                 <label className="checkbox" title="Item buttons look">
                   <span id="buttonsPrefix">Buttons:</span>
-                  <select id="btnModeSelect" className="select" defaultValue="icons">
+                  <select
+                    id="btnModeSelect"
+                    className="select"
+                    value={controlsState.buttonMode}
+                    onChange={e => setControlsState(prev => ({ ...prev, buttonMode: e.target.value as ControlsState['buttonMode'] }))}
+                  >
                     <option value="icons">Icons</option>
                     <option value="text">Text</option>
                   </select>
                 </label>
                 <label className="checkbox" title="Visual vibe preset">
                   <span id="vibePrefix">Vibe:</span>
-                  <select id="vibeSelect" className="select" defaultValue="default">
+                  <select
+                    id="vibeSelect"
+                    className="select"
+                    value={controlsState.vibe}
+                    onChange={e => setControlsState(prev => ({ ...prev, vibe: e.target.value as VibeValue }))}
+                  >
                     <option value="default">Default</option>
                     <option value="anime">Anime Pop</option>
                     <option value="arcade">Video Game</option>
@@ -503,7 +639,16 @@ export default function TopMenu() {
                 </label>
                 <label className="checkbox" title="Interface language">
                   <span id="interfaceLangPrefix">Interface:</span>
-                  <select id="interfaceLang" className="select" defaultValue="en">
+                  <select
+                    id="interfaceLang"
+                    className="select"
+                    value={controlsState.interfaceLang}
+                    onChange={e => {
+                      const nextLang = e.target.value as 'en' | 'bg';
+                      setControlsState(prev => ({ ...prev, interfaceLang: nextLang }));
+                      dispatch(setLanguage(nextLang));
+                    }}
+                  >
                     <option value="en">EN</option>
                     <option value="bg">BG</option>
                   </select>

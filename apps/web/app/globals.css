@@ -36,6 +36,11 @@ body[data-react-top-quick-panels='1'].controls-collapsed .controls.quick-section
   display: none !important;
 }
 
+body[data-react-top-quick-panels='1'] .controls > #searchSection,
+body[data-react-top-quick-panels='1'] .controls > #addStreamSection {
+  display: none !important;
+}
+
 .reactPreviewWrap {
   margin-top: 8px;
   margin-bottom: 4px;

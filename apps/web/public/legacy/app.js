@@ -806,6 +806,7 @@
     document.body.dataset.font = next;
     lsSet(FONT_KEY, next);
     if (fontSelect) fontSelect.value = next;
+    emitControlsState();
     renderHelp();
   }
 
@@ -815,6 +816,7 @@
     document.body.dataset.fontSize = next;
     lsSet(FONT_SIZE_KEY, next);
     if (fontSizeSelect) fontSizeSelect.value = next;
+    emitControlsState();
     renderHelp();
   }
 
@@ -826,6 +828,7 @@
     if (schemeSelect) schemeSelect.value = next;
     applyColumnPalette(document.body.dataset.vibe || 'default', next);
     applyColumnThemes();
+    emitControlsState();
     renderHelp();
   }
 
@@ -836,6 +839,7 @@
     lsSet(BTN_MODE_KEY, next);
     if (btnModeSelect) btnModeSelect.value = next;
     renderAllFeeds();
+    emitControlsState();
     renderHelp();
   }
 
@@ -850,6 +854,7 @@
     // Re-render visible items so vibe-specific icon buttons update immediately.
     renderAllFeeds();
     emitTopUiState();
+    emitControlsState();
     renderHelp();
   }
 
@@ -902,6 +907,30 @@
         allColumnControlsHidden: !areAllColumnMenusOpen(),
         vibe: document.body.dataset.vibe || 'default',
         language: uiLang
+      }
+    }));
+  }
+
+  function emitControlsState() {
+    const notifyMode = getNotifyMode();
+    const allBudget = String(allBudgetSelect?.value || 'standard');
+    window.dispatchEvent(new CustomEvent('ai-news:controls-state', {
+      detail: {
+        notifyEnabled: !!(notifyEnabledEl && notifyEnabledEl.checked),
+        notifyMode,
+        aiAvailable: !!aiAvailable,
+        aiEnabled: !!(aiEnabledEl && aiEnabledEl.checked),
+        summaryLang: String(summaryLangEl?.value || 'bilingual'),
+        researchLang: String(researchLangEl?.value || 'bg'),
+        allBudget: allBudget === 'mixed' || allBudget === 'low' || allBudget === 'standard' || allBudget === 'high'
+          ? allBudget
+          : 'standard',
+        font: String(fontSelect?.value || 'system'),
+        fontSize: String(fontSizeSelect?.value || 'md'),
+        scheme: String(schemeSelect?.value || 'classic'),
+        buttonMode: String(btnModeSelect?.value || 'icons'),
+        interfaceLang: String(interfaceLangEl?.value || uiLang || 'en'),
+        vibe: String(document.body.dataset.vibe || vibeSelect?.value || quickVibeSelect?.value || 'default')
       }
     }));
   }
@@ -1096,6 +1125,7 @@
     renderHelp();
     applyTheme(theme);
     emitTopUiState();
+    emitControlsState();
   }
 
   function toggleSectionVisibility(sectionEl, focusEl) {
@@ -1392,6 +1422,7 @@
     const first = values[0];
     const same = values.every(v => v === first);
     allBudgetSelect.value = same ? first : 'mixed';
+    emitControlsState();
   }
 
   function updateColumnUi(feedUrl) {
@@ -2698,6 +2729,7 @@
 
         Object.keys(columns).forEach(url => updateColumnUi(url));
         renderAllFeeds();
+        emitControlsState();
         return;
       }
 
@@ -2768,6 +2800,7 @@
           lsSet(NOTIFY_ENABLED_KEY, '0');
         }
       }
+      emitControlsState();
       renderHelp();
     });
   }
@@ -2776,6 +2809,7 @@
       const mode = getNotifyMode();
       lsSet(NOTIFY_MODE_KEY, mode);
       toast(t('notifications_toast', { mode: notifyModeLabel(mode) }));
+      emitControlsState();
       renderHelp();
     });
   }
@@ -2793,12 +2827,14 @@
   if (aiEnabledEl) {
     aiEnabledEl.addEventListener('change', () => {
       send({ type: 'toggle_ai', enabled: aiEnabledEl.checked });
+      emitControlsState();
     });
   }
 
   if (summaryLangEl) {
     summaryLangEl.addEventListener('change', () => {
       send({ type: 'set_summary_lang', lang: summaryLangEl.value });
+      emitControlsState();
       renderAllFeeds();
     });
   }
@@ -2807,6 +2843,7 @@
     researchLangEl.addEventListener('change', () => {
       send({ type: 'set_research_lang', lang: researchLangEl.value });
       toast(t('research_language_toast', { lang: researchLangEl.value.toUpperCase() }));
+      emitControlsState();
       renderAllFeeds();
     });
   }
@@ -2817,11 +2854,15 @@
       if (budget !== 'low' && budget !== 'standard' && budget !== 'high') return;
       send({ type: 'set_all_budget', budget });
       toast(t('all_budget_toast', { budget }));
+      emitControlsState();
     });
   }
 
   if (interfaceLangEl) {
-    interfaceLangEl.addEventListener('change', () => applyUiLanguage(interfaceLangEl.value));
+    interfaceLangEl.addEventListener('change', () => {
+      applyUiLanguage(interfaceLangEl.value);
+      emitControlsState();
+    });
   }
 
   if (fontSelect) {
@@ -2915,6 +2956,7 @@
   }
 
   window.addEventListener('ai-news:request-top-state', emitTopUiState);
+  window.addEventListener('ai-news:request-controls-state', emitControlsState);
   window.addEventListener('ai-news:toggle-controls', toggleControls);
   window.addEventListener('ai-news:toggle-all-column-controls', toggleAllColumnMenus);
   window.addEventListener('ai-news:hide-all-research', hideAllResearchBodies);
@@ -3039,5 +3081,6 @@
 
   renderHelp();
   updateQuickSectionButtons();
+  emitControlsState();
   connect();
 })();
