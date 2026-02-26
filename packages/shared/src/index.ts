@@ -1,0 +1,34 @@
+import { z } from 'zod';
+
+export const summaryLangSchema = z.union([z.literal('bg'), z.literal('en'), z.literal('bilingual')]);
+export const researchLangSchema = z.union([z.literal('bg'), z.literal('en')]);
+export const feedKindSchema = z.union([z.literal('rss'), z.literal('reddit'), z.literal('youtube')]);
+export const budgetModeSchema = z.union([z.literal('low'), z.literal('standard'), z.literal('high')]);
+export const sortModeSchema = z.union([z.literal('newest'), z.literal('oldest'), z.literal('matched')]);
+
+export const columnFiltersSchema = z.object({
+  onlyMatches: z.boolean(),
+  onlyResearched: z.boolean(),
+  onlySummaries: z.boolean(),
+});
+
+export const clientMsgSchema = z.discriminatedUnion('type', [
+  z.object({ type: z.literal('toggle_ai'), enabled: z.boolean() }),
+  z.object({ type: z.literal('set_summary_lang'), lang: summaryLangSchema }),
+  z.object({ type: z.literal('set_research_lang'), lang: researchLangSchema }),
+  z.object({ type: z.literal('add_feed'), url: z.string(), label: z.string().optional(), kind: feedKindSchema.optional(), intervalSec: z.number().optional() }),
+  z.object({ type: z.literal('remove_feed'), feedUrl: z.string() }),
+  z.object({ type: z.literal('set_feed_summary'), feedUrl: z.string(), enabled: z.boolean() }),
+  z.object({ type: z.literal('set_feed_research'), feedUrl: z.string(), enabled: z.boolean() }),
+  z.object({ type: z.literal('set_feed_budget'), feedUrl: z.string(), budget: budgetModeSchema }),
+  z.object({ type: z.literal('set_all_budget'), budget: budgetModeSchema }),
+  z.object({ type: z.literal('set_feed_interval'), feedUrl: z.string(), intervalSec: z.number() }),
+  z.object({ type: z.literal('set_feed_column_settings'), feedUrl: z.string(), sortMode: sortModeSchema, filters: columnFiltersSchema }),
+  z.object({ type: z.literal('hide_item'), id: z.string() }),
+  z.object({ type: z.literal('unhide_item'), id: z.string() }),
+  z.object({ type: z.literal('run_research_item'), id: z.string(), feedUrl: z.string() }),
+  z.object({ type: z.literal('run_summary_item'), id: z.string(), feedUrl: z.string() }),
+  z.object({ type: z.literal('ask_agent_item'), id: z.string(), feedUrl: z.string(), question: z.string(), researchMode: z.union([z.literal('auto'), z.literal('force'), z.literal('reuse')]).optional() }),
+]);
+
+export type ClientMsg = z.infer<typeof clientMsgSchema>;
