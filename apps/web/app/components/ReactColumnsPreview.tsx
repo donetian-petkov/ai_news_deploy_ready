@@ -37,6 +37,7 @@ import {
   setAllFeedControlsOpen,
   setFeedBudgetSetting,
   setFeedColumnSettings,
+  setFeedDeleteAge,
   setFeedIntervalSetting,
   setFeedResearchSetting,
   setFeedSummarySetting,
@@ -48,6 +49,7 @@ import {
   clearResearchPending,
   enqueueAskQuestion,
   hideItemLocally,
+  removeOldItemsInFeed,
   receiveAskReply,
   clearSummaryForItem,
   clearSummaryPending,
@@ -95,6 +97,14 @@ function collapseText(text: string, maxChars: number): string {
   return `${normalized.slice(0, maxChars)}...`;
 }
 
+function cutoffFromAge(age: 'yesterday' | 'week' | 'month' | 'year'): number {
+  const now = Date.now();
+  if (age === 'yesterday') return now - 24 * 60 * 60 * 1000;
+  if (age === 'month') return now - 30 * 24 * 60 * 60 * 1000;
+  if (age === 'year') return now - 365 * 24 * 60 * 60 * 1000;
+  return now - 7 * 24 * 60 * 60 * 1000;
+}
+
 export default function ReactColumnsPreview({ wsUrl }: Props) {
   const dispatch = useAppDispatch();
   const connected = useAppSelector(s => s.connection.connected);
@@ -103,6 +113,7 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
   const feeds = useAppSelector(s => s.feeds.feeds);
   const pinnedByUrl = useAppSelector(s => s.feeds.pinnedByUrl);
   const controlsOpenByUrl = useAppSelector(s => s.feeds.controlsOpenByUrl);
+  const deleteAgeByUrl = useAppSelector(s => s.feeds.deleteAgeByUrl);
   const searchQuery = useAppSelector(s => s.ui.searchQuery);
   const itemsByFeed = useAppSelector(s => s.news.itemsByFeed);
   const summaryPendingById = useAppSelector(s => s.news.summaryPendingById);
@@ -163,7 +174,12 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
     askPlaceholder: bg ? 'Питай за тази конкретна новина...' : 'Ask about this specific news...',
     thinking: bg ? 'Мисля...' : 'Thinking...',
     send: bg ? 'Изпрати' : 'Send',
-    linkCopied: bg ? 'Линкът е копиран' : 'Link copied'
+    linkCopied: bg ? 'Линкът е копиран' : 'Link copied',
+    deleteYesterday: bg ? 'Изтрий: Вчера' : 'Delete: Yesterday',
+    deleteWeek: bg ? 'Изтрий: Седмица' : 'Delete: Past week',
+    deleteMonth: bg ? 'Изтрий: Месец' : 'Delete: Past month',
+    deleteYear: bg ? 'Изтрий: Година' : 'Delete: Past year',
+    deleteOld: bg ? 'Изтрий стари' : 'Delete old'
   }), [bg]);
 
   useEffect(() => {
@@ -394,6 +410,14 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
     if (ok) dispatch(setFeedColumnSettings({ feedUrl: feed.url, filters: nextFilters }));
   };
 
+  const removeOldInFeed = (feed: FeedInfo) => {
+    const age = deleteAgeByUrl[feed.url] || 'week';
+    dispatch(removeOldItemsInFeed({
+      feedUrl: feed.url,
+      cutoffMs: cutoffFromAge(age)
+    }));
+  };
+
   return (
     <Box className="container" sx={{ pt: 1, pb: 0.5 }}>
       <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.25 }}>
@@ -553,6 +577,29 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
                       }
                       label={l.summaries}
                     />
+                    <FormControl size="small" sx={{ minWidth: 148 }}>
+                      <Select
+                        value={deleteAgeByUrl[feed.url] || 'week'}
+                        onChange={e => dispatch(setFeedDeleteAge({
+                          feedUrl: feed.url,
+                          age: e.target.value as 'yesterday' | 'week' | 'month' | 'year'
+                        }))}
+                      >
+                        <MenuItem value="yesterday">{l.deleteYesterday}</MenuItem>
+                        <MenuItem value="week">{l.deleteWeek}</MenuItem>
+                        <MenuItem value="month">{l.deleteMonth}</MenuItem>
+                        <MenuItem value="year">{l.deleteYear}</MenuItem>
+                      </Select>
+                    </FormControl>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      color="error"
+                      startIcon={<DeleteOutlineIcon />}
+                      onClick={() => removeOldInFeed(feed)}
+                    >
+                      {l.deleteOld}
+                    </Button>
                   </Stack>
                 ) : null}
 

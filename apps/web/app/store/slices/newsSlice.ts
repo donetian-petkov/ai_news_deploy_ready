@@ -69,6 +69,12 @@ const newsSlice = createSlice({
       delete state.summaryPendingById[id];
       delete state.researchPendingById[id];
     },
+    removeOldItemsInFeed(state, action: PayloadAction<{ feedUrl: string; cutoffMs: number }>) {
+      const { feedUrl, cutoffMs } = action.payload;
+      const list = state.itemsByFeed[feedUrl];
+      if (!Array.isArray(list)) return;
+      state.itemsByFeed[feedUrl] = list.filter(it => !Number.isFinite(it.publishedMs) || it.publishedMs >= cutoffMs);
+    },
     upsertNewsItem(state, action: PayloadAction<NewsItem>) {
       const item = action.payload;
       if (item.filteredOk === false) return;
@@ -179,6 +185,7 @@ const newsSlice = createSlice({
 export const {
   setHiddenIds,
   hideItemLocally,
+  removeOldItemsInFeed,
   upsertNewsItem,
   setSummaryPending,
   clearSummaryPending,

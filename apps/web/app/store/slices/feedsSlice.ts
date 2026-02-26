@@ -5,12 +5,14 @@ type FeedsState = {
   feeds: FeedInfo[];
   pinnedByUrl: Record<string, boolean>;
   controlsOpenByUrl: Record<string, boolean>;
+  deleteAgeByUrl: Record<string, 'yesterday' | 'week' | 'month' | 'year'>;
 };
 
 const initialState: FeedsState = {
   feeds: [],
   pinnedByUrl: {},
-  controlsOpenByUrl: {}
+  controlsOpenByUrl: {},
+  deleteAgeByUrl: {}
 };
 
 const feedsSlice = createSlice({
@@ -28,10 +30,16 @@ const feedsSlice = createSlice({
       Object.keys(state.controlsOpenByUrl).forEach(url => {
         if (!nextUrls.has(url)) delete state.controlsOpenByUrl[url];
       });
+      Object.keys(state.deleteAgeByUrl).forEach(url => {
+        if (!nextUrls.has(url)) delete state.deleteAgeByUrl[url];
+      });
 
       nextFeeds.forEach(f => {
         if (typeof state.controlsOpenByUrl[f.url] !== 'boolean') {
           state.controlsOpenByUrl[f.url] = true;
+        }
+        if (!state.deleteAgeByUrl[f.url]) {
+          state.deleteAgeByUrl[f.url] = 'week';
         }
       });
     },
@@ -55,6 +63,11 @@ const feedsSlice = createSlice({
       state.feeds = state.feeds.filter(f => f.url !== feedUrl);
       delete state.pinnedByUrl[feedUrl];
       delete state.controlsOpenByUrl[feedUrl];
+      delete state.deleteAgeByUrl[feedUrl];
+    },
+    setFeedDeleteAge(state, action: PayloadAction<{ feedUrl: string; age: 'yesterday' | 'week' | 'month' | 'year' }>) {
+      const { feedUrl, age } = action.payload;
+      state.deleteAgeByUrl[feedUrl] = age;
     },
     setFeedSummarySetting(state, action: PayloadAction<{ feedUrl: string; enabled: boolean }>) {
       const idx = state.feeds.findIndex(f => f.url === action.payload.feedUrl);
@@ -102,6 +115,7 @@ export const {
   toggleFeedControls,
   setAllFeedControlsOpen,
   removeFeedLocally,
+  setFeedDeleteAge,
   setFeedSummarySetting,
   setFeedResearchSetting,
   setFeedBudgetSetting,
