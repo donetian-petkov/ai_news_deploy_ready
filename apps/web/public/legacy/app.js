@@ -1090,6 +1090,26 @@
     updateQuickSectionButtons();
   }
 
+  function toggleQuickSection(sectionEl, focusEl) {
+    if (!sectionEl) return;
+    if (!document.body.classList.contains('controls-collapsed')) {
+      document.body.classList.add('controls-collapsed');
+      lsSet(CONTROLS_KEY, '1');
+      if (controlsToggle) controlsToggle.textContent = t('show_top_controls');
+    }
+    const nextVisible = !sectionEl.classList.contains('quickSectionVisible');
+    sectionEl.classList.toggle('quickSectionVisible', nextVisible);
+    sectionEl.open = nextVisible;
+    updateCollapsedQuickSectionsUi();
+    if (nextVisible && focusEl) {
+      setTimeout(() => {
+        focusEl.focus();
+        sectionEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }, 30);
+    }
+    updateQuickSectionButtons();
+  }
+
   function isSectionVisible(sectionEl) {
     if (!sectionEl) return false;
     if (document.body.classList.contains('controls-collapsed')) {
@@ -2752,8 +2772,8 @@
   if (quickVibeSelect) {
     quickVibeSelect.addEventListener('change', () => applyVibePreset(quickVibeSelect.value));
   }
-  quickSearchBtn?.addEventListener('click', () => toggleSectionVisibility(searchSectionEl, searchInput));
-  quickAddStreamBtn?.addEventListener('click', () => toggleSectionVisibility(addStreamSectionEl, feedUrlEl));
+  quickSearchBtn?.addEventListener('click', () => toggleQuickSection(searchSectionEl, searchInput));
+  quickAddStreamBtn?.addEventListener('click', () => toggleQuickSection(addStreamSectionEl, feedUrlEl));
   searchSectionEl?.addEventListener('toggle', () => {
     if (document.body.classList.contains('controls-collapsed') && !searchSectionEl.open) {
       searchSectionEl.classList.remove('quickSectionVisible');
@@ -2920,12 +2940,12 @@
     }
     if (lower === 's') {
       e.preventDefault();
-      toggleSectionVisibility(searchSectionEl, searchInput);
+      toggleQuickSection(searchSectionEl, searchInput);
       return;
     }
     if (lower === 'a') {
       e.preventDefault();
-      toggleSectionVisibility(addStreamSectionEl, feedUrlEl);
+      toggleQuickSection(addStreamSectionEl, feedUrlEl);
       return;
     }
     if (lower === 't') {
