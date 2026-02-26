@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef } from 'react';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
+import ManageSearchIcon from '@mui/icons-material/ManageSearch';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import {
   Alert,
@@ -16,7 +17,14 @@ import {
 } from '@mui/material';
 import { MAX_COLUMNS } from '../store/constants';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
-import { clearSummaryForItem, clearSummaryPending, setSummaryPending } from '../store/slices/newsSlice';
+import {
+  clearResearchForItem,
+  clearResearchPending,
+  clearSummaryForItem,
+  clearSummaryPending,
+  setResearchPending,
+  setSummaryPending
+} from '../store/slices/newsSlice';
 import { sendWsMessage, startWsConnection, stopWsConnection } from '../store/wsClient';
 import type { FeedInfo, NewsItem } from '../store/types';
 
@@ -33,6 +41,21 @@ function formatTime(ms: number): string {
   }
 }
 
+function extractConfidence(research: string): string {
+  const m = String(research || '').match(/confidence\s*:\s*(low|medium|high)/i);
+  if (!m) return '';
+  const level = String(m[1] || '').toLowerCase();
+  if (level === 'high') return 'High';
+  if (level === 'medium') return 'Medium';
+  if (level === 'low') return 'Low';
+  return '';
+}
+
+function compactResearch(research: string): string {
+  const normalized = String(research || '').replace(/\s+/g, ' ').trim();
+  return normalized.length > 340 ? `${normalized.slice(0, 340)}...` : normalized;
+}
+
 export default function ReactColumnsPreview({ wsUrl }: Props) {
   const dispatch = useAppDispatch();
   const connected = useAppSelector(s => s.connection.connected);
@@ -40,7 +63,9 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
   const feeds = useAppSelector(s => s.feeds.feeds);
   const itemsByFeed = useAppSelector(s => s.news.itemsByFeed);
   const summaryPendingById = useAppSelector(s => s.news.summaryPendingById);
+  const researchPendingById = useAppSelector(s => s.news.researchPendingById);
   const pendingTimeoutsRef = useRef<Record<string, number>>({});
+  const researchTimeoutsRef = useRef<Record<string, number>>({});
 
   useEffect(() => {
     startWsConnection(dispatch, wsUrl);
@@ -52,6 +77,11 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
         window.clearTimeout(pendingTimeoutsRef.current[id]);
       }
       pendingTimeoutsRef.current = {};
+      const rIds = Object.keys(researchTimeoutsRef.current);
+      for (const id of rIds) {
+        window.clearTimeout(researchTimeoutsRef.current[id]);
+      }
+      researchTimeoutsRef.current = {};
     };
   }, [dispatch, wsUrl]);
 
@@ -86,6 +116,28 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
       feedUrl: it.feedUrl
     });
     if (!ok) dispatch(clearSummaryPending(it.id));
+  };
+
+  const requestResearch = (it: NewsItem) => {
+    if (!connected) return;
+
+    dispatch(setResearchPending(it.id));
+    dispatch(clearResearchForItem({ id: it.id, feedUrl: it.feedUrl }));
+
+    if (researchTimeoutsRef.current[it.id]) {
+      window.clearTimeout(researchTimeoutsRef.current[it.id]);
+    }
+    researchTimeoutsRef.current[it.id] = window.setTimeout(() => {
+      dispatch(clearResearchPending(it.id));
+      delete researchTimeoutsRef.current[it.id];
+    }, 45000);
+
+    const ok = sendWsMessage({
+      type: 'run_research_item',
+      id: it.id,
+      feedUrl: it.feedUrl
+    });
+    if (!ok) dispatch(clearResearchPending(it.id));
   };
 
   return (
@@ -174,12 +226,33 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
                           >
                             {summaryPendingById[it.id] ? 'Generating Summary...' : 'Summary'}
                           </Button>
+                          <Button
+                            size="small"
+                            variant={researchPendingById[it.id] ? 'contained' : 'outlined'}
+                            startIcon={<ManageSearchIcon />}
+                            onClick={() => requestResearch(it)}
+                            disabled={!connected || !!researchPendingById[it.id]}
+                          >
+                            {researchPendingById[it.id] ? 'Researching...' : 'Research'}
+                          </Button>
                         </Stack>
 
                         {it.summary ? (
                           <Typography variant="body2" sx={{ color: 'rgba(226,234,250,0.95)', whiteSpace: 'pre-wrap' }}>
                             {it.summary}
                           </Typography>
+                        ) : null}
+                        {it.research ? (
+                          <Box sx={{ mt: 1 }}>
+                            {extractConfidence(it.research) ? (
+                              <Typography variant="caption" sx={{ color: 'rgba(212,220,236,0.75)', display: 'block', mb: 0.35 }}>
+                                Confidence: {extractConfidence(it.research)}
+                              </Typography>
+                            ) : null}
+                            <Typography variant="body2" sx={{ color: 'rgba(205,218,238,0.92)', whiteSpace: 'pre-wrap' }}>
+                              {compactResearch(it.research)}
+                            </Typography>
+                          </Box>
                         ) : null}
                       </CardContent>
                     </Card>

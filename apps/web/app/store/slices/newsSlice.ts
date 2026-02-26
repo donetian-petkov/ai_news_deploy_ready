@@ -6,12 +6,14 @@ type NewsState = {
   itemsByFeed: Record<string, NewsItem[]>;
   hiddenIds: string[];
   summaryPendingById: Record<string, true>;
+  researchPendingById: Record<string, true>;
 };
 
 const initialState: NewsState = {
   itemsByFeed: {},
   hiddenIds: [],
-  summaryPendingById: {}
+  summaryPendingById: {},
+  researchPendingById: {}
 };
 
 const newsSlice = createSlice({
@@ -39,6 +41,9 @@ const newsSlice = createSlice({
       if (item.summary && item.summary.trim()) {
         delete state.summaryPendingById[item.id];
       }
+      if (item.research && item.research.trim()) {
+        delete state.researchPendingById[item.id];
+      }
     },
     setSummaryPending(state, action: PayloadAction<string>) {
       state.summaryPendingById[action.payload] = true;
@@ -54,6 +59,21 @@ const newsSlice = createSlice({
         list[idx] = { ...list[idx], summary: '' };
         state.itemsByFeed[feedUrl] = list;
       }
+    },
+    setResearchPending(state, action: PayloadAction<string>) {
+      state.researchPendingById[action.payload] = true;
+    },
+    clearResearchPending(state, action: PayloadAction<string>) {
+      delete state.researchPendingById[action.payload];
+    },
+    clearResearchForItem(state, action: PayloadAction<{ id: string; feedUrl: string }>) {
+      const { id, feedUrl } = action.payload;
+      const list = Array.isArray(state.itemsByFeed[feedUrl]) ? [...state.itemsByFeed[feedUrl]] : [];
+      const idx = list.findIndex(x => x.id === id);
+      if (idx >= 0) {
+        list[idx] = { ...list[idx], research: '' };
+        state.itemsByFeed[feedUrl] = list;
+      }
     }
   }
 });
@@ -63,7 +83,10 @@ export const {
   upsertNewsItem,
   setSummaryPending,
   clearSummaryPending,
-  clearSummaryForItem
+  clearSummaryForItem,
+  setResearchPending,
+  clearResearchPending,
+  clearResearchForItem
 } = newsSlice.actions;
 
 export default newsSlice.reducer;

@@ -1,17 +1,38 @@
+'use client';
+
+import { Box, Button, Chip, Stack, Typography } from '@mui/material';
+import { useAppSelector } from '../store/hooks';
+
+function StatusPills() {
+  const connected = useAppSelector(s => s.connection.connected);
+  const status = useAppSelector(s => s.connection.status);
+  const totalTokens = useAppSelector(s => s.aiUsage.totalTokens);
+  const label = connected ? 'Connected' : status === 'error' ? 'Socket error' : status === 'connecting' ? 'Connecting...' : 'Disconnected';
+
+  return (
+    <>
+      <Chip id="status" className="statusPill" size="small" label={label} color={connected ? 'success' : 'default'} variant={connected ? 'filled' : 'outlined'} />
+      <Chip id="tokenUsage" className="statusPill" size="small" label={`Tokens: ${totalTokens.toLocaleString('en-US')}`} variant="outlined" />
+    </>
+  );
+}
+
 export default function TopMenu() {
   return (
     <div className="topbar">
       <div className="topbarInner" id="topbarInner">
         <div className="headerRow">
-          <div className="headerLeft">
-            <h1 id="appTitle">Live News Stream</h1>
+          <Box className="headerLeft">
+            <Typography id="appTitle" component="h1" sx={{ margin: 0, fontSize: 28, fontWeight: 900, lineHeight: 1.1 }}>
+              Live News Stream
+            </Typography>
             <div className="subHint" id="subHint">
               Drag columns · <b>?</b> Help · <b>M</b> Menu · <b>/</b> Search
             </div>
-          </div>
-          <div className="headerRight">
-            <div id="status" className="statusPill">Connecting...</div>
-            <div id="tokenUsage" className="statusPill">Tokens: 0</div>
+          </Box>
+
+          <Stack className="headerRight" direction="row" flexWrap="wrap" gap={1.1} alignItems="center">
+            <StatusPills />
             <label className="checkbox topQuickLabel" title="Quick vibe switch">
               <span id="quickVibeLabelText">Vibe:</span>
               <select id="quickVibeSelect" className="select topQuickSelect" defaultValue="default">
@@ -25,13 +46,13 @@ export default function TopMenu() {
                 <option value="scifi">Sci-Fi</option>
               </select>
             </label>
-            <button id="quickSearchBtn" className="btn ghost" type="button">Search</button>
-            <button id="quickAddStreamBtn" className="btn ghost" type="button">Add Stream</button>
-            <button id="controlsToggle" className="btn ghost" type="button">Hide top controls</button>
-            <button id="allColControlsToggle" className="btn ghost" type="button">Hide all column controls</button>
-            <button id="hideAllResearchBtn" className="btn ghost" type="button">Hide all research</button>
-            <button id="menuToggle" className="btn ghost" type="button">Hide menu</button>
-          </div>
+            <Button id="quickSearchBtn" className="btn ghost" size="small" variant="outlined" type="button">Search</Button>
+            <Button id="quickAddStreamBtn" className="btn ghost" size="small" variant="outlined" type="button">Add Stream</Button>
+            <Button id="controlsToggle" className="btn ghost" size="small" variant="outlined" type="button">Hide top controls</Button>
+            <Button id="allColControlsToggle" className="btn ghost" size="small" variant="outlined" type="button">Hide all column controls</Button>
+            <Button id="hideAllResearchBtn" className="btn ghost" size="small" variant="outlined" type="button">Hide all research</Button>
+            <Button id="menuToggle" className="btn ghost" size="small" variant="outlined" type="button">Hide menu</Button>
+          </Stack>
         </div>
 
         <div className="controls">

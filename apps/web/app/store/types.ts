@@ -15,6 +15,7 @@ export type NewsItem = {
   feedUrl: string;
   isMatch: boolean;
   summary?: string;
+  research?: string;
   filteredOk?: boolean;
 };
 

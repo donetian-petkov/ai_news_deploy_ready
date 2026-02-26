@@ -46,6 +46,7 @@ function parseNews(v: unknown): NewsItem | null {
     publishedMs: typeof m.publishedMs === 'number' ? m.publishedMs : Date.now(),
     isMatch: !!m.isMatch,
     summary: typeof m.summary === 'string' ? m.summary : '',
+    research: typeof m.research === 'string' ? m.research : '',
     filteredOk: typeof m.filteredOk === 'boolean' ? m.filteredOk : true
   };
 }
