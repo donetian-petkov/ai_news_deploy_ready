@@ -15,6 +15,7 @@ Next.js + Node.js conversion of the live AI news stream, with Prisma (SQLite) an
   - Top menu is now a native React component: `apps/web/app/components/TopMenu.tsx`.
   - News runtime shell is now native React: `apps/web/app/components/NewsRuntimeShell.tsx`.
   - First React live card/column renderer added: `apps/web/app/components/ReactColumnsPreview.tsx` (reads `config/news` over WS and renders preview columns/cards).
+  - React preview now supports a working Summary action (`run_summary_item`) with pending state.
 - `apps/api`: Polling/AI/WebSocket server (migrated from the original project), now with:
   - zod WebSocket message validation
   - Prisma SQLite app-state persistence + AI usage snapshots

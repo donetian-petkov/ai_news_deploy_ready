@@ -90,11 +90,15 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
   const [connected, setConnected] = useState(false);
   const [feeds, setFeeds] = useState<FeedInfo[]>([]);
   const [itemsByFeed, setItemsByFeed] = useState<Record<string, NewsItem[]>>({});
+  const [summaryPendingById, setSummaryPendingById] = useState<Record<string, true>>({});
   const hiddenIdsRef = useRef<Set<string>>(new Set());
+  const wsRef = useRef<WebSocket | null>(null);
+  const pendingTimeoutsRef = useRef<Record<string, number>>({});
 
   useEffect(() => {
     const url = resolveWsUrl(wsUrl);
     const ws = new WebSocket(url);
+    wsRef.current = ws;
 
     ws.onopen = () => setConnected(true);
     ws.onclose = () => setConnected(false);
@@ -129,6 +133,15 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
       if (hiddenIdsRef.current.has(news.id)) return;
       if (news.filteredOk === false) return;
 
+      if (news.summary && news.summary.trim()) {
+        setSummaryPendingById(prev => {
+          if (!prev[news.id]) return prev;
+          const next = { ...prev };
+          delete next[news.id];
+          return next;
+        });
+      }
+
       setItemsByFeed(prev => {
         const next = { ...prev };
         const list = Array.isArray(next[news.feedUrl]) ? [...next[news.feedUrl]] : [];
@@ -142,7 +155,13 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
     };
 
     return () => {
+      wsRef.current = null;
       ws.close();
+      const ids = Object.keys(pendingTimeoutsRef.current);
+      for (const id of ids) {
+        window.clearTimeout(pendingTimeoutsRef.current[id]);
+      }
+      pendingTimeoutsRef.current = {};
     };
   }, [wsUrl]);
 
@@ -156,6 +175,40 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
     }));
     return fallback;
   }, [feeds, itemsByFeed]);
+
+  const requestSummary = (it: NewsItem) => {
+    const ws = wsRef.current;
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+
+    setSummaryPendingById(prev => ({ ...prev, [it.id]: true }));
+    setItemsByFeed(prev => {
+      const next = { ...prev };
+      const list = Array.isArray(next[it.feedUrl]) ? [...next[it.feedUrl]] : [];
+      const idx = list.findIndex(x => x.id === it.id);
+      if (idx >= 0) list[idx] = { ...list[idx], summary: '' };
+      next[it.feedUrl] = list;
+      return next;
+    });
+
+    if (pendingTimeoutsRef.current[it.id]) {
+      window.clearTimeout(pendingTimeoutsRef.current[it.id]);
+    }
+    pendingTimeoutsRef.current[it.id] = window.setTimeout(() => {
+      setSummaryPendingById(prev => {
+        if (!prev[it.id]) return prev;
+        const next = { ...prev };
+        delete next[it.id];
+        return next;
+      });
+      delete pendingTimeoutsRef.current[it.id];
+    }, 30000);
+
+    ws.send(JSON.stringify({
+      type: 'run_summary_item',
+      id: it.id,
+      feedUrl: it.feedUrl
+    }));
+  };
 
   return (
     <section className="container reactPreviewWrap">
@@ -192,6 +245,16 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
                     <a className="headline" href={it.link} target="_blank" rel="noreferrer">
                       {it.title}
                     </a>
+                    <div className="reactPreviewActions">
+                      <button
+                        className="reactPreviewActionBtn"
+                        type="button"
+                        onClick={() => requestSummary(it)}
+                        disabled={!connected || !!summaryPendingById[it.id]}
+                      >
+                        {summaryPendingById[it.id] ? 'Generating Summary…' : 'Summary'}
+                      </button>
+                    </div>
                     {it.summary ? <div className="bodyText">{it.summary}</div> : null}
                   </div>
                 ))}
