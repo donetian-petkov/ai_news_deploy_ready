@@ -288,6 +288,8 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
   const notifyEnabled = useAppSelector(s => s.ui.notifyEnabled);
   const notifyMode = useAppSelector(s => s.ui.notifyMode);
   const hideAllResearch = useAppSelector(s => s.ui.hideAllResearch);
+  const showMoreNewsAllSeq = useAppSelector(s => s.ui.showMoreNewsAllSeq);
+  const resetNewsShownAllSeq = useAppSelector(s => s.ui.resetNewsShownAllSeq);
   const aiEnabled = useAppSelector(s => s.ui.aiEnabled);
   const feeds = useAppSelector(s => s.feeds.feeds);
   const pinnedByUrl = useAppSelector(s => s.feeds.pinnedByUrl);
@@ -364,7 +366,7 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
     showMore: bg ? 'Покажи още' : 'Show More',
     showLess: bg ? 'Покажи по-малко' : 'Show Less',
     showFiveMore: bg ? 'Покажи още 5' : 'Show 5 more',
-    showLessItems: bg ? 'Покажи по-малко новини' : 'Show fewer',
+    resetToTenItems: bg ? 'Нулирай до 10' : 'Reset to 10',
     autoResearching: bg ? 'Авто проучване...' : 'Auto researching...',
     pinNews: bg ? 'Закачи новина' : 'Pin news',
     unpinNews: bg ? 'Откачи новина' : 'Unpin news',
@@ -538,6 +540,28 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
       return next;
     });
   }, [renderedFeeds]);
+
+  useEffect(() => {
+    if (showMoreNewsAllSeq <= 0 || !renderedFeeds.length) return;
+    setVisibleByFeed(prev => {
+      const next = { ...prev };
+      renderedFeeds.forEach(feed => {
+        next[feed.url] = Math.max(10, (next[feed.url] || 10) + 5);
+      });
+      return next;
+    });
+  }, [showMoreNewsAllSeq, renderedFeeds]);
+
+  useEffect(() => {
+    if (resetNewsShownAllSeq <= 0 || !renderedFeeds.length) return;
+    setVisibleByFeed(prev => {
+      const next = { ...prev };
+      renderedFeeds.forEach(feed => {
+        next[feed.url] = 10;
+      });
+      return next;
+    });
+  }, [resetNewsShownAllSeq, renderedFeeds]);
 
   useEffect(() => {
     setHydratedColumns(prev => {
@@ -1470,7 +1494,7 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
                       color="secondary"
                       onClick={() => setVisibleByFeed(prev => ({ ...prev, [feed.url]: 10 }))}
                     >
-                      {l.showLessItems}
+                      {l.resetToTenItems}
                     </Button>
                   ) : null}
                 </Stack>

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Alert, Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, MenuItem, Select, Stack, TextField, Typography, useMediaQuery } from '@mui/material';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
-import { setLanguage, setSearchQuery, setTopUiState, setHideAllResearch, setNotifySettings, setAiSettings, setAppearanceSettings, hydrateUiSettings, setHelpOpen, dismissToast } from '../store/slices/uiSlice';
+import { setLanguage, setSearchQuery, setTopUiState, setHideAllResearch, setNotifySettings, setAiSettings, setAppearanceSettings, hydrateUiSettings, setHelpOpen, dismissToast, triggerShowMoreNewsAll, triggerResetNewsShownAll } from '../store/slices/uiSlice';
 import { sendWsMessage } from '../store/wsClient';
 import { setFeedBudgetSetting } from '../store/slices/feedsSlice';
 import { removeOldItemsInFeed, resetAllToNewestLimit } from '../store/slices/newsSlice';
@@ -60,6 +60,8 @@ export default function TopMenu() {
     showAllColumnControls: bg ? 'Покажи всички контроли на колони' : 'Show all column controls',
     hideAllResearch: bg ? 'Скрий всички проучвания' : 'Hide all research',
     showAllResearch: bg ? 'Покажи всички проучвания' : 'Show all research',
+    showMoreNewsAll: bg ? 'Покажи +5 (всички колони)' : 'Show +5 (all columns)',
+    resetNewsShownAll: bg ? 'Нулирай показани до 10' : 'Reset shown to 10',
     hideMenu: bg ? 'Скрий меню' : 'Hide menu',
     showMenu: bg ? 'Покажи меню' : 'Show menu',
     anime: bg ? 'Аниме Поп' : 'Anime Pop',
@@ -528,6 +530,12 @@ export default function TopMenu() {
           <div className="controlsCompactRow controlsRow">
             <div className="controlGroup">
               <button id="resetBtn" className="btn" type="button" onClick={resetAllNewest}>Reset ALL to newest 10</button>
+              <button id="showMoreNewsAllBtn" className="btn" type="button" onClick={() => dispatch(triggerShowMoreNewsAll())}>
+                {labels.showMoreNewsAll}
+              </button>
+              <button id="resetNewsShownAllBtn" className="btn" type="button" onClick={() => dispatch(triggerResetNewsShownAll())}>
+                {labels.resetNewsShownAll}
+              </button>
               <label className="checkbox" title="Delete old news by age from all columns">
                 <span id="deleteAgePrefix">Delete age:</span>
                 <select id="deleteAgeSelect" className="select" value={deleteAgeAll} onChange={e => setDeleteAgeAll(e.target.value as 'yesterday' | 'week' | 'month' | 'year')}>

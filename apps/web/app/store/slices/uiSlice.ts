@@ -21,6 +21,8 @@ type UiState = {
   allColumnControlsHidden: boolean;
   hideAllResearchSeq: number;
   hideAllResearch: boolean;
+  showMoreNewsAllSeq: number;
+  resetNewsShownAllSeq: number;
   helpOpen: boolean;
   notifyEnabled: boolean;
   notifyMode: 'matched' | 'matched_pinned' | 'pinned' | 'all';
@@ -48,6 +50,8 @@ const initialState: UiState = {
   allColumnControlsHidden: false,
   hideAllResearchSeq: 0,
   hideAllResearch: false,
+  showMoreNewsAllSeq: 0,
+  resetNewsShownAllSeq: 0,
   helpOpen: false,
   notifyEnabled: false,
   notifyMode: 'matched',
@@ -93,6 +97,12 @@ const uiSlice = createSlice({
     setHideAllResearch(state, action: PayloadAction<boolean>) {
       state.hideAllResearch = !!action.payload;
       if (state.hideAllResearch) state.hideAllResearchSeq += 1;
+    },
+    triggerShowMoreNewsAll(state) {
+      state.showMoreNewsAllSeq += 1;
+    },
+    triggerResetNewsShownAll(state) {
+      state.resetNewsShownAllSeq += 1;
     },
     setHelpOpen(state, action: PayloadAction<boolean>) {
       state.helpOpen = !!action.payload;
@@ -173,6 +183,8 @@ export const {
   setTopUiState,
   triggerHideAllResearch,
   setHideAllResearch,
+  triggerShowMoreNewsAll,
+  triggerResetNewsShownAll,
   setHelpOpen,
   setNotifySettings,
   setAiSettings,
