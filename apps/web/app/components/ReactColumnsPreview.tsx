@@ -431,19 +431,33 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
   }, [controlsOpenByUrl, deleteAgeByUrl, feeds.length, orderByUrl, pinnedByUrl]);
 
   useEffect(() => {
-    const allItems = Object.entries(itemsByFeed).flatMap(([feedUrl, items]) =>
-      (items || []).map(item => ({ feedUrl, item }))
-    );
     if (!notificationsPrimedRef.current) {
-      allItems.forEach(({ item }) => seenNewsIdsRef.current.add(item.id));
+      Object.values(itemsByFeed).forEach(items => {
+        (items || []).forEach(item => {
+          if (item?.id) seenNewsIdsRef.current.add(item.id);
+        });
+      });
       notificationsPrimedRef.current = true;
       return;
     }
 
-    if (!notifyEnabled || typeof Notification === 'undefined' || Notification.permission !== 'granted') {
-      allItems.forEach(({ item }) => seenNewsIdsRef.current.add(item.id));
-      return;
-    }
+    const newlySeen: Array<{ feedUrl: string; item: NewsItem }> = [];
+    Object.entries(itemsByFeed).forEach(([feedUrl, items]) => {
+      const list = Array.isArray(items) ? items : [];
+      // Lists are kept newest-first; stop scanning once we hit first known id.
+      for (let i = 0; i < list.length; i++) {
+        const item = list[i];
+        if (!item?.id) continue;
+        if (seenNewsIdsRef.current.has(item.id)) break;
+        newlySeen.push({ feedUrl, item });
+      }
+    });
+
+    if (!newlySeen.length) return;
+
+    const notificationsAllowed = notifyEnabled
+      && typeof Notification !== 'undefined'
+      && Notification.permission === 'granted';
 
     const shouldNotify = (feedUrl: string, it: NewsItem): boolean => {
       if (notifyMode === 'all') return true;
@@ -452,16 +466,18 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
       return !!it.isMatch;
     };
 
-    allItems.forEach(({ feedUrl, item }) => {
-      if (seenNewsIdsRef.current.has(item.id)) return;
+    // Notify in chronological order when multiple items land in one batch.
+    for (let i = newlySeen.length - 1; i >= 0; i--) {
+      const { feedUrl, item } = newlySeen[i];
       seenNewsIdsRef.current.add(item.id);
-      if (!shouldNotify(feedUrl, item)) return;
+      if (!notificationsAllowed) continue;
+      if (!shouldNotify(feedUrl, item)) continue;
       const body = String(item.summary || item.research || '').trim();
       const n = new Notification(item.isMatch ? `MATCH · ${item.title}` : item.title, {
         body: body || item.link
       });
       n.onclick = () => window.open(item.link, '_blank', 'noopener,noreferrer');
-    });
+    }
   }, [itemsByFeed, notifyEnabled, notifyMode, pinnedByUrl]);
 
   useEffect(() => {
@@ -511,7 +527,7 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
       filters: { onlyMatches: false, onlyResearched: false, onlySummaries: false }
     }));
     return fallback;
-  }, [feeds, itemsByFeed, orderByUrl, pinnedByUrl]);
+  }, [feeds, itemsByFeed, orderByUrl]);
 
   const renderedFeeds = previewFeeds;
 
@@ -526,8 +542,13 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
         map.set(it.id, { ...it, feedUrl: FILTERED_FEED_URL });
       }
     });
-    return Array.from(map.values()).sort((a, b) => b.publishedMs - a.publishedMs);
-  }, [itemsByFeed]);
+    return Array.from(map.values()).sort((a, b) => {
+      const aPinned = !!pinnedNewsById[a.id];
+      const bPinned = !!pinnedNewsById[b.id];
+      if (aPinned !== bPinned) return aPinned ? -1 : 1;
+      return b.publishedMs - a.publishedMs;
+    });
+  }, [itemsByFeed, pinnedNewsById]);
 
   useEffect(() => {
     if (!renderedFeeds.length) return;
@@ -889,19 +910,12 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
           dragLastTargetRef.current = null;
         }}
       >
-        {renderedFeeds.map((feed: FeedInfo) => {
-          const columnIdx = Math.max(0, renderedFeeds.findIndex(f => f.url === feed.url));
+        {renderedFeeds.map((feed: FeedInfo, columnIdx: number) => {
           const isMatchColumn = feed.url === FILTERED_FEED_URL || String(feed.label || '').toLowerCase().startsWith('filtered');
           const colTheme: 'a' | 'b' | 'match' = isMatchColumn ? 'match' : (columnIdx % 2 === 0 ? 'a' : 'b');
           const accent = colTheme === 'a' ? palette.a : colTheme === 'b' ? palette.b : palette.m;
           const soft = colTheme === 'a' ? palette.aSoft : colTheme === 'b' ? palette.bSoft : palette.mSoft;
-          const itemsRaw = isMatchColumn ? filteredColumnItems : (itemsByFeed[feed.url] || []);
-          const items = [...itemsRaw].sort((a, b) => {
-            const aPinned = !!pinnedNewsById[a.id];
-            const bPinned = !!pinnedNewsById[b.id];
-            if (aPinned !== bPinned) return aPinned ? -1 : 1;
-            return Number(b.publishedMs || 0) - Number(a.publishedMs || 0);
-          });
+          const items = isMatchColumn ? filteredColumnItems : (itemsByFeed[feed.url] || []);
           const normalizedQuery = String(searchQuery || '').trim().toLowerCase();
           const itemsVisible = normalizedQuery
             ? items.filter(it => {

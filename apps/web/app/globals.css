@@ -100,7 +100,6 @@ body[data-scheme='forest'] { --panel-border: rgba(91, 173, 117, 0.46); --card-bo
   position: sticky;
   top: 0;
   z-index: 50;
-  backdrop-filter: blur(8px);
   background: linear-gradient(180deg, var(--topbar-start), var(--topbar-end));
   border-bottom: 1px solid var(--panel-border);
   color: var(--text-main);

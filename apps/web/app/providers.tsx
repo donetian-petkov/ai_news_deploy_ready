@@ -79,9 +79,7 @@ function MuiThemeBridge({ children }: { children: React.ReactNode }) {
       },
       MuiCard: {
         styleOverrides: {
-          root: {
-            backdropFilter: 'blur(2px)'
-          }
+          root: {}
         }
       }
     }
