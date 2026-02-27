@@ -72,6 +72,10 @@
 - Reduced column density on wide screens:
   - responsive grid now uses explicit `1/2/3/4` columns by breakpoint
   - prevents cluttered 5-column rows on large displays
+- Filtered column behavior tightened:
+  - Filtered stream is now always sorted to the first column position
+  - Filtered column is not draggable (stays pinned at top/left)
+  - empty Filtered state now shows “No matched news yet...” (instead of generic waiting)
 
 ### Existing migration milestones already in `main`
 - Next.js web app and Node.js API monorepo with Prisma + SQLite + zod.

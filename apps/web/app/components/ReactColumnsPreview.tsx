@@ -251,6 +251,7 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
     live: bg ? 'На живо през WebSocket' : 'Live via WebSocket',
     disconnected: bg ? 'Разкачен' : 'Disconnected',
     waiting: bg ? 'Изчакване на новини...' : 'Waiting for news...',
+    waitingMatches: bg ? 'Няма съвпадения засега...' : 'No matched news yet...',
     noMatches: bg ? 'Няма съвпадения за търсенето в този поток.' : 'No search matches in this stream.',
     pinned: bg ? 'Закачена' : 'Pinned',
     pin: bg ? 'Закачи' : 'Pin',
@@ -418,6 +419,9 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
       const list = [...feeds];
       const orderIndex = new Map(orderByUrl.map((url, idx) => [url, idx]));
       list.sort((a, b) => {
+        const aFiltered = a.url === FILTERED_FEED_URL;
+        const bFiltered = b.url === FILTERED_FEED_URL;
+        if (aFiltered !== bFiltered) return aFiltered ? -1 : 1;
         const aPinned = !!pinnedByUrl[a.url];
         const bPinned = !!pinnedByUrl[b.url];
         if (aPinned !== bPinned) return aPinned ? -1 : 1;
@@ -722,8 +726,9 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
             <Card
               key={feed.url}
               variant="outlined"
-              draggable
+              draggable={!isMatchColumn}
               onDragStart={e => {
+                if (isMatchColumn) return;
                 setDragFeedUrl(feed.url);
                 setDragOverFeedUrl(feed.url);
                 e.dataTransfer.effectAllowed = 'move';
@@ -930,7 +935,7 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
                 <Stack spacing={1.2}>
                   {itemsVisible.length === 0 ? (
                     <Alert severity="info" variant="outlined">
-                      {items.length === 0 ? l.waiting : l.noMatches}
+                      {items.length === 0 ? (isMatchColumn ? l.waitingMatches : l.waiting) : l.noMatches}
                     </Alert>
                   ) : itemsVisible.map(it => (
                     <Card
