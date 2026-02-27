@@ -33,6 +33,45 @@ const initialState: NewsState = {
   askByItem: {}
 };
 
+function applyNewsBatch(state: NewsState, items: NewsItem[]) {
+  if (!Array.isArray(items) || !items.length) return;
+
+  const latestByKey = new Map<string, NewsItem>();
+  for (const item of items) {
+    if (!item || !item.id || !item.feedUrl) continue;
+    if (state.hiddenIds.includes(item.id)) continue;
+    latestByKey.set(`${item.feedUrl}::${item.id}`, item);
+  }
+
+  const touchedFeeds = new Set<string>();
+  latestByKey.forEach(item => {
+    if (!Array.isArray(state.itemsByFeed[item.feedUrl])) {
+      state.itemsByFeed[item.feedUrl] = [];
+    }
+    const list = state.itemsByFeed[item.feedUrl];
+    const idx = list.findIndex(x => x.id === item.id);
+    if (idx >= 0) list[idx] = { ...list[idx], ...item };
+    else list.push(item);
+    touchedFeeds.add(item.feedUrl);
+
+    if (item.summary && item.summary.trim()) {
+      delete state.summaryPendingById[item.id];
+    }
+    if (item.research && item.research.trim()) {
+      delete state.researchPendingById[item.id];
+    }
+  });
+
+  touchedFeeds.forEach(feedUrl => {
+    const list = state.itemsByFeed[feedUrl];
+    if (!Array.isArray(list)) return;
+    list.sort((a, b) => b.publishedMs - a.publishedMs);
+    if (list.length > MAX_ITEMS_PER_COLUMN) {
+      list.length = MAX_ITEMS_PER_COLUMN;
+    }
+  });
+}
+
 function askKey(id: string, feedUrl: string): string {
   return `${feedUrl}::${id}`;
 }
@@ -84,25 +123,10 @@ const newsSlice = createSlice({
       });
     },
     upsertNewsItem(state, action: PayloadAction<NewsItem>) {
-      const item = action.payload;
-      if (state.hiddenIds.includes(item.id)) return;
-
-      const list = Array.isArray(state.itemsByFeed[item.feedUrl])
-        ? [...state.itemsByFeed[item.feedUrl]]
-        : [];
-      const idx = list.findIndex(x => x.id === item.id);
-      if (idx >= 0) list[idx] = { ...list[idx], ...item };
-      else list.push(item);
-
-      list.sort((a, b) => b.publishedMs - a.publishedMs);
-      state.itemsByFeed[item.feedUrl] = list.slice(0, MAX_ITEMS_PER_COLUMN);
-
-      if (item.summary && item.summary.trim()) {
-        delete state.summaryPendingById[item.id];
-      }
-      if (item.research && item.research.trim()) {
-        delete state.researchPendingById[item.id];
-      }
+      applyNewsBatch(state, [action.payload]);
+    },
+    upsertNewsBatch(state, action: PayloadAction<NewsItem[]>) {
+      applyNewsBatch(state, action.payload);
     },
     setSummaryPending(state, action: PayloadAction<string>) {
       state.summaryPendingById[action.payload] = true;
@@ -195,6 +219,7 @@ export const {
   removeOldItemsInFeed,
   resetAllToNewestLimit,
   upsertNewsItem,
+  upsertNewsBatch,
   setSummaryPending,
   clearSummaryPending,
   clearSummaryForItem,

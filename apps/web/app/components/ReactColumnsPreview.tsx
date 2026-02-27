@@ -41,6 +41,7 @@ import {
   Link as MuiLink,
   MenuItem,
   Select,
+  Skeleton,
   Snackbar,
   Stack,
   TextField,
@@ -244,6 +245,8 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
   const [shareNoticeOpen, setShareNoticeOpen] = useState(false);
   const [dragFeedUrl, setDragFeedUrl] = useState<string | null>(null);
   const [dragOverFeedUrl, setDragOverFeedUrl] = useState<string | null>(null);
+  const [hydratedColumns, setHydratedColumns] = useState<Record<string, true>>({});
+  const columnNodesRef = useRef<Record<string, HTMLDivElement | null>>({});
   const prevAllControlsHiddenRef = useRef<boolean | null>(null);
   const bg = language === 'bg';
   const l = useMemo(() => ({
@@ -469,6 +472,56 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
     });
     return Array.from(map.values()).sort((a, b) => b.publishedMs - a.publishedMs);
   }, [itemsByFeed]);
+
+  useEffect(() => {
+    setHydratedColumns(prev => {
+      const next = { ...prev };
+      let changed = false;
+      for (let i = 0; i < Math.min(4, renderedFeeds.length); i++) {
+        const url = renderedFeeds[i].url;
+        if (!next[url]) {
+          next[url] = true;
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [renderedFeeds]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const observer = new IntersectionObserver(entries => {
+      const found: string[] = [];
+      entries.forEach(entry => {
+        if (!entry.isIntersecting) return;
+        const el = entry.target as HTMLElement;
+        const url = String(el.dataset.feedUrl || '');
+        if (url) found.push(url);
+      });
+      if (!found.length) return;
+      setHydratedColumns(prev => {
+        const next = { ...prev };
+        let changed = false;
+        found.forEach(url => {
+          if (!next[url]) {
+            next[url] = true;
+            changed = true;
+          }
+        });
+        return changed ? next : prev;
+      });
+    }, {
+      root: null,
+      rootMargin: '320px 0px',
+      threshold: 0.01
+    });
+
+    renderedFeeds.forEach(feed => {
+      const node = columnNodesRef.current[feed.url];
+      if (node) observer.observe(node);
+    });
+    return () => observer.disconnect();
+  }, [renderedFeeds]);
 
   const requestSummary = (it: NewsItem) => {
     if (!connected) return;
@@ -718,13 +771,20 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
               return hay.includes(normalizedQuery);
             })
             : items;
+          const isHydrated = !!hydratedColumns[feed.url];
           const pinned = !!pinnedByUrl[feed.url];
           const controlsOpen = typeof controlsOpenByUrl[feed.url] === 'boolean' ? !!controlsOpenByUrl[feed.url] : true;
           const isDragging = dragFeedUrl === feed.url;
           const isDropTarget = !!dragFeedUrl && dragFeedUrl !== feed.url && dragOverFeedUrl === feed.url;
           return (
-            <Card
+            <Box
               key={feed.url}
+              data-feed-url={feed.url}
+              ref={node => {
+                columnNodesRef.current[feed.url] = node as HTMLDivElement | null;
+              }}
+            >
+            <Card
               variant="outlined"
               draggable={!isMatchColumn}
               onDragStart={e => {
@@ -813,7 +873,7 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
                     {controlsOpen ? l.hideControls : l.showControls}
                   </Button>
                 </Stack>
-                {controlsOpen ? (
+                {isHydrated && controlsOpen ? (
                   <Stack direction="row" spacing={1} sx={{ mb: 1.1 }} flexWrap="wrap" alignItems="center">
                     <Button
                       size="small"
@@ -931,7 +991,13 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
                     </Button>
                   </Stack>
                 ) : null}
-
+                {!isHydrated ? (
+                  <Stack spacing={1.2} sx={{ py: 0.6 }}>
+                    <Skeleton variant="rounded" height={80} sx={{ bgcolor: 'rgba(120,140,180,0.14)' }} />
+                    <Skeleton variant="rounded" height={80} sx={{ bgcolor: 'rgba(120,140,180,0.14)' }} />
+                    <Alert severity="info" variant="outlined">Loading column...</Alert>
+                  </Stack>
+                ) : (
                 <Stack spacing={1.2}>
                   {itemsVisible.length === 0 ? (
                     <Alert severity="info" variant="outlined">
@@ -1199,8 +1265,10 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
                     </Card>
                   ))}
                 </Stack>
+                )}
               </CardContent>
             </Card>
+            </Box>
           );
         })}
       </Box>

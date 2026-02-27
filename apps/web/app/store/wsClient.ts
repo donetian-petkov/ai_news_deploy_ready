@@ -5,13 +5,18 @@ import type { BudgetMode, FeedInfo, NewsItem, SortMode } from './types';
 import { FILTERED_FEED_URL } from './constants';
 import { setStatus } from './slices/connectionSlice';
 import { setFeeds } from './slices/feedsSlice';
-import { receiveAskReply, setHiddenIds, upsertNewsItem } from './slices/newsSlice';
+import { receiveAskReply, setHiddenIds, upsertNewsBatch } from './slices/newsSlice';
 import { setUsage } from './slices/aiUsageSlice';
 import { setAiSettings } from './slices/uiSlice';
 
 let ws: WebSocket | null = null;
 let wsUrlCurrent = '';
 let hiddenIds = new Set<string>();
+let pendingNews: NewsItem[] = [];
+let pendingNewsTimer: ReturnType<typeof setTimeout> | null = null;
+
+const NEWS_FLUSH_INTERVAL_MS = 45;
+const NEWS_FLUSH_MAX_BATCH = 80;
 
 type FeedSettingsWire = {
   summaryEnabled?: unknown;
@@ -136,7 +141,31 @@ function resolveWsUrl(explicitUrl: string): string {
   return 'ws://localhost:4000';
 }
 
+function flushPendingNews(dispatch: AppDispatch) {
+  if (!pendingNews.length) return;
+  const batch = pendingNews;
+  pendingNews = [];
+  dispatch(upsertNewsBatch(batch));
+}
+
+function schedulePendingNewsFlush(dispatch: AppDispatch) {
+  if (pendingNewsTimer) return;
+  pendingNewsTimer = setTimeout(() => {
+    pendingNewsTimer = null;
+    flushPendingNews(dispatch);
+  }, NEWS_FLUSH_INTERVAL_MS);
+}
+
+function resetPendingNews() {
+  pendingNews = [];
+  if (pendingNewsTimer) {
+    clearTimeout(pendingNewsTimer);
+    pendingNewsTimer = null;
+  }
+}
+
 export function startWsConnection(dispatch: AppDispatch, explicitUrl: string) {
+  resetPendingNews();
   const nextUrl = resolveWsUrl(explicitUrl);
   if (ws && wsUrlCurrent === nextUrl && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
     return;
@@ -155,10 +184,12 @@ export function startWsConnection(dispatch: AppDispatch, explicitUrl: string) {
   };
 
   ws.onclose = () => {
+    resetPendingNews();
     dispatch(setStatus('disconnected'));
   };
 
   ws.onerror = () => {
+    resetPendingNews();
     dispatch(setStatus('error'));
   };
 
@@ -232,11 +263,21 @@ export function startWsConnection(dispatch: AppDispatch, explicitUrl: string) {
     const news = parseNews(msg);
     if (!news) return;
     if (hiddenIds.has(news.id)) return;
-    dispatch(upsertNewsItem(news));
+    pendingNews.push(news);
+    if (pendingNews.length >= NEWS_FLUSH_MAX_BATCH) {
+      if (pendingNewsTimer) {
+        clearTimeout(pendingNewsTimer);
+        pendingNewsTimer = null;
+      }
+      flushPendingNews(dispatch);
+      return;
+    }
+    schedulePendingNewsFlush(dispatch);
   };
 }
 
 export function stopWsConnection() {
+  resetPendingNews();
   if (!ws) return;
   try { ws.close(); } catch {}
   ws = null;
