@@ -97,115 +97,114 @@ type SchemeValue = 'classic' | 'vivid' | 'sunset' | 'neon' | 'ocean' | 'forest';
 const VIBE_LIST: VibeValue[] = ['default', 'anime', 'arcade', 'cinema', 'newspaper', 'cyberwitch', 'fantasy', 'scifi'];
 const SCHEME_LIST: SchemeValue[] = ['classic', 'vivid', 'sunset', 'neon', 'ocean', 'forest'];
 
-const SCHEME_PALETTES: Record<SchemeValue, { a: string; b: string; m: string; aSoft: string; bSoft: string; mSoft: string }> = {
-  classic: {
-    a: 'rgba(61, 149, 255, 0.98)',
-    b: 'rgba(32, 203, 125, 0.98)',
-    m: 'rgba(255, 172, 26, 0.98)',
-    aSoft: 'rgba(61, 149, 255, 0.24)',
-    bSoft: 'rgba(32, 203, 125, 0.22)',
-    mSoft: 'rgba(255, 172, 26, 0.26)'
-  },
-  vivid: {
-    a: 'rgba(16, 185, 255, 1)',
-    b: 'rgba(250, 88, 102, 1)',
-    m: 'rgba(255, 200, 54, 1)',
-    aSoft: 'rgba(16, 185, 255, 0.30)',
-    bSoft: 'rgba(250, 88, 102, 0.24)',
-    mSoft: 'rgba(255, 200, 54, 0.32)'
-  },
-  sunset: {
-    a: 'rgba(255, 127, 80, 1)',
-    b: 'rgba(255, 87, 51, 1)',
-    m: 'rgba(255, 199, 95, 1)',
-    aSoft: 'rgba(255, 127, 80, 0.28)',
-    bSoft: 'rgba(255, 87, 51, 0.24)',
-    mSoft: 'rgba(255, 199, 95, 0.30)'
-  },
-  neon: {
-    a: 'rgba(96, 255, 190, 1)',
-    b: 'rgba(77, 121, 255, 1)',
-    m: 'rgba(255, 77, 166, 1)',
-    aSoft: 'rgba(96, 255, 190, 0.25)',
-    bSoft: 'rgba(77, 121, 255, 0.24)',
-    mSoft: 'rgba(255, 77, 166, 0.22)'
-  },
-  ocean: {
-    a: 'rgba(0, 175, 255, 1)',
-    b: 'rgba(0, 219, 193, 1)',
-    m: 'rgba(255, 203, 52, 1)',
-    aSoft: 'rgba(0, 175, 255, 0.30)',
-    bSoft: 'rgba(0, 219, 193, 0.22)',
-    mSoft: 'rgba(255, 203, 52, 0.28)'
-  },
-  forest: {
-    a: 'rgba(75, 168, 96, 1)',
-    b: 'rgba(121, 85, 72, 1)',
-    m: 'rgba(214, 153, 64, 1)',
-    aSoft: 'rgba(75, 168, 96, 0.30)',
-    bSoft: 'rgba(121, 85, 72, 0.22)',
-    mSoft: 'rgba(214, 153, 64, 0.28)'
-  }
+type Rgb = { r: number; g: number; b: number };
+type Hsl = { h: number; s: number; l: number };
+type ColumnPalette = { a: string; b: string; m: string; aSoft: string; bSoft: string; mSoft: string };
+
+const VIBE_BASE_COLORS: Record<VibeValue, [string, string, string]> = {
+  default: ['#3d95ff', '#20cb7d', '#ffac1a'],
+  anime: ['#ff4da6', '#38bdf8', '#ffe15c'],
+  arcade: ['#39ff14', '#ff40ff', '#ffdd00'],
+  cinema: ['#d2a85f', '#b4253a', '#f4c870'],
+  newspaper: ['#4e627a', '#78808c', '#b27418'],
+  cyberwitch: ['#b34cff', '#00ddff', '#ff74e6'],
+  fantasy: ['#56a86e', '#886a4a', '#d9b054'],
+  scifi: ['#00c9ff', '#707cff', '#74ffcf']
 };
 
-const VIBE_PALETTE_OVERRIDES: Partial<Record<VibeValue, Partial<{ a: string; b: string; m: string; aSoft: string; bSoft: string; mSoft: string }>>> = {
-  anime: {
-    a: 'rgba(255, 92, 174, 0.98)',
-    b: 'rgba(112, 176, 255, 0.98)',
-    m: 'rgba(255, 206, 92, 0.98)',
-    aSoft: 'rgba(255, 92, 174, 0.25)',
-    bSoft: 'rgba(112, 176, 255, 0.23)',
-    mSoft: 'rgba(255, 206, 92, 0.24)'
-  },
-  arcade: {
-    a: 'rgba(87, 255, 142, 0.98)',
-    b: 'rgba(48, 210, 255, 0.98)',
-    m: 'rgba(255, 92, 92, 0.98)',
-    aSoft: 'rgba(87, 255, 142, 0.24)',
-    bSoft: 'rgba(48, 210, 255, 0.22)',
-    mSoft: 'rgba(255, 92, 92, 0.22)'
-  },
-  cinema: {
-    a: 'rgba(220, 177, 92, 0.98)',
-    b: 'rgba(93, 145, 255, 0.98)',
-    m: 'rgba(255, 122, 86, 0.98)',
-    aSoft: 'rgba(220, 177, 92, 0.24)',
-    bSoft: 'rgba(93, 145, 255, 0.21)',
-    mSoft: 'rgba(255, 122, 86, 0.22)'
-  },
-  newspaper: {
-    a: 'rgba(157, 185, 220, 0.98)',
-    b: 'rgba(111, 165, 145, 0.98)',
-    m: 'rgba(216, 179, 120, 0.98)',
-    aSoft: 'rgba(157, 185, 220, 0.22)',
-    bSoft: 'rgba(111, 165, 145, 0.22)',
-    mSoft: 'rgba(216, 179, 120, 0.22)'
-  },
-  cyberwitch: {
-    a: 'rgba(199, 103, 255, 0.99)',
-    b: 'rgba(34, 219, 255, 0.99)',
-    m: 'rgba(255, 104, 210, 0.99)',
-    aSoft: 'rgba(199, 103, 255, 0.24)',
-    bSoft: 'rgba(34, 219, 255, 0.22)',
-    mSoft: 'rgba(255, 104, 210, 0.20)'
-  },
-  fantasy: {
-    a: 'rgba(111, 193, 106, 0.98)',
-    b: 'rgba(110, 142, 230, 0.98)',
-    m: 'rgba(230, 172, 91, 0.98)',
-    aSoft: 'rgba(111, 193, 106, 0.23)',
-    bSoft: 'rgba(110, 142, 230, 0.22)',
-    mSoft: 'rgba(230, 172, 91, 0.24)'
-  },
-  scifi: {
-    a: 'rgba(57, 210, 255, 0.99)',
-    b: 'rgba(129, 136, 255, 0.99)',
-    m: 'rgba(255, 141, 70, 0.99)',
-    aSoft: 'rgba(57, 210, 255, 0.22)',
-    bSoft: 'rgba(129, 136, 255, 0.22)',
-    mSoft: 'rgba(255, 141, 70, 0.22)'
-  }
+const SCHEME_TUNING: Record<SchemeValue, { hueShift: number; satMul: number; lightMul: number; softAlpha: number }> = {
+  classic: { hueShift: 0, satMul: 1.0, lightMul: 1.0, softAlpha: 0.26 },
+  vivid: { hueShift: 10, satMul: 1.16, lightMul: 1.02, softAlpha: 0.30 },
+  sunset: { hueShift: -22, satMul: 1.08, lightMul: 0.96, softAlpha: 0.29 },
+  neon: { hueShift: 32, satMul: 1.28, lightMul: 1.04, softAlpha: 0.27 },
+  ocean: { hueShift: -52, satMul: 1.03, lightMul: 0.94, softAlpha: 0.30 },
+  forest: { hueShift: -105, satMul: 0.82, lightMul: 0.86, softAlpha: 0.28 }
 };
+
+function clamp(v: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, v));
+}
+
+function hexToRgb(hex: string): Rgb {
+  const clean = String(hex || '').trim().replace(/^#/, '');
+  if (!/^[0-9a-fA-F]{6}$/.test(clean)) return { r: 61, g: 149, b: 255 };
+  const n = Number.parseInt(clean, 16);
+  return {
+    r: (n >> 16) & 255,
+    g: (n >> 8) & 255,
+    b: n & 255
+  };
+}
+
+function rgbToHsl(r: number, g: number, b: number): Hsl {
+  const rn = r / 255;
+  const gn = g / 255;
+  const bn = b / 255;
+  const max = Math.max(rn, gn, bn);
+  const min = Math.min(rn, gn, bn);
+  const delta = max - min;
+  let h = 0;
+  if (delta !== 0) {
+    if (max === rn) h = ((gn - bn) / delta) % 6;
+    else if (max === gn) h = (bn - rn) / delta + 2;
+    else h = (rn - gn) / delta + 4;
+    h *= 60;
+    if (h < 0) h += 360;
+  }
+  const l = (max + min) / 2;
+  const s = delta === 0 ? 0 : delta / (1 - Math.abs(2 * l - 1));
+  return { h, s, l };
+}
+
+function hslToRgb(h: number, s: number, l: number): Rgb {
+  const c = (1 - Math.abs(2 * l - 1)) * s;
+  const hh = h / 60;
+  const x = c * (1 - Math.abs((hh % 2) - 1));
+  let r1 = 0;
+  let g1 = 0;
+  let b1 = 0;
+  if (hh < 1) { r1 = c; g1 = x; b1 = 0; }
+  else if (hh < 2) { r1 = x; g1 = c; b1 = 0; }
+  else if (hh < 3) { r1 = 0; g1 = c; b1 = x; }
+  else if (hh < 4) { r1 = 0; g1 = x; b1 = c; }
+  else if (hh < 5) { r1 = x; g1 = 0; b1 = c; }
+  else { r1 = c; g1 = 0; b1 = x; }
+  const m = l - c / 2;
+  return {
+    r: Math.round((r1 + m) * 255),
+    g: Math.round((g1 + m) * 255),
+    b: Math.round((b1 + m) * 255)
+  };
+}
+
+function transformHex(hex: string, tuning: { hueShift: number; satMul: number; lightMul: number }): Rgb {
+  const rgb = hexToRgb(hex);
+  const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
+  const h = ((hsl.h + tuning.hueShift) % 360 + 360) % 360;
+  const s = clamp(hsl.s * tuning.satMul, 0.12, 1);
+  const l = clamp(hsl.l * tuning.lightMul, 0.10, 0.86);
+  return hslToRgb(h, s, l);
+}
+
+function rgba(rgb: Rgb, alpha = 1): string {
+  return `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`;
+}
+
+function buildColumnPalette(vibe: VibeValue, scheme: SchemeValue): ColumnPalette {
+  const base = VIBE_BASE_COLORS[vibe] || VIBE_BASE_COLORS.default;
+  const tuning = SCHEME_TUNING[scheme] || SCHEME_TUNING.classic;
+  const a = transformHex(base[0], tuning);
+  const b = transformHex(base[1], tuning);
+  const m = transformHex(base[2], tuning);
+  return {
+    a: rgba(a, 1),
+    b: rgba(b, 1),
+    m: rgba(m, 1),
+    aSoft: rgba(a, tuning.softAlpha),
+    bSoft: rgba(b, Math.max(0.16, tuning.softAlpha - 0.03)),
+    mSoft: rgba(m, Math.min(0.36, tuning.softAlpha + 0.03))
+  };
+}
 
 function getVibeIcons(vibe: VibeValue): {
   summary: React.ElementType;
@@ -786,10 +785,7 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
   const fontScale = fontSize === 'xl' ? 1.17 : fontSize === 'lg' ? 1.09 : fontSize === 'sm' ? 0.93 : 1;
   const resolvedVibe: VibeValue = (VIBE_LIST.includes(vibe as VibeValue) ? vibe : 'default') as VibeValue;
   const resolvedScheme: SchemeValue = (SCHEME_LIST.includes(scheme as SchemeValue) ? scheme : 'classic') as SchemeValue;
-  const palette = {
-    ...SCHEME_PALETTES[resolvedScheme],
-    ...(VIBE_PALETTE_OVERRIDES[resolvedVibe] || {})
-  };
+  const palette = useMemo(() => buildColumnPalette(resolvedVibe, resolvedScheme), [resolvedVibe, resolvedScheme]);
   const vibeIcons = useMemo(() => getVibeIcons(resolvedVibe), [resolvedVibe]);
   const compactBtnSx = {
     minHeight: 30,
