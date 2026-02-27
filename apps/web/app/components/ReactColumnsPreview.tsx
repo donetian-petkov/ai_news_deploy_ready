@@ -110,6 +110,7 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
   const connected = useAppSelector(s => s.connection.connected);
   const status = useAppSelector(s => s.connection.status);
   const language = useAppSelector(s => s.ui.language);
+  const hideAllResearchSeq = useAppSelector(s => s.ui.hideAllResearchSeq);
   const feeds = useAppSelector(s => s.feeds.feeds);
   const pinnedByUrl = useAppSelector(s => s.feeds.pinnedByUrl);
   const controlsOpenByUrl = useAppSelector(s => s.feeds.controlsOpenByUrl);
@@ -203,19 +204,20 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
   }, [dispatch, wsUrl]);
 
   useEffect(() => {
-    const onHideAllResearch = () => {
-      setHideAllResearch(true);
-    };
     const onSetVibe = () => {
       // keep React preview in sync with top controls interactions
     };
-    window.addEventListener('ai-news:hide-all-research', onHideAllResearch);
     window.addEventListener('ai-news:set-vibe', onSetVibe);
     return () => {
-      window.removeEventListener('ai-news:hide-all-research', onHideAllResearch);
       window.removeEventListener('ai-news:set-vibe', onSetVibe);
     };
   }, []);
+
+  useEffect(() => {
+    if (hideAllResearchSeq > 0) {
+      setHideAllResearch(true);
+    }
+  }, [hideAllResearchSeq]);
 
   useEffect(() => {
     if (!feeds.length) return;

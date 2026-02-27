@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Alert, Box, Button, Chip, FormControl, MenuItem, Select, Stack, TextField, Typography } from '@mui/material';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
-import { setLanguage, setSearchQuery, setTopUiState } from '../store/slices/uiSlice';
+import { setLanguage, setSearchQuery, setTopUiState, triggerHideAllResearch } from '../store/slices/uiSlice';
 import { sendWsMessage } from '../store/wsClient';
 
 type VibeValue = 'default' | 'anime' | 'arcade' | 'cinema' | 'newspaper' | 'cyberwitch' | 'fantasy' | 'scifi';
@@ -441,7 +441,20 @@ export default function TopMenu() {
             <Button id="quickAddStreamBtn" className="btn ghost" size="small" variant="outlined" type="button" onClick={toggleAddStream}>{addStreamLabel}</Button>
             <Button id="controlsToggle" className="btn ghost" size="small" variant="outlined" type="button" onClick={toggleControls}>{controlsLabel}</Button>
             <Button id="allColControlsToggle" className="btn ghost" size="small" variant="outlined" type="button" onClick={toggleAllColumnControls}>{allColumnLabel}</Button>
-            <Button id="hideAllResearchBtn" className="btn ghost" size="small" variant="outlined" type="button" onClick={() => emit('ai-news:hide-all-research')}>{labels.hideAllResearch}</Button>
+            <Button
+              id="hideAllResearchBtn"
+              className="btn ghost"
+              size="small"
+              variant="outlined"
+              type="button"
+              onClick={() => {
+                dispatch(triggerHideAllResearch());
+                // Keep legacy columns in sync while migration is in progress.
+                emit('ai-news:hide-all-research');
+              }}
+            >
+              {labels.hideAllResearch}
+            </Button>
             <Button id="menuToggle" className="btn ghost" size="small" variant="outlined" type="button" onClick={toggleMenu}>{menuLabel}</Button>
           </Stack>
         </div>

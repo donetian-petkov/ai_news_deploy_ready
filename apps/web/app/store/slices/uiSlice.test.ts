@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import uiReducer, { setSearchQuery, setTopUiState } from './uiSlice';
+import uiReducer, { setSearchQuery, setTopUiState, triggerHideAllResearch } from './uiSlice';
 
 describe('uiSlice', () => {
   it('returns the initial state', () => {
@@ -13,6 +13,7 @@ describe('uiSlice', () => {
       searchVisible: true,
       addStreamVisible: false,
       allColumnControlsHidden: false,
+      hideAllResearchSeq: 0,
       vibe: 'default'
     });
   });
@@ -47,5 +48,13 @@ describe('uiSlice', () => {
 
     state = uiReducer(state, setTopUiState({ vibe: 'not-a-vibe' as never }));
     expect(state.vibe).toBe('anime');
+  });
+
+  it('increments hide-all-research sequence', () => {
+    let state = uiReducer(undefined, triggerHideAllResearch());
+    expect(state.hideAllResearchSeq).toBe(1);
+
+    state = uiReducer(state, triggerHideAllResearch());
+    expect(state.hideAllResearchSeq).toBe(2);
   });
 });

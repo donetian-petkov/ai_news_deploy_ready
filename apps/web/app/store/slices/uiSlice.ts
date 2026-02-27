@@ -19,6 +19,7 @@ type UiState = {
   searchVisible: boolean;
   addStreamVisible: boolean;
   allColumnControlsHidden: boolean;
+  hideAllResearchSeq: number;
   vibe: 'default' | 'anime' | 'arcade' | 'cinema' | 'newspaper' | 'cyberwitch' | 'fantasy' | 'scifi';
 };
 
@@ -31,6 +32,7 @@ const initialState: UiState = {
   searchVisible: true,
   addStreamVisible: false,
   allColumnControlsHidden: false,
+  hideAllResearchSeq: 0,
   vibe: 'default'
 };
 
@@ -55,9 +57,12 @@ const uiSlice = createSlice({
       if (typeof next.addStreamVisible === 'boolean') state.addStreamVisible = next.addStreamVisible;
       if (typeof next.allColumnControlsHidden === 'boolean') state.allColumnControlsHidden = next.allColumnControlsHidden;
       if (typeof next.vibe === 'string' && isVibe(next.vibe)) state.vibe = next.vibe;
+    },
+    triggerHideAllResearch(state) {
+      state.hideAllResearchSeq += 1;
     }
   }
 });
 
-export const { setLanguage, setColorMode, setSearchQuery, setTopUiState } = uiSlice.actions;
+export const { setLanguage, setColorMode, setSearchQuery, setTopUiState, triggerHideAllResearch } = uiSlice.actions;
 export default uiSlice.reducer;
