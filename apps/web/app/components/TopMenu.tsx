@@ -8,7 +8,7 @@ import MenuIcon from '@mui/icons-material/Menu';
 import SearchIcon from '@mui/icons-material/Search';
 import TuneIcon from '@mui/icons-material/Tune';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
-import { setLanguage, setSearchQuery, setTopUiState, setHideAllResearch, setHideAllSummaries, setNotifySettings, setAiSettings, setAppearanceSettings, hydrateUiSettings, setHelpOpen, dismissToast, triggerShowMoreNewsAll, triggerResetNewsShownAll } from '../store/slices/uiSlice';
+import { setLanguage, setSearchQuery, setTopUiState, setHideAllResearch, setHideAllSummaries, setNotifySettings, setAiSettings, setAppearanceSettings, hydrateUiSettings, setHelpOpen, dismissToast, enqueueToast, triggerShowMoreNewsAll, triggerResetNewsShownAll } from '../store/slices/uiSlice';
 import { sendWsMessage } from '../store/wsClient';
 import { setFeedBudgetSetting } from '../store/slices/feedsSlice';
 import { removeOldItemsInFeed, resetAllToNewestLimit } from '../store/slices/newsSlice';
@@ -91,7 +91,11 @@ export default function TopMenu() {
     intervalSuffix: bg ? 'с' : 's',
     helpTitle: bg ? 'Помощ' : 'Help',
     close: bg ? 'Затвори' : 'Close',
-    colorMode: bg ? 'Цветове' : 'Color mode'
+    colorMode: bg ? 'Цветове' : 'Color mode',
+    aiProvider: bg ? 'AI доставчик:' : 'AI provider:',
+    openai: 'OpenAI',
+    claude: 'Claude',
+    openrouter: 'OpenRouter'
   } as const;
 
   useEffect(() => {
@@ -409,6 +413,34 @@ export default function TopMenu() {
     });
   };
 
+  const changeAiProvider = (provider: 'openai' | 'claude' | 'openrouter') => {
+    const keyLabel = provider === 'claude'
+      ? 'ANTHROPIC_API_KEY'
+      : provider === 'openrouter'
+        ? 'OPENROUTER_API_KEY'
+        : 'OPENAI_API_KEY';
+    const promptText = bg
+      ? `Смяната на AI доставчик изисква API ключ (${keyLabel}). Въведи новия ключ:`
+      : `Switching AI provider requires an API key (${keyLabel}). Enter the new key:`;
+    const apiKey = window.prompt(promptText, '');
+    if (apiKey === null) return;
+    if (!apiKey.trim()) {
+      dispatch(enqueueToast({
+        kind: 'error',
+        message: bg ? 'Смяната е прекратена: липсва API ключ.' : 'Provider switch cancelled: API key is required.'
+      }));
+      return;
+    }
+    const ok = sendWsMessage({ type: 'set_ai_provider', provider, apiKey: apiKey.trim() });
+    if (!ok) {
+      dispatch(enqueueToast({
+        kind: 'error',
+        message: bg ? 'Няма връзка със сървъра.' : 'No server connection.'
+      }));
+      return;
+    }
+  };
+
   const requestNotificationPermission = async (enabled: boolean) => {
     if (!enabled || typeof Notification === 'undefined') return;
     try {
@@ -591,6 +623,19 @@ export default function TopMenu() {
         <details className="controlSection" open>
           <summary id="aiSettingsSummary">AI Settings</summary>
           <div className="controlGroup">
+            <label className="checkbox">
+              <span id="aiProviderPrefix">{labels.aiProvider}</span>
+              <select
+                id="aiProviderSelect"
+                className="select"
+                value={ui.aiProvider}
+                onChange={e => changeAiProvider(e.target.value as 'openai' | 'claude' | 'openrouter')}
+              >
+                <option value="openai">{labels.openai}</option>
+                <option value="claude">{labels.claude}</option>
+                <option value="openrouter">{labels.openrouter}</option>
+              </select>
+            </label>
             <label className="checkbox">
               <span id="summaryLangPrefix">Summary:</span>
               <select

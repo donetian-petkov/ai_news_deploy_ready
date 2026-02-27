@@ -5,6 +5,7 @@ export const researchLangSchema = z.union([z.literal('bg'), z.literal('en')]);
 export const feedKindSchema = z.union([z.literal('rss'), z.literal('reddit'), z.literal('youtube')]);
 export const budgetModeSchema = z.union([z.literal('low'), z.literal('standard'), z.literal('high')]);
 export const sortModeSchema = z.union([z.literal('newest'), z.literal('oldest'), z.literal('matched')]);
+export const aiProviderSchema = z.union([z.literal('openai'), z.literal('claude'), z.literal('openrouter')]);
 
 export const columnFiltersSchema = z.object({
   onlyMatches: z.boolean(),
@@ -14,6 +15,7 @@ export const columnFiltersSchema = z.object({
 
 export const clientMsgSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('toggle_ai'), enabled: z.boolean() }),
+  z.object({ type: z.literal('set_ai_provider'), provider: aiProviderSchema, apiKey: z.string().optional() }),
   z.object({ type: z.literal('set_summary_lang'), lang: summaryLangSchema }),
   z.object({ type: z.literal('set_research_lang'), lang: researchLangSchema }),
   z.object({ type: z.literal('add_feed'), url: z.string(), label: z.string().optional(), kind: feedKindSchema.optional(), intervalSec: z.number().optional() }),

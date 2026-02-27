@@ -29,6 +29,7 @@ type UiState = {
   notifyMode: 'matched' | 'matched_pinned' | 'pinned' | 'all';
   aiAvailable: boolean;
   aiEnabled: boolean;
+  aiProvider: 'openai' | 'claude' | 'openrouter';
   summaryLang: 'bilingual' | 'bg' | 'en';
   researchLang: 'bg' | 'en';
   allBudget: 'mixed' | 'low' | 'standard' | 'high';
@@ -59,6 +60,7 @@ const initialState: UiState = {
   notifyMode: 'matched',
   aiAvailable: false,
   aiEnabled: false,
+  aiProvider: 'openai',
   summaryLang: 'bilingual',
   researchLang: 'bg',
   allBudget: 'standard',
@@ -119,10 +121,11 @@ const uiSlice = createSlice({
         state.notifyMode = next.notifyMode;
       }
     },
-    setAiSettings(state, action: PayloadAction<Partial<Pick<UiState, 'aiAvailable' | 'aiEnabled' | 'summaryLang' | 'researchLang' | 'allBudget'>>>) {
+    setAiSettings(state, action: PayloadAction<Partial<Pick<UiState, 'aiAvailable' | 'aiEnabled' | 'aiProvider' | 'summaryLang' | 'researchLang' | 'allBudget'>>>) {
       const next = action.payload;
       if (typeof next.aiAvailable === 'boolean') state.aiAvailable = next.aiAvailable;
       if (typeof next.aiEnabled === 'boolean') state.aiEnabled = next.aiEnabled;
+      if (next.aiProvider === 'openai' || next.aiProvider === 'claude' || next.aiProvider === 'openrouter') state.aiProvider = next.aiProvider;
       if (next.summaryLang === 'bg' || next.summaryLang === 'en' || next.summaryLang === 'bilingual') state.summaryLang = next.summaryLang;
       if (next.researchLang === 'bg' || next.researchLang === 'en') state.researchLang = next.researchLang;
       if (next.allBudget === 'mixed' || next.allBudget === 'low' || next.allBudget === 'standard' || next.allBudget === 'high') state.allBudget = next.allBudget;

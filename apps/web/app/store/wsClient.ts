@@ -209,6 +209,9 @@ export function startWsConnection(dispatch: AppDispatch, explicitUrl: string) {
       dispatch(setAiSettings({
         aiAvailable: !!msg.aiAvailable,
         aiEnabled: !!msg.aiEnabled,
+        aiProvider: msg.aiProvider === 'claude' || msg.aiProvider === 'openrouter' || msg.aiProvider === 'openai'
+          ? msg.aiProvider
+          : 'openai',
         summaryLang: msg.summaryLang === 'bg' || msg.summaryLang === 'en' || msg.summaryLang === 'bilingual'
           ? msg.summaryLang
           : 'bilingual',

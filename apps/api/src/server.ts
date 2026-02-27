@@ -6,7 +6,8 @@ import fs from 'fs';
 import dotenv from 'dotenv';
 import OpenAI from 'openai';
 import { PrismaClient } from '@prisma/client';
-import { clientMsgSchema, type ClientMsg } from '@ai-news/shared';
+import { aiProviderSchema, clientMsgSchema, type ClientMsg } from '@ai-news/shared';
+import { z } from 'zod';
 
 function bootstrapEnv() {
   const envCandidates = [
@@ -54,6 +55,7 @@ const prisma = new PrismaClient({
 
 type SummaryLang = 'bg' | 'en' | 'bilingual';
 type ResearchLang = 'bg' | 'en';
+type AIProvider = z.infer<typeof aiProviderSchema>;
 
 type FeedKind = 'rss' | 'reddit' | 'youtube';
 
@@ -129,6 +131,7 @@ type Config = {
   type: 'config';
   keywords: string[];
 
+  aiProvider: AIProvider;
   aiAvailable: boolean;
   aiEnabled: boolean;
 
@@ -233,22 +236,49 @@ function parseKeywords(): string[] {
 const keywords = parseKeywords();
 
 // ---- AI configuration (.env) ----
-const aiAvailable = !!process.env.OPENAI_API_KEY;
+const aiProviderParsed = aiProviderSchema.safeParse(process.env.AI_PROVIDER || 'openai');
+let aiProvider: AIProvider = aiProviderParsed.success ? aiProviderParsed.data : 'openai';
+
+const providerApiKeys: Record<AIProvider, string> = {
+  openai: String(process.env.OPENAI_API_KEY || '').trim(),
+  claude: String(process.env.ANTHROPIC_API_KEY || process.env.CLAUDE_API_KEY || '').trim(),
+  openrouter: String(process.env.OPENROUTER_API_KEY || '').trim()
+};
 
 const EMBED_MODEL =
   process.env.OPENAI_EMBED_MODEL ||
   process.env.EMBED_MODEL ||
   'text-embedding-3-small';
 
-const SUMMARY_MODEL =
+const OPENAI_SUMMARY_MODEL =
   process.env.OPENAI_SUMMARY_MODEL ||
   process.env.SUMMARY_MODEL ||
   'gpt-4.1-nano';
 
-const RESEARCH_MODEL =
+const OPENAI_RESEARCH_MODEL =
   process.env.OPENAI_RESEARCH_MODEL ||
   process.env.RESEARCH_MODEL ||
   'gpt-4.1-mini';
+
+const CLAUDE_SUMMARY_MODEL =
+  process.env.CLAUDE_SUMMARY_MODEL ||
+  process.env.SUMMARY_MODEL ||
+  'claude-3-5-haiku-latest';
+
+const CLAUDE_RESEARCH_MODEL =
+  process.env.CLAUDE_RESEARCH_MODEL ||
+  process.env.RESEARCH_MODEL ||
+  'claude-3-7-sonnet-latest';
+
+const OPENROUTER_SUMMARY_MODEL =
+  process.env.OPENROUTER_SUMMARY_MODEL ||
+  process.env.SUMMARY_MODEL ||
+  'openai/gpt-4.1-mini';
+
+const OPENROUTER_RESEARCH_MODEL =
+  process.env.OPENROUTER_RESEARCH_MODEL ||
+  process.env.RESEARCH_MODEL ||
+  'openai/gpt-4.1';
 
 const ASK_AGENT_MAX_QUESTIONS = 5;
 const ASK_AGENT_MAX_CHARS = 400;
@@ -275,7 +305,56 @@ const RESEARCH_DEFAULT_FILTERED =
 const RESEARCH_DEFAULT_ALL =
   (process.env.RESEARCH_DEFAULT_ALL || 'false') === 'true';
 
-let aiEnabled =
+let openaiEmbeddingClient: OpenAI | null = null;
+let openaiGenerationClient: OpenAI | null = null;
+let openrouterGenerationClient: OpenAI | null = null;
+let aiAvailable: boolean = false;
+
+function activeModel(kind: 'summary' | 'research'): string {
+  if (aiProvider === 'claude') return kind === 'summary' ? CLAUDE_SUMMARY_MODEL : CLAUDE_RESEARCH_MODEL;
+  if (aiProvider === 'openrouter') return kind === 'summary' ? OPENROUTER_SUMMARY_MODEL : OPENROUTER_RESEARCH_MODEL;
+  return kind === 'summary' ? OPENAI_SUMMARY_MODEL : OPENAI_RESEARCH_MODEL;
+}
+
+function activeOpenAiLikeClient(): OpenAI | null {
+  if (aiProvider === 'openrouter') return openrouterGenerationClient;
+  if (aiProvider === 'openai') return openaiGenerationClient;
+  return null;
+}
+
+function activeProviderHasKey(provider: AIProvider): boolean {
+  return provider === 'claude'
+    ? !!providerApiKeys.claude
+    : provider === 'openrouter'
+      ? !!openrouterGenerationClient
+      : !!openaiGenerationClient;
+}
+
+function refreshAiClients() {
+  openaiEmbeddingClient = providerApiKeys.openai
+    ? new OpenAI({ apiKey: providerApiKeys.openai })
+    : null;
+  openaiGenerationClient = providerApiKeys.openai
+    ? new OpenAI({ apiKey: providerApiKeys.openai })
+    : null;
+  openrouterGenerationClient = providerApiKeys.openrouter
+    ? new OpenAI({
+      apiKey: providerApiKeys.openrouter,
+      baseURL: process.env.OPENROUTER_BASE_URL || 'https://openrouter.ai/api/v1'
+    })
+    : null;
+  aiAvailable = activeProviderHasKey(aiProvider);
+}
+
+function setAiProviderKey(provider: AIProvider, apiKey?: string) {
+  const next = String(apiKey || '').trim();
+  if (next) providerApiKeys[provider] = next;
+  refreshAiClients();
+}
+
+refreshAiClients();
+
+let aiEnabled: boolean =
   (process.env.AI_ENABLED ? process.env.AI_ENABLED !== 'false' : true) &&
   aiAvailable;
 
@@ -285,20 +364,14 @@ if (!['bg', 'en', 'bilingual'].includes(summaryLang)) summaryLang = 'bilingual';
 let researchLang: ResearchLang = (process.env.RESEARCH_LANG as ResearchLang) || 'bg';
 if (!['bg', 'en'].includes(researchLang)) researchLang = 'bg';
 
-const openai = aiAvailable ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY }) : null;
-
 let aiUsageInputTokens = 0;
 let aiUsageOutputTokens = 0;
 let aiUsageTotalTokens = 0;
 
-function trackUsageFromResponse(resp: any) {
-  const usage = (resp && typeof resp === 'object') ? (resp as any).usage : null;
-  if (!usage || typeof usage !== 'object') return;
-
-  const input = Number(usage.input_tokens || usage.prompt_tokens || 0);
-  const output = Number(usage.output_tokens || usage.completion_tokens || 0);
-  const total = Number(usage.total_tokens || (input + output) || 0);
-
+function trackUsage(inputRaw: unknown, outputRaw: unknown, totalRaw: unknown) {
+  const input = Number(inputRaw || 0);
+  const output = Number(outputRaw || 0);
+  const total = Number(totalRaw || (input + output) || 0);
   if (!Number.isFinite(input) && !Number.isFinite(output) && !Number.isFinite(total)) return;
 
   aiUsageInputTokens += Number.isFinite(input) ? Math.max(0, Math.floor(input)) : 0;
@@ -324,6 +397,17 @@ function trackUsageFromResponse(resp: any) {
       totalTokens: aiUsageTotalTokens
     }
   }).catch(() => {});
+}
+
+function trackUsageFromResponse(resp: any) {
+  const usage = (resp && typeof resp === 'object') ? (resp as any).usage : null;
+  if (!usage || typeof usage !== 'object') return;
+
+  trackUsage(
+    usage.input_tokens || usage.prompt_tokens || 0,
+    usage.output_tokens || usage.completion_tokens || 0,
+    usage.total_tokens || 0
+  );
 }
 
 // ---------------- Persistence (JSON) ----------------
@@ -545,7 +629,7 @@ function cosine(a: number[], b: number[]) {
 }
 
 async function embed(text: string): Promise<number[] | null> {
-  if (!openai) return null;
+  if (!openaiEmbeddingClient) return null;
 
   const key = normalizeText(text);
   if (!key) return null;
@@ -553,7 +637,7 @@ async function embed(text: string): Promise<number[] | null> {
   const cached = titleVecCache.get(key);
   if (cached) return cached;
 
-  const res = await openai.embeddings.create({
+  const res = await openaiEmbeddingClient.embeddings.create({
     model: EMBED_MODEL,
     input: text,
     encoding_format: 'float'
@@ -573,7 +657,7 @@ async function embed(text: string): Promise<number[] | null> {
 
 async function initKeywordEmbeddings() {
   keywordVecs = [];
-  if (!openai || !aiEnabled || keywords.length === 0) return;
+  if (!openaiEmbeddingClient || !aiEnabled || keywords.length === 0) return;
 
   for (const kw of keywords) {
     const v = await embed(kw);
@@ -597,7 +681,7 @@ async function hybridMatch(
 ): Promise<{ isMatch: boolean; score: number; vec: number[] | null }> {
   const hit = substringHit(title);
 
-  if (!openai || !aiEnabled || keywordVecs.length === 0) {
+  if (!openaiEmbeddingClient || !aiEnabled || keywordVecs.length === 0) {
     return { isMatch: hit, score: hit ? 1 : 0, vec: null };
   }
 
@@ -795,31 +879,95 @@ async function fetchArticleText(link: string, maxChars: number): Promise<string>
 // ------------------------------------------------------------------
 
 // ---------------- AI calls ----------------
+async function generateWithOpenAiLike(
+  model: string,
+  input: string,
+  maxOutputTokens: number,
+  temperature: number
+): Promise<string | undefined> {
+  const client = activeOpenAiLikeClient();
+  if (!client) return undefined;
+  const resp = await client.responses.create({
+    model,
+    input,
+    max_output_tokens: maxOutputTokens,
+    temperature
+  });
+  trackUsageFromResponse(resp);
+  const text = (resp.output_text || '').trim();
+  return text || undefined;
+}
+
+async function generateWithClaude(
+  model: string,
+  input: string,
+  maxOutputTokens: number,
+  temperature: number
+): Promise<string | undefined> {
+  if (!providerApiKeys.claude) return undefined;
+
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': providerApiKeys.claude,
+      'anthropic-version': '2023-06-01'
+    },
+    body: JSON.stringify({
+      model,
+      max_tokens: maxOutputTokens,
+      temperature,
+      messages: [{ role: 'user', content: input }]
+    })
+  });
+
+  if (!res.ok) {
+    throw new Error(`Claude HTTP ${res.status}`);
+  }
+
+  const json = await res.json() as any;
+  const usage = json?.usage || {};
+  trackUsage(usage.input_tokens || 0, usage.output_tokens || 0, 0);
+
+  const text = Array.isArray(json?.content)
+    ? json.content
+      .filter((x: any) => x && x.type === 'text' && typeof x.text === 'string')
+      .map((x: any) => String(x.text))
+      .join('\n')
+      .trim()
+    : '';
+  return text || undefined;
+}
+
+async function generateAiText(
+  kind: 'summary' | 'research',
+  input: string,
+  maxOutputTokens: number,
+  temperature: number
+): Promise<string | undefined> {
+  if (!aiEnabled || !aiAvailable) return undefined;
+  const model = activeModel(kind);
+  if (!model || model === 'none') return undefined;
+
+  if (aiProvider === 'claude') {
+    return generateWithClaude(model, input, maxOutputTokens, temperature);
+  }
+  return generateWithOpenAiLike(model, input, maxOutputTokens, temperature);
+}
+
 async function oneLineSummary(
   title: string,
   source: string,
   context: string,
   budget: BudgetMode
 ): Promise<string | undefined> {
-  if (!openai || !aiEnabled) return undefined;
-  if (SUMMARY_MODEL === 'none') return undefined;
-
   const input =
     `${summaryInstruction(summaryLang)} No quotes.\n` +
     `Source: ${source}\n` +
     `Headline: ${title}\n` +
     (context ? `Context: ${context}\n` : '');
 
-  const resp = await openai.responses.create({
-    model: SUMMARY_MODEL,
-    input,
-    max_output_tokens: budgetToTokensSummary(budget),
-    temperature: 0.2
-  });
-  trackUsageFromResponse(resp);
-
-  const text = (resp.output_text || '').trim();
-  return text || undefined;
+  return generateAiText('summary', input, budgetToTokensSummary(budget), 0.2);
 }
 
 async function oneItemResearch(
@@ -830,9 +978,6 @@ async function oneItemResearch(
   linkText: string,
   budget: BudgetMode
 ): Promise<string | undefined> {
-  if (!openai || !aiEnabled) return undefined;
-  if (RESEARCH_MODEL === 'none') return undefined;
-
   const input =
     `${researchInstruction(researchLang)}\n` +
     `Source: ${source}\n` +
@@ -841,16 +986,7 @@ async function oneItemResearch(
     (context ? `RSS context: ${context}\n` : '') +
     (linkText ? `Article text (may be partial): ${linkText}\n` : '');
 
-  const resp = await openai.responses.create({
-    model: RESEARCH_MODEL,
-    input,
-    max_output_tokens: budgetToTokensResearch(budget),
-    temperature: 0.25
-  });
-  trackUsageFromResponse(resp);
-
-  const text = (resp.output_text || '').trim();
-  return text || undefined;
+  return generateAiText('research', input, budgetToTokensResearch(budget), 0.25);
 }
 
 function askAgentInstruction(lang: ResearchLang): string {
@@ -871,9 +1007,6 @@ async function askAgentAboutItem(
   budget: BudgetMode,
   chatResearch?: string
 ): Promise<string | undefined> {
-  if (!openai || !aiEnabled) return undefined;
-  if (RESEARCH_MODEL === 'none') return undefined;
-
   const safeQuestion = String(question || '').slice(0, ASK_AGENT_MAX_CHARS);
   const input =
     `${askAgentInstruction(researchLang)}\n` +
@@ -888,16 +1021,7 @@ async function askAgentAboutItem(
     (item.__ctx ? `RSS context: ${item.__ctx}\n` : '') +
     (item.__linkText ? `Article text (may be partial): ${item.__linkText}\n` : '');
 
-  const resp = await openai.responses.create({
-    model: RESEARCH_MODEL,
-    input,
-    max_output_tokens: budgetToTokensAsk(budget),
-    temperature: 0.2
-  });
-  trackUsageFromResponse(resp);
-
-  const text = (resp.output_text || '').trim();
-  return text || undefined;
+  return generateAiText('research', input, budgetToTokensAsk(budget), 0.2);
 }
 // -----------------------------------------
 
@@ -906,6 +1030,7 @@ function broadcastConfig() {
     type: 'config',
     keywords,
 
+    aiProvider,
     aiAvailable,
     aiEnabled,
 
@@ -1006,7 +1131,7 @@ function jobKey(j: AiJob) {
 }
 
 function enqueueJob(job: AiJob) {
-  if (!aiEnabled || !openai) return;
+  if (!aiEnabled || !aiAvailable) return;
   const k = jobKey(job);
   if (aiInFlight.has(k)) return;
   if (aiQueue.some(x => jobKey(x) === k)) return;
@@ -1035,7 +1160,7 @@ async function runOneJob(job: AiJob) {
 
     if (job.kind === 'summary') {
       if (it.summary && it.summary.trim()) return;
-      if (SUMMARY_MODEL === 'none') return;
+      if (activeModel('summary') === 'none') return;
 
       const ctx = it.__ctx || '';
       const text = await oneLineSummary(it.title, it.source, ctx, budget);
@@ -1049,7 +1174,7 @@ async function runOneJob(job: AiJob) {
 
     if (job.kind === 'research') {
       if (it.research && it.research.trim() && !job.manual) return;
-      if (RESEARCH_MODEL === 'none') return;
+      if (activeModel('research') === 'none') return;
 
       // If budget is low and not manual -> skip auto research
       if (!job.manual && !budgetAllowsAutoResearch(budget)) return;
@@ -1077,7 +1202,7 @@ async function runOneJob(job: AiJob) {
 }
 
 async function tickAiQueue() {
-  if (!aiEnabled || !openai) return;
+  if (!aiEnabled || !aiAvailable) return;
   if (!aiQueue.length) return;
 
   while (aiInFlight.size < AI_MAX_CONCURRENCY && aiQueue.length) {
@@ -1297,7 +1422,7 @@ async function processFeed(fi: FeedInfo) {
       }
 
       // enqueue AI jobs (auto per-column)
-      if (aiEnabled && openai) {
+      if (aiEnabled && aiAvailable) {
         const wantFeedSummary = s.summaryEnabled;
         const wantFilteredSummary =
           feedSettings.get(FILTERED_FEED_URL)?.summaryEnabled && filteredOk;
@@ -1439,6 +1564,7 @@ wss.on('connection', (ws: WebSocket) => {
     type: 'config',
     keywords,
 
+    aiProvider,
     aiAvailable,
     aiEnabled,
 
@@ -1490,6 +1616,39 @@ wss.on('connection', (ws: WebSocket) => {
       return;
     }
 
+    if (msg.type === 'set_ai_provider') {
+      const provider = msg.provider;
+      const nextKey = typeof msg.apiKey === 'string' ? msg.apiKey.trim() : '';
+      if (typeof msg.apiKey === 'string' && !nextKey) {
+        ws.send(JSON.stringify({ type: 'error', message: 'API key is required for provider switch.' }));
+        return;
+      }
+
+      aiProvider = provider;
+      if (nextKey) {
+        setAiProviderKey(provider, nextKey);
+      } else {
+        refreshAiClients();
+      }
+
+      aiEnabled = aiEnabled && aiAvailable;
+
+      titleVecCache.clear();
+      dedupeWindow = [];
+      filteredDedupeWindow = [];
+      aiQueue.length = 0;
+      aiInFlight.clear();
+
+      await initKeywordEmbeddings();
+      broadcastConfig();
+      ws.send(JSON.stringify({
+        type: 'ok',
+        message: `AI provider switched to ${provider}`
+      }));
+      markDirty();
+      return;
+    }
+
     if (msg.type === 'set_summary_lang') {
       const lang = msg.lang;
       if (lang === 'bg' || lang === 'en' || lang === 'bilingual') {
@@ -1498,7 +1657,7 @@ wss.on('connection', (ws: WebSocket) => {
         broadcastConfig();
 
         // Re-render existing summaries in the newly selected global language.
-        if (prev !== lang && aiEnabled && openai && SUMMARY_MODEL !== 'none') {
+        if (prev !== lang && aiEnabled && aiAvailable && activeModel('summary') !== 'none') {
           const MAX = 260;
           const list = recent.slice().sort((a, b) => b.publishedMs - a.publishedMs);
           let done = 0;
@@ -1557,7 +1716,7 @@ wss.on('connection', (ws: WebSocket) => {
       }
 
       // enqueue bounded backfill
-      if (enabled && aiEnabled && openai && SUMMARY_MODEL !== 'none') {
+      if (enabled && aiEnabled && aiAvailable && activeModel('summary') !== 'none') {
         const MAX = 220;
         const list = recent.slice().sort((a, b) => b.publishedMs - a.publishedMs);
         let done = 0;
@@ -1595,7 +1754,7 @@ wss.on('connection', (ws: WebSocket) => {
       }
 
       // bounded backfill research
-      if (enabled && aiEnabled && openai && RESEARCH_MODEL !== 'none') {
+      if (enabled && aiEnabled && aiAvailable && activeModel('research') !== 'none') {
         const MAX = 120;
         const list = recent.slice().sort((a, b) => b.publishedMs - a.publishedMs);
         let done = 0;
@@ -1719,7 +1878,7 @@ wss.on('connection', (ws: WebSocket) => {
     }
 
     if (msg.type === 'run_research_item') {
-      if (!aiEnabled || !openai || RESEARCH_MODEL === 'none') return;
+      if (!aiEnabled || !aiAvailable || activeModel('research') === 'none') return;
       const id = String(msg.id || '').trim();
       if (!id) return;
 
@@ -1736,7 +1895,7 @@ wss.on('connection', (ws: WebSocket) => {
     }
 
     if (msg.type === 'run_summary_item') {
-      if (!aiEnabled || !openai || SUMMARY_MODEL === 'none') return;
+      if (!aiEnabled || !aiAvailable || activeModel('summary') === 'none') return;
       const id = String(msg.id || '').trim();
       if (!id) return;
 
@@ -1753,7 +1912,7 @@ wss.on('connection', (ws: WebSocket) => {
     }
 
     if (msg.type === 'ask_agent_item') {
-      if (!aiEnabled || !openai || RESEARCH_MODEL === 'none') {
+      if (!aiEnabled || !aiAvailable || activeModel('research') === 'none') {
         const unavailable: AskAgentReply = {
           type: 'ask_agent_reply',
           id: String(msg.id || ''),

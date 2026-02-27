@@ -14,11 +14,16 @@ describe('uiSlice', () => {
       addStreamVisible: false,
       allColumnControlsHidden: false,
       hideAllResearchSeq: 0,
+      hideAllResearch: false,
+      hideAllSummaries: false,
+      showMoreNewsAllSeq: 0,
+      resetNewsShownAllSeq: 0,
       helpOpen: false,
       notifyEnabled: false,
       notifyMode: 'matched',
       aiAvailable: false,
       aiEnabled: false,
+      aiProvider: 'openai',
       summaryLang: 'bilingual',
       researchLang: 'bg',
       allBudget: 'standard',
@@ -26,7 +31,8 @@ describe('uiSlice', () => {
       fontSize: 'md',
       scheme: 'classic',
       buttonMode: 'icons',
-      vibe: 'default'
+      vibe: 'default',
+      toasts: []
     });
   });
 
