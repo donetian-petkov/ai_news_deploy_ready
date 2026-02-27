@@ -246,6 +246,7 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
   const [dragFeedUrl, setDragFeedUrl] = useState<string | null>(null);
   const [dragOverFeedUrl, setDragOverFeedUrl] = useState<string | null>(null);
   const dragCommittedRef = useRef(false);
+  const dragLastTargetRef = useRef<string | null>(null);
   const [hydratedColumns, setHydratedColumns] = useState<Record<string, true>>({});
   const columnNodesRef = useRef<Record<string, HTMLDivElement | null>>({});
   const prevAllControlsHiddenRef = useRef<boolean | null>(null);
@@ -788,6 +789,7 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
                   return;
                 }
                 dragCommittedRef.current = false;
+                dragLastTargetRef.current = null;
                 setDragFeedUrl(feed.url);
                 setDragOverFeedUrl(feed.url);
                 e.dataTransfer.effectAllowed = 'move';
@@ -801,13 +803,21 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
                 setDragFeedUrl(null);
                 setDragOverFeedUrl(null);
                 dragCommittedRef.current = false;
+                dragLastTargetRef.current = null;
               }}
               ref={node => {
                 columnNodesRef.current[feed.url] = node as HTMLDivElement | null;
               }}
               onDragEnter={() => {
                 if (!canDrag) return;
-                if (dragFeedUrl && dragFeedUrl !== feed.url) setDragOverFeedUrl(feed.url);
+                if (dragFeedUrl && dragFeedUrl !== feed.url) {
+                  setDragOverFeedUrl(feed.url);
+                  if (dragLastTargetRef.current !== feed.url) {
+                    dispatch(reorderFeeds({ fromUrl: dragFeedUrl, toUrl: feed.url }));
+                    dragCommittedRef.current = true;
+                    dragLastTargetRef.current = feed.url;
+                  }
+                }
               }}
               onDragOver={e => {
                 if (!canDrag) return;
@@ -815,6 +825,11 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
                 e.dataTransfer.dropEffect = 'move';
                 if (dragFeedUrl && dragFeedUrl !== feed.url && dragOverFeedUrl !== feed.url) {
                   setDragOverFeedUrl(feed.url);
+                  if (dragLastTargetRef.current !== feed.url) {
+                    dispatch(reorderFeeds({ fromUrl: dragFeedUrl, toUrl: feed.url }));
+                    dragCommittedRef.current = true;
+                    dragLastTargetRef.current = feed.url;
+                  }
                 }
               }}
               onDrop={e => {

@@ -117,10 +117,19 @@ const feedsSlice = createSlice({
     reorderFeeds(state, action: PayloadAction<{ fromUrl: string; toUrl: string }>) {
       const { fromUrl, toUrl } = action.payload;
       if (!fromUrl || !toUrl || fromUrl === toUrl) return;
-      const fromIdx = state.orderByUrl.indexOf(fromUrl);
-      const toIdx = state.orderByUrl.indexOf(toUrl);
+
+      const feedUrls = state.feeds.map(f => f.url);
+      const feedUrlSet = new Set(feedUrls);
+      const baseOrder = [
+        ...state.orderByUrl.filter(url => feedUrlSet.has(url)),
+        ...feedUrls.filter(url => !state.orderByUrl.includes(url))
+      ];
+
+      const fromIdx = baseOrder.indexOf(fromUrl);
+      const toIdx = baseOrder.indexOf(toUrl);
       if (fromIdx < 0 || toIdx < 0) return;
-      const next = [...state.orderByUrl];
+
+      const next = [...baseOrder];
       const [moved] = next.splice(fromIdx, 1);
       next.splice(toIdx, 0, moved);
       state.orderByUrl = next;
