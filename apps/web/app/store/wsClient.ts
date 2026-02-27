@@ -62,6 +62,37 @@ function parseFeedInfos(v: unknown, feedSettingsRaw: unknown): FeedInfo[] {
       }
     });
   }
+
+  const filteredSettings = (feedSettings[FILTERED_FEED_URL] && typeof feedSettings[FILTERED_FEED_URL] === 'object')
+    ? feedSettings[FILTERED_FEED_URL]
+    : null;
+  if (filteredSettings && !out.some(f => f.url === FILTERED_FEED_URL)) {
+    const budget = filteredSettings.budget === 'low' || filteredSettings.budget === 'standard' || filteredSettings.budget === 'high'
+      ? filteredSettings.budget as BudgetMode
+      : 'standard';
+    const sortMode = filteredSettings.sortMode === 'newest' || filteredSettings.sortMode === 'oldest' || filteredSettings.sortMode === 'matched'
+      ? filteredSettings.sortMode as SortMode
+      : 'newest';
+    const filtersRaw = (filteredSettings.filters && typeof filteredSettings.filters === 'object')
+      ? filteredSettings.filters as Record<string, unknown>
+      : {};
+    out.unshift({
+      url: FILTERED_FEED_URL,
+      label: 'Filtered',
+      kind: 'rss',
+      intervalSec: 0,
+      summaryEnabled: typeof filteredSettings.summaryEnabled === 'boolean' ? filteredSettings.summaryEnabled : false,
+      researchEnabled: typeof filteredSettings.researchEnabled === 'boolean' ? filteredSettings.researchEnabled : false,
+      budget,
+      sortMode,
+      filters: {
+        onlyMatches: typeof filtersRaw.onlyMatches === 'boolean' ? !!filtersRaw.onlyMatches : true,
+        onlyResearched: !!filtersRaw.onlyResearched,
+        onlySummaries: !!filtersRaw.onlySummaries
+      }
+    });
+  }
+
   return out;
 }
 

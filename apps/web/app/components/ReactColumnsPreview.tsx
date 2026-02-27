@@ -56,6 +56,7 @@ import {
 } from '../store/slices/newsSlice';
 import { sendWsMessage, startWsConnection, stopWsConnection } from '../store/wsClient';
 import type { BudgetMode, FeedInfo, NewsItem, SortMode } from '../store/types';
+import { FILTERED_FEED_URL } from '../store/constants';
 
 type Props = {
   wsUrl: string;
@@ -520,6 +521,20 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
     return next;
   }, [dragFeedUrl, dragOverFeedUrl, previewFeeds]);
 
+  const filteredColumnItems = useMemo(() => {
+    const all = Object.values(itemsByFeed).flatMap(items => Array.isArray(items) ? items : []);
+    const map = new Map<string, NewsItem>();
+    all.forEach(it => {
+      if (!it || !it.id) return;
+      if (!it.isMatch || it.filteredOk === false) return;
+      const prev = map.get(it.id);
+      if (!prev || (Number(it.publishedMs || 0) > Number(prev.publishedMs || 0))) {
+        map.set(it.id, { ...it, feedUrl: FILTERED_FEED_URL });
+      }
+    });
+    return Array.from(map.values()).sort((a, b) => b.publishedMs - a.publishedMs);
+  }, [itemsByFeed]);
+
   const requestSummary = (it: NewsItem) => {
     if (!connected) return;
 
@@ -751,11 +766,11 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
       >
         {renderedFeeds.map((feed: FeedInfo) => {
           const columnIdx = Math.max(0, renderedFeeds.findIndex(f => f.url === feed.url));
-          const isMatchColumn = feed.url === '__filtered__' || String(feed.label || '').toLowerCase().startsWith('filtered');
+          const isMatchColumn = feed.url === FILTERED_FEED_URL || String(feed.label || '').toLowerCase().startsWith('filtered');
           const colTheme: 'a' | 'b' | 'match' = isMatchColumn ? 'match' : (columnIdx % 2 === 0 ? 'a' : 'b');
           const accent = colTheme === 'a' ? palette.a : colTheme === 'b' ? palette.b : palette.m;
           const soft = colTheme === 'a' ? palette.aSoft : colTheme === 'b' ? palette.bSoft : palette.mSoft;
-          const items = itemsByFeed[feed.url] || [];
+          const items = isMatchColumn ? filteredColumnItems : (itemsByFeed[feed.url] || []);
           const normalizedQuery = String(searchQuery || '').trim().toLowerCase();
           const itemsVisible = normalizedQuery
             ? items.filter(it => {
@@ -812,9 +827,9 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
                 cursor: isDragging ? 'grabbing' : 'grab'
               }}
             >
-              <CardContent sx={{ pb: '12px !important' }}>
+              <CardContent sx={{ pb: '12px !important', px: 2.2 }}>
                 <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.25 }}>
-                  <Typography variant="h6" sx={{ fontSize: `${18 * fontScale}px`, fontWeight: 800, lineHeight: 1.2, pr: 1, color: 'rgba(232,243,255,0.97)' }}>
+                  <Typography variant="h6" sx={{ fontSize: `${18 * fontScale}px`, fontWeight: 800, lineHeight: 1.2, pr: 1, pl: 0.3, color: 'rgba(232,243,255,0.97)' }}>
                     {feed.label}
                   </Typography>
                   <Stack direction="row" spacing={1} alignItems="center">
@@ -823,26 +838,30 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
                   </Stack>
                 </Stack>
                 <Stack direction="row" spacing={1} sx={{ mb: 1.1 }} flexWrap="wrap">
-                  <Button
-                    size="small"
-                    variant={pinned ? 'contained' : 'outlined'}
-                    startIcon={pinned ? <PushPinIcon /> : <PushPinOutlinedIcon />}
-                    onClick={() => dispatch(togglePinned(feed.url))}
-                    sx={compactBtnSx}
-                  >
-                    {pinned ? l.pinned : l.pin}
-                  </Button>
-                  <Button
-                    size="small"
-                    variant="outlined"
-                    color="error"
-                    startIcon={<DeleteOutlineIcon />}
-                    onClick={() => removeFeed(feed.url)}
-                    disabled={!connected}
-                    sx={compactBtnSx}
-                  >
-                    {l.remove}
-                  </Button>
+                  {!isMatchColumn ? (
+                    <Button
+                      size="small"
+                      variant={pinned ? 'contained' : 'outlined'}
+                      startIcon={pinned ? <PushPinIcon /> : <PushPinOutlinedIcon />}
+                      onClick={() => dispatch(togglePinned(feed.url))}
+                      sx={compactBtnSx}
+                    >
+                      {pinned ? l.pinned : l.pin}
+                    </Button>
+                  ) : null}
+                  {!isMatchColumn ? (
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      color="error"
+                      startIcon={<DeleteOutlineIcon />}
+                      onClick={() => removeFeed(feed.url)}
+                      disabled={!connected}
+                      sx={compactBtnSx}
+                    >
+                      {l.remove}
+                    </Button>
+                  ) : null}
                   <Button
                     size="small"
                     variant="outlined"

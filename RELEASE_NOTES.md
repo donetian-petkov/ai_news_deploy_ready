@@ -57,6 +57,11 @@
 - Fixed feed rendering gate in React news slice:
   - regular columns now accept incoming `news` items regardless of `filteredOk`
   - resolves "Waiting for news..." across all columns when keyword matching is strict/empty
+- Restored legacy-style Filtered stream in Next frontend:
+  - `__filtered__` column is synthesized from server `feedSettings` and rendered in the grid
+  - filtered column items are derived from matched news across all feeds (`isMatch` + `filteredOk`)
+  - filtered stream hides remove/pin controls like the legacy UI
+  - adjusted column header/title padding to prevent clipped leading text
 
 ### Existing migration milestones already in `main`
 - Next.js web app and Node.js API monorepo with Prisma + SQLite + zod.
