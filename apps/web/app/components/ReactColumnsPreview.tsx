@@ -249,29 +249,30 @@ function getVibeIcons(vibe: VibeValue): {
   ask: React.ElementType;
   share: React.ElementType;
   hide: React.ElementType;
+  copy: React.ElementType;
 } {
   if (vibe === 'anime') {
-    return { summary: AnimationIcon, research: WizardHatIcon, ask: TheaterComedyIcon, share: SendIcon, hide: PersonOffIcon };
+    return { summary: AnimationIcon, research: WizardHatIcon, ask: TheaterComedyIcon, share: SendIcon, hide: PersonOffIcon, copy: MicIcon };
   }
   if (vibe === 'arcade') {
-    return { summary: SportsEsportsIcon, research: BoltIcon, ask: SmartToyIcon, share: RocketLaunchIcon, hide: VisibilityOffIcon };
+    return { summary: SportsEsportsIcon, research: BoltIcon, ask: SmartToyIcon, share: RocketLaunchIcon, hide: VisibilityOffIcon, copy: FactCheckIcon };
   }
   if (vibe === 'cinema') {
-    return { summary: MovieIcon, research: MicIcon, ask: TheaterComedyIcon, share: OpenInNewIcon, hide: VisibilityOffIcon };
+    return { summary: MovieIcon, research: MicIcon, ask: TheaterComedyIcon, share: OpenInNewIcon, hide: VisibilityOffIcon, copy: LocalLibraryIcon };
   }
   if (vibe === 'newspaper') {
-    return { summary: NewspaperIcon, research: FactCheckIcon, ask: HistoryEduIcon, share: LinkIcon, hide: VisibilityOffIcon };
+    return { summary: NewspaperIcon, research: FactCheckIcon, ask: HistoryEduIcon, share: LinkIcon, hide: VisibilityOffIcon, copy: AutoStoriesIcon };
   }
   if (vibe === 'cyberwitch') {
-    return { summary: WizardHatIcon, research: ScienceIcon, ask: SupportAgentIcon, share: RocketLaunchIcon, hide: ShieldMoonIcon };
+    return { summary: WizardHatIcon, research: ScienceIcon, ask: SupportAgentIcon, share: RocketLaunchIcon, hide: ShieldMoonIcon, copy: AnimationIcon };
   }
   if (vibe === 'fantasy') {
-    return { summary: LocalLibraryIcon, research: WizardHatIcon, ask: HelpOutlineIcon, share: LinkIcon, hide: ShieldMoonIcon };
+    return { summary: LocalLibraryIcon, research: WizardHatIcon, ask: HelpOutlineIcon, share: LinkIcon, hide: ShieldMoonIcon, copy: HistoryEduIcon };
   }
   if (vibe === 'scifi') {
-    return { summary: SmartToyIcon, research: PrecisionManufacturingIcon, ask: ChatIcon, share: RocketLaunchIcon, hide: VisibilityOffIcon };
+    return { summary: SmartToyIcon, research: PrecisionManufacturingIcon, ask: ChatIcon, share: RocketLaunchIcon, hide: VisibilityOffIcon, copy: ScienceIcon };
   }
-  return { summary: AutoStoriesIcon, research: ManageSearchIcon, ask: ChatIcon, share: OpenInNewIcon, hide: VisibilityOffIcon };
+  return { summary: AutoStoriesIcon, research: ManageSearchIcon, ask: ChatIcon, share: OpenInNewIcon, hide: VisibilityOffIcon, copy: ContentCopyIcon };
 }
 
 function formatTime(ms: number): string {
@@ -352,6 +353,7 @@ type VibeIcons = {
   ask: React.ElementType;
   share: React.ElementType;
   hide: React.ElementType;
+  copy: React.ElementType;
 };
 
 type NewsCardProps = {
@@ -434,6 +436,7 @@ const NewsCard = memo(function NewsCard({
   const AskIconComp = vibeIcons.ask;
   const ShareIconComp = vibeIcons.share;
   const HideIconComp = vibeIcons.hide;
+  const CopyIconComp = vibeIcons.copy;
   const iconOnly = buttonMode === 'icons';
   const actionSx = {
     ...compactBtnSx,
@@ -513,7 +516,7 @@ const NewsCard = memo(function NewsCard({
                 sx={actionSx}
                 onClick={() => onCopyNews(item)}
               >
-                {iconOnly ? <ContentCopyIcon sx={{ fontSize: 15 }} aria-hidden /> : labels.copyNews}
+                {iconOnly ? <CopyIconComp sx={{ fontSize: 15 }} aria-hidden /> : labels.copyNews}
               </Button>
             </Tooltip>
             <Tooltip title={labels.hideNews}>
