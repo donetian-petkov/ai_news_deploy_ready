@@ -115,6 +115,7 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
   const controlsOpenByUrl = useAppSelector(s => s.feeds.controlsOpenByUrl);
   const deleteAgeByUrl = useAppSelector(s => s.feeds.deleteAgeByUrl);
   const searchQuery = useAppSelector(s => s.ui.searchQuery);
+  const allColumnControlsHidden = useAppSelector(s => s.ui.allColumnControlsHidden);
   const itemsByFeed = useAppSelector(s => s.news.itemsByFeed);
   const summaryPendingById = useAppSelector(s => s.news.summaryPendingById);
   const researchPendingById = useAppSelector(s => s.news.researchPendingById);
@@ -124,6 +125,7 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
   const [hideAllResearch, setHideAllResearch] = useState(false);
   const [bodyModes, setBodyModes] = useState<Record<string, BodyMode>>({});
   const [shareNoticeOpen, setShareNoticeOpen] = useState(false);
+  const prevAllControlsHiddenRef = useRef<boolean | null>(null);
   const bg = language === 'bg';
   const l = useMemo(() => ({
     previewTitle: bg ? 'React Визуализация (Преглед)' : 'React Renderer Preview',
@@ -201,27 +203,40 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
   }, [dispatch, wsUrl]);
 
   useEffect(() => {
-    const onToggleAllColumnControls = () => {
-      const urls = feeds.map(f => f.url);
-      if (!urls.length) return;
-      const allOpen = urls.every(url => controlsOpenByUrl[url] !== false);
-      dispatch(setAllFeedControlsOpen(!allOpen));
-    };
     const onHideAllResearch = () => {
       setHideAllResearch(true);
     };
     const onSetVibe = () => {
       // keep React preview in sync with top controls interactions
     };
-    window.addEventListener('ai-news:toggle-all-column-controls', onToggleAllColumnControls);
     window.addEventListener('ai-news:hide-all-research', onHideAllResearch);
     window.addEventListener('ai-news:set-vibe', onSetVibe);
     return () => {
-      window.removeEventListener('ai-news:toggle-all-column-controls', onToggleAllColumnControls);
       window.removeEventListener('ai-news:hide-all-research', onHideAllResearch);
       window.removeEventListener('ai-news:set-vibe', onSetVibe);
     };
-  }, [dispatch, feeds, controlsOpenByUrl]);
+  }, []);
+
+  useEffect(() => {
+    if (!feeds.length) return;
+    if (prevAllControlsHiddenRef.current === null) {
+      prevAllControlsHiddenRef.current = allColumnControlsHidden;
+      if (allColumnControlsHidden) {
+        dispatch(setAllFeedControlsOpen(false));
+      }
+      return;
+    }
+
+    if (prevAllControlsHiddenRef.current !== allColumnControlsHidden) {
+      dispatch(setAllFeedControlsOpen(!allColumnControlsHidden));
+      prevAllControlsHiddenRef.current = allColumnControlsHidden;
+      return;
+    }
+
+    if (allColumnControlsHidden) {
+      dispatch(setAllFeedControlsOpen(false));
+    }
+  }, [allColumnControlsHidden, dispatch, feeds.length]);
 
   const previewFeeds = useMemo(() => {
     if (feeds.length) {

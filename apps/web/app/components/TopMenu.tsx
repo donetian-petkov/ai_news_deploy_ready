@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Alert, Box, Button, Chip, FormControl, MenuItem, Select, Stack, TextField, Typography } from '@mui/material';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { setLanguage, setSearchQuery, setTopUiState } from '../store/slices/uiSlice';
+import { sendWsMessage } from '../store/wsClient';
 
 type VibeValue = 'default' | 'anime' | 'arcade' | 'cinema' | 'newspaper' | 'cyberwitch' | 'fantasy' | 'scifi';
 type TopStateDetail = {
@@ -99,6 +100,7 @@ export default function TopMenu() {
   });
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const addStreamInputRef = useRef<HTMLInputElement | null>(null);
+  const topbarInnerRef = useRef<HTMLDivElement | null>(null);
 
   const labels = {
     title: bg ? 'Поток Новини На Живо' : 'Live News Stream',
@@ -188,6 +190,27 @@ export default function TopMenu() {
   }, [dispatch]);
 
   useEffect(() => {
+    document.body.classList.toggle('menu-collapsed', ui.menuCollapsed);
+    document.body.classList.toggle('controls-collapsed', ui.controlsCollapsed);
+  }, [ui.controlsCollapsed, ui.menuCollapsed]);
+
+  useEffect(() => {
+    const onPointerDown = (event: PointerEvent) => {
+      if (ui.menuCollapsed || ui.controlsCollapsed) return;
+      const root = topbarInnerRef.current;
+      const target = event.target;
+      if (!root || !target || !(target instanceof Node)) return;
+      if (!root.contains(target)) {
+        dispatch(setTopUiState({ controlsCollapsed: true }));
+      }
+    };
+    document.addEventListener('pointerdown', onPointerDown);
+    return () => {
+      document.removeEventListener('pointerdown', onPointerDown);
+    };
+  }, [dispatch, ui.controlsCollapsed, ui.menuCollapsed]);
+
+  useEffect(() => {
     const timer = window.setTimeout(() => {
       emit('ai-news:set-search-query', { query: searchDraft });
     }, 90);
@@ -257,7 +280,7 @@ export default function TopMenu() {
       }
       if (key === '/') {
         e.preventDefault();
-        if (!ui.searchVisible) emit('ai-news:toggle-search');
+        if (!ui.searchVisible) toggleSearch();
         window.setTimeout(() => searchInputRef.current?.focus(), 45);
         return;
       }
@@ -268,27 +291,27 @@ export default function TopMenu() {
       }
       if (lower === 'm') {
         e.preventDefault();
-        emit('ai-news:toggle-menu');
+        toggleMenu();
         return;
       }
       if (lower === 'c') {
         e.preventDefault();
-        emit('ai-news:toggle-controls');
+        toggleControls();
         return;
       }
       if (lower === 'g') {
         e.preventDefault();
-        emit('ai-news:toggle-all-column-controls');
+        toggleAllColumnControls();
         return;
       }
       if (lower === 's') {
         e.preventDefault();
-        emit('ai-news:toggle-search');
+        toggleSearch();
         return;
       }
       if (lower === 'a') {
         e.preventDefault();
-        emit('ai-news:toggle-add-stream');
+        toggleAddStream();
         return;
       }
       if (lower === 't') {
@@ -306,7 +329,7 @@ export default function TopMenu() {
     return () => {
       window.removeEventListener('keydown', onKeyDown);
     };
-  }, [ui.searchVisible]);
+  }, [ui.addStreamVisible, ui.allColumnControlsHidden, ui.controlsCollapsed, ui.menuCollapsed, ui.searchVisible]);
 
   const emit = (type: string, detail?: object) => {
     window.dispatchEvent(new CustomEvent(type, { detail }));
@@ -324,12 +347,54 @@ export default function TopMenu() {
       return;
     }
     setAddStatus({ kind: 'info', message: labels.adding });
-    emit('ai-news:add-feed', {
+    const ok = sendWsMessage({
+      type: 'add_feed',
       kind: feedType,
       url: feedUrl.trim(),
       label: feedLabel.trim(),
       intervalSec: Number(feedInterval) || 120
     });
+    if (!ok) {
+      setAddStatus({
+        kind: 'error',
+        message: bg ? 'Няма връзка със сървъра' : 'No server connection'
+      });
+    }
+  };
+
+  const toggleSearch = () => {
+    dispatch(setTopUiState({
+      menuCollapsed: false,
+      searchVisible: !ui.searchVisible
+    }));
+  };
+
+  const toggleAddStream = () => {
+    dispatch(setTopUiState({
+      menuCollapsed: false,
+      addStreamVisible: !ui.addStreamVisible
+    }));
+  };
+
+  const toggleControls = () => {
+    dispatch(setTopUiState({
+      menuCollapsed: false,
+      controlsCollapsed: !ui.controlsCollapsed
+    }));
+  };
+
+  const toggleMenu = () => {
+    const next = !ui.menuCollapsed;
+    dispatch(setTopUiState({
+      menuCollapsed: next,
+      controlsCollapsed: next ? ui.controlsCollapsed : false
+    }));
+  };
+
+  const toggleAllColumnControls = () => {
+    dispatch(setTopUiState({ allColumnControlsHidden: !ui.allColumnControlsHidden }));
+    // Keep legacy columns in sync while migration is in progress.
+    emit('ai-news:toggle-all-column-controls');
   };
 
   const searchLabel = ui.searchVisible ? labels.hideSearch : labels.search;
@@ -340,7 +405,7 @@ export default function TopMenu() {
 
   return (
     <div className="topbar">
-      <div className="topbarInner" id="topbarInner">
+      <div className="topbarInner" id="topbarInner" ref={topbarInnerRef}>
         <div className="headerRow">
           <Box className="headerLeft">
             <Typography id="appTitle" component="h1" sx={{ margin: 0, fontSize: 28, fontWeight: 900, lineHeight: 1.1 }}>
@@ -375,16 +440,16 @@ export default function TopMenu() {
                 <option value="scifi">{labels.scifi}</option>
               </select>
             </label>
-            <Button id="quickSearchBtn" className="btn ghost" size="small" variant="outlined" type="button" onClick={() => emit('ai-news:toggle-search')}>{searchLabel}</Button>
-            <Button id="quickAddStreamBtn" className="btn ghost" size="small" variant="outlined" type="button" onClick={() => emit('ai-news:toggle-add-stream')}>{addStreamLabel}</Button>
-            <Button id="controlsToggle" className="btn ghost" size="small" variant="outlined" type="button" onClick={() => emit('ai-news:toggle-controls')}>{controlsLabel}</Button>
-            <Button id="allColControlsToggle" className="btn ghost" size="small" variant="outlined" type="button" onClick={() => emit('ai-news:toggle-all-column-controls')}>{allColumnLabel}</Button>
+            <Button id="quickSearchBtn" className="btn ghost" size="small" variant="outlined" type="button" onClick={toggleSearch}>{searchLabel}</Button>
+            <Button id="quickAddStreamBtn" className="btn ghost" size="small" variant="outlined" type="button" onClick={toggleAddStream}>{addStreamLabel}</Button>
+            <Button id="controlsToggle" className="btn ghost" size="small" variant="outlined" type="button" onClick={toggleControls}>{controlsLabel}</Button>
+            <Button id="allColControlsToggle" className="btn ghost" size="small" variant="outlined" type="button" onClick={toggleAllColumnControls}>{allColumnLabel}</Button>
             <Button id="hideAllResearchBtn" className="btn ghost" size="small" variant="outlined" type="button" onClick={() => emit('ai-news:hide-all-research')}>{labels.hideAllResearch}</Button>
-            <Button id="menuToggle" className="btn ghost" size="small" variant="outlined" type="button" onClick={() => emit('ai-news:toggle-menu')}>{menuLabel}</Button>
+            <Button id="menuToggle" className="btn ghost" size="small" variant="outlined" type="button" onClick={toggleMenu}>{menuLabel}</Button>
           </Stack>
         </div>
 
-        {ui.searchVisible ? (
+        {!ui.menuCollapsed && ui.searchVisible ? (
           <Box sx={{ mt: 1.1, mb: 0.9 }}>
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
               <TextField
@@ -402,7 +467,7 @@ export default function TopMenu() {
           </Box>
         ) : null}
 
-        {ui.addStreamVisible ? (
+        {!ui.menuCollapsed && ui.addStreamVisible ? (
           <Box sx={{ mt: 0.3, mb: 1 }}>
             <Stack direction={{ xs: 'column', md: 'row' }} spacing={1}>
               <FormControl size="small" sx={{ minWidth: 150 }}>
@@ -449,7 +514,8 @@ export default function TopMenu() {
           </Box>
         ) : null}
 
-        <div className="controls">
+        {!ui.menuCollapsed ? (
+        <div className="controls" style={ui.controlsCollapsed ? { display: 'none' } : undefined}>
           <div className="controlsCompactRow controlsRow">
             <div className="controlGroup">
               <button id="resetBtn" className="btn" type="button">Reset ALL to newest 10</button>
@@ -696,6 +762,7 @@ export default function TopMenu() {
             <div id="addFeedStatus"></div>
           </details>
         </div>
+        ) : null}
       </div>
     </div>
   );
