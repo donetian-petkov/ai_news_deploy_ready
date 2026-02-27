@@ -133,6 +133,24 @@ function parseNews(v: unknown): NewsItem | null {
     )
     ? m.mood
     : undefined;
+  const newsType = typeof m.newsType === 'string'
+    && (
+      m.newsType === 'science'
+      || m.newsType === 'movies'
+      || m.newsType === 'politics'
+      || m.newsType === 'business'
+      || m.newsType === 'technology'
+      || m.newsType === 'sports'
+      || m.newsType === 'health'
+      || m.newsType === 'world'
+      || m.newsType === 'culture'
+      || m.newsType === 'environment'
+      || m.newsType === 'crime'
+      || m.newsType === 'education'
+      || m.newsType === 'other'
+    )
+    ? m.newsType
+    : undefined;
   return {
     id,
     title,
@@ -143,6 +161,7 @@ function parseNews(v: unknown): NewsItem | null {
     summary: typeof m.summary === 'string' ? m.summary : '',
     research: typeof m.research === 'string' ? m.research : '',
     mood,
+    newsType,
     filteredOk: typeof m.filteredOk === 'boolean' ? m.filteredOk : true
   };
 }

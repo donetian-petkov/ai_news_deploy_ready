@@ -8,7 +8,7 @@ import MenuIcon from '@mui/icons-material/Menu';
 import SearchIcon from '@mui/icons-material/Search';
 import TuneIcon from '@mui/icons-material/Tune';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
-import { setLanguage, setSearchQuery, setTopUiState, setHideAllResearch, setHideAllSummaries, setNotifySettings, setAiSettings, setMoodFilter, setAppearanceSettings, hydrateUiSettings, setHelpOpen, dismissToast, enqueueToast, triggerShowMoreNewsAll, triggerResetNewsShownAll } from '../store/slices/uiSlice';
+import { setLanguage, setSearchQuery, setTopUiState, setHideAllResearch, setHideAllSummaries, setNotifySettings, setAiSettings, setMoodFilter, setTypeFilter, setAppearanceSettings, hydrateUiSettings, setHelpOpen, dismissToast, enqueueToast, triggerShowMoreNewsAll, triggerResetNewsShownAll } from '../store/slices/uiSlice';
 import { sendWsMessage } from '../store/wsClient';
 import { setFeedBudgetSetting } from '../store/slices/feedsSlice';
 import { removeOldItemsInFeed, resetAllToNewestLimit } from '../store/slices/newsSlice';
@@ -94,6 +94,7 @@ export default function TopMenu() {
     colorMode: bg ? 'Цветове' : 'Color mode',
     aiProvider: bg ? 'AI доставчик:' : 'AI provider:',
     moodFilter: bg ? 'Филтър настроение:' : 'Mood filter:',
+    typeFilter: bg ? 'Филтър тип:' : 'Type filter:',
     openai: 'OpenAI',
     claude: 'Claude',
     openrouter: 'OpenRouter',
@@ -108,6 +109,20 @@ export default function TopMenu() {
     moodUncertainty: bg ? 'Несигурност' : 'Uncertainty',
     moodNeutral: bg ? 'Неутрално' : 'Neutral',
     moodCurios: bg ? 'Любопитство' : 'Curios',
+    typeAll: bg ? 'Всички' : 'All',
+    typeScience: bg ? 'Наука' : 'Science',
+    typeMovies: bg ? 'Филми' : 'Movies',
+    typePolitics: bg ? 'Политика' : 'Politics',
+    typeBusiness: bg ? 'Бизнес' : 'Business',
+    typeTechnology: bg ? 'Технологии' : 'Technology',
+    typeSports: bg ? 'Спорт' : 'Sports',
+    typeHealth: bg ? 'Здраве' : 'Health',
+    typeWorld: bg ? 'Свят' : 'World',
+    typeCulture: bg ? 'Култура' : 'Culture',
+    typeEnvironment: bg ? 'Околна среда' : 'Environment',
+    typeCrime: bg ? 'Криминални' : 'Crime',
+    typeEducation: bg ? 'Образование' : 'Education',
+    typeOther: bg ? 'Друго' : 'Other',
     aiUnavailable: bg ? 'AI не е наличен за избрания доставчик. Добави валиден API ключ от AI Settings.' : 'AI is unavailable for the selected provider. Add a valid API key in AI Settings.',
     perfMode: bg ? 'Режим производителност' : 'Performance mode',
     perfOn: bg ? 'ВКЛ' : 'ON',
@@ -132,6 +147,7 @@ export default function TopMenu() {
           notifyEnabled: boolean;
           notifyMode: 'matched' | 'matched_pinned' | 'pinned' | 'all';
           moodFilter: 'all' | 'pesimistic' | 'optimistic' | 'realistic' | 'melancholy' | 'happiness' | 'sadness' | 'rage' | 'uncertainty' | 'neutral' | 'curios';
+          typeFilter: 'all' | 'science' | 'movies' | 'politics' | 'business' | 'technology' | 'sports' | 'health' | 'world' | 'culture' | 'environment' | 'crime' | 'education' | 'other';
           font: 'system' | 'manrope' | 'grotesk' | 'sora' | 'plex' | 'serif' | 'mono';
           fontSize: 'sm' | 'md' | 'lg' | 'xl';
           scheme: 'classic' | 'vivid' | 'sunset' | 'neon' | 'ocean' | 'forest';
@@ -176,6 +192,7 @@ export default function TopMenu() {
         notifyEnabled: ui.notifyEnabled,
         notifyMode: ui.notifyMode,
         moodFilter: ui.moodFilter,
+        typeFilter: ui.typeFilter,
         font: ui.font,
         fontSize: ui.fontSize,
         scheme: ui.scheme,
@@ -184,7 +201,7 @@ export default function TopMenu() {
         vibe: ui.vibe
       }));
     } catch {}
-  }, [ui.addStreamVisible, ui.allColumnControlsHidden, ui.hideAllResearch, ui.hideAllSummaries, ui.buttonMode, ui.colorMode, ui.controlsCollapsed, ui.font, ui.fontSize, ui.language, ui.menuCollapsed, ui.notifyEnabled, ui.notifyMode, ui.moodFilter, ui.performanceMode, ui.scheme, ui.searchVisible, ui.vibe]);
+  }, [ui.addStreamVisible, ui.allColumnControlsHidden, ui.hideAllResearch, ui.hideAllSummaries, ui.buttonMode, ui.colorMode, ui.controlsCollapsed, ui.font, ui.fontSize, ui.language, ui.menuCollapsed, ui.notifyEnabled, ui.notifyMode, ui.moodFilter, ui.typeFilter, ui.performanceMode, ui.scheme, ui.searchVisible, ui.vibe]);
 
   useEffect(() => {
     if (!isMobile) setMobileDrawerOpen(false);
@@ -718,6 +735,31 @@ export default function TopMenu() {
                 <option value="uncertainty">{labels.moodUncertainty}</option>
                 <option value="neutral">{labels.moodNeutral}</option>
                 <option value="curios">{labels.moodCurios}</option>
+              </select>
+            </label>
+            <label className="checkbox">
+              <span id="typeFilterPrefix">{labels.typeFilter}</span>
+              <select
+                id="typeFilter"
+                className="select"
+                value={ui.typeFilter}
+                disabled={!ui.aiAvailable}
+                onChange={e => dispatch(setTypeFilter(e.target.value as 'all' | 'science' | 'movies' | 'politics' | 'business' | 'technology' | 'sports' | 'health' | 'world' | 'culture' | 'environment' | 'crime' | 'education' | 'other'))}
+              >
+                <option value="all">{labels.typeAll}</option>
+                <option value="science">{labels.typeScience}</option>
+                <option value="movies">{labels.typeMovies}</option>
+                <option value="politics">{labels.typePolitics}</option>
+                <option value="business">{labels.typeBusiness}</option>
+                <option value="technology">{labels.typeTechnology}</option>
+                <option value="sports">{labels.typeSports}</option>
+                <option value="health">{labels.typeHealth}</option>
+                <option value="world">{labels.typeWorld}</option>
+                <option value="culture">{labels.typeCulture}</option>
+                <option value="environment">{labels.typeEnvironment}</option>
+                <option value="crime">{labels.typeCrime}</option>
+                <option value="education">{labels.typeEducation}</option>
+                <option value="other">{labels.typeOther}</option>
               </select>
             </label>
             <label className="checkbox" title="Apply one budget to all columns">

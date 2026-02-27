@@ -830,6 +830,7 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
   const orderByUrl = useAppSelector(s => s.feeds.orderByUrl);
   const searchQuery = useAppSelector(s => s.ui.searchQuery);
   const moodFilter = useAppSelector(s => s.ui.moodFilter);
+  const typeFilter = useAppSelector(s => s.ui.typeFilter);
   const allColumnControlsHidden = useAppSelector(s => s.ui.allColumnControlsHidden);
   const itemsByFeed = useAppSelector(s => s.news.itemsByFeed);
   const summaryPendingById = useAppSelector(s => s.news.summaryPendingById);
@@ -1524,13 +1525,16 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
           const moodFilteredItems = moodFilter === 'all'
             ? items
             : items.filter(it => it.mood === moodFilter);
+          const typeFilteredItems = typeFilter === 'all'
+            ? moodFilteredItems
+            : moodFilteredItems.filter(it => it.newsType === typeFilter);
           const normalizedQuery = String(searchQuery || '').trim().toLowerCase();
           const itemsVisible = normalizedQuery
-            ? moodFilteredItems.filter(it => {
+            ? typeFilteredItems.filter(it => {
               const hay = `${it.title}\n${it.summary || ''}\n${it.research || ''}`.toLowerCase();
               return hay.includes(normalizedQuery);
             })
-            : moodFilteredItems;
+            : typeFilteredItems;
           const visibleLimit = Math.max(10, visibleByFeed[feed.url] || 10);
           const shownItems = itemsVisible.slice(0, visibleLimit);
           const isHydrated = !!hydratedColumns[feed.url];

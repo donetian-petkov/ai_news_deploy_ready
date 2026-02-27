@@ -31,6 +31,7 @@ type UiState = {
   aiEnabled: boolean;
   aiProvider: 'openai' | 'claude' | 'openrouter';
   moodFilter: 'all' | 'pesimistic' | 'optimistic' | 'realistic' | 'melancholy' | 'happiness' | 'sadness' | 'rage' | 'uncertainty' | 'neutral' | 'curios';
+  typeFilter: 'all' | 'science' | 'movies' | 'politics' | 'business' | 'technology' | 'sports' | 'health' | 'world' | 'culture' | 'environment' | 'crime' | 'education' | 'other';
   summaryLang: 'bilingual' | 'bg' | 'en';
   researchLang: 'bg' | 'en';
   allBudget: 'mixed' | 'low' | 'standard' | 'high';
@@ -64,6 +65,7 @@ const initialState: UiState = {
   aiEnabled: false,
   aiProvider: 'openai',
   moodFilter: 'all',
+  typeFilter: 'all',
   summaryLang: 'bilingual',
   researchLang: 'bg',
   allBudget: 'standard',
@@ -152,6 +154,27 @@ const uiSlice = createSlice({
         state.moodFilter = next;
       }
     },
+    setTypeFilter(state, action: PayloadAction<UiState['typeFilter']>) {
+      const next = action.payload;
+      if (
+        next === 'all'
+        || next === 'science'
+        || next === 'movies'
+        || next === 'politics'
+        || next === 'business'
+        || next === 'technology'
+        || next === 'sports'
+        || next === 'health'
+        || next === 'world'
+        || next === 'culture'
+        || next === 'environment'
+        || next === 'crime'
+        || next === 'education'
+        || next === 'other'
+      ) {
+        state.typeFilter = next;
+      }
+    },
     setAppearanceSettings(state, action: PayloadAction<Partial<Pick<UiState, 'font' | 'fontSize' | 'scheme' | 'performanceMode' | 'buttonMode' | 'vibe' | 'colorMode'>>>) {
       const next = action.payload;
       if (next.font === 'system' || next.font === 'manrope' || next.font === 'grotesk' || next.font === 'sora' || next.font === 'plex' || next.font === 'serif' || next.font === 'mono') {
@@ -174,7 +197,7 @@ const uiSlice = createSlice({
       }
       if (typeof next.vibe === 'string' && isVibe(next.vibe)) state.vibe = next.vibe;
     },
-    hydrateUiSettings(state, action: PayloadAction<Partial<Pick<UiState, 'language' | 'colorMode' | 'menuCollapsed' | 'controlsCollapsed' | 'searchVisible' | 'addStreamVisible' | 'allColumnControlsHidden' | 'hideAllResearch' | 'hideAllSummaries' | 'notifyEnabled' | 'notifyMode' | 'moodFilter' | 'font' | 'fontSize' | 'scheme' | 'performanceMode' | 'buttonMode' | 'vibe'>>>) {
+    hydrateUiSettings(state, action: PayloadAction<Partial<Pick<UiState, 'language' | 'colorMode' | 'menuCollapsed' | 'controlsCollapsed' | 'searchVisible' | 'addStreamVisible' | 'allColumnControlsHidden' | 'hideAllResearch' | 'hideAllSummaries' | 'notifyEnabled' | 'notifyMode' | 'moodFilter' | 'typeFilter' | 'font' | 'fontSize' | 'scheme' | 'performanceMode' | 'buttonMode' | 'vibe'>>>) {
       const next = action.payload;
       if (next.language === 'en' || next.language === 'bg') state.language = next.language;
       if (next.colorMode === 'system' || next.colorMode === 'dark' || next.colorMode === 'light') state.colorMode = next.colorMode;
@@ -200,6 +223,22 @@ const uiSlice = createSlice({
         || next.moodFilter === 'neutral'
         || next.moodFilter === 'curios'
       ) state.moodFilter = next.moodFilter;
+      if (
+        next.typeFilter === 'all'
+        || next.typeFilter === 'science'
+        || next.typeFilter === 'movies'
+        || next.typeFilter === 'politics'
+        || next.typeFilter === 'business'
+        || next.typeFilter === 'technology'
+        || next.typeFilter === 'sports'
+        || next.typeFilter === 'health'
+        || next.typeFilter === 'world'
+        || next.typeFilter === 'culture'
+        || next.typeFilter === 'environment'
+        || next.typeFilter === 'crime'
+        || next.typeFilter === 'education'
+        || next.typeFilter === 'other'
+      ) state.typeFilter = next.typeFilter;
       if (next.font === 'system' || next.font === 'manrope' || next.font === 'grotesk' || next.font === 'sora' || next.font === 'plex' || next.font === 'serif' || next.font === 'mono') state.font = next.font;
       if (next.fontSize === 'sm' || next.fontSize === 'md' || next.fontSize === 'lg' || next.fontSize === 'xl') state.fontSize = next.fontSize;
       if (next.scheme === 'classic' || next.scheme === 'vivid' || next.scheme === 'sunset' || next.scheme === 'neon' || next.scheme === 'ocean' || next.scheme === 'forest') state.scheme = next.scheme;
@@ -238,6 +277,7 @@ export const {
   setNotifySettings,
   setAiSettings,
   setMoodFilter,
+  setTypeFilter,
   setAppearanceSettings,
   hydrateUiSettings,
   enqueueToast,

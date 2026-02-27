@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import uiReducer, { setSearchQuery, setTopUiState, triggerHideAllResearch, setAppearanceSettings, setNotifySettings, setAiSettings, setMoodFilter, hydrateUiSettings, enqueueToast, dismissToast } from './uiSlice';
+import uiReducer, { setSearchQuery, setTopUiState, triggerHideAllResearch, setAppearanceSettings, setNotifySettings, setAiSettings, setMoodFilter, setTypeFilter, hydrateUiSettings, enqueueToast, dismissToast } from './uiSlice';
 
 describe('uiSlice', () => {
   it('returns the initial state', () => {
@@ -25,6 +25,7 @@ describe('uiSlice', () => {
       aiEnabled: false,
       aiProvider: 'openai',
       moodFilter: 'all',
+      typeFilter: 'all',
       summaryLang: 'bilingual',
       researchLang: 'bg',
       allBudget: 'standard',
@@ -114,6 +115,11 @@ describe('uiSlice', () => {
     expect(state.moodFilter).toBe('rage');
     state = uiReducer(state, setMoodFilter('not-a-mood' as never));
     expect(state.moodFilter).toBe('rage');
+
+    state = uiReducer(state, setTypeFilter('science'));
+    expect(state.typeFilter).toBe('science');
+    state = uiReducer(state, setTypeFilter('not-a-type' as never));
+    expect(state.typeFilter).toBe('science');
   });
 
   it('hydrates stored prefs for performance mode and ai-related visibility toggles', () => {

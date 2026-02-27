@@ -218,7 +218,8 @@ describe('wsClient', () => {
       feedUrl: 'https://a',
       publishedMs: 2,
       isMatch: true,
-      mood: 'uncertainty'
+      mood: 'uncertainty',
+      newsType: 'science'
     });
     await new Promise(resolve => setTimeout(resolve, 70));
     const batchAction = actions.find(a => a.type === 'news/upsertNewsBatch');
@@ -228,7 +229,8 @@ describe('wsClient', () => {
       id: 'n-2',
       title: 'Visible title',
       feedUrl: 'https://a',
-      mood: 'uncertainty'
+      mood: 'uncertainty',
+      newsType: 'science'
     });
   });
 

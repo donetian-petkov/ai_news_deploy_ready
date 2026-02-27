@@ -12,6 +12,20 @@ export type NewsMood =
   | 'uncertainty'
   | 'neutral'
   | 'curios';
+export type NewsType =
+  | 'science'
+  | 'movies'
+  | 'politics'
+  | 'business'
+  | 'technology'
+  | 'sports'
+  | 'health'
+  | 'world'
+  | 'culture'
+  | 'environment'
+  | 'crime'
+  | 'education'
+  | 'other';
 
 export type ColumnFilters = {
   onlyMatches: boolean;
@@ -41,6 +55,7 @@ export type NewsItem = {
   summary?: string;
   research?: string;
   mood?: NewsMood;
+  newsType?: NewsType;
   filteredOk?: boolean;
 };
 

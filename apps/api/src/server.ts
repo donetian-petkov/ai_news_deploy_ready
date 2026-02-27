@@ -67,6 +67,20 @@ type Mood =
   | 'uncertainty'
   | 'neutral'
   | 'curios';
+type NewsType =
+  | 'science'
+  | 'movies'
+  | 'politics'
+  | 'business'
+  | 'technology'
+  | 'sports'
+  | 'health'
+  | 'world'
+  | 'culture'
+  | 'environment'
+  | 'crime'
+  | 'education'
+  | 'other';
 
 type FeedKind = 'rss' | 'reddit' | 'youtube';
 
@@ -132,6 +146,7 @@ type News = {
   summary?: string;
   research?: string;
   mood?: Mood;
+  newsType?: NewsType;
 };
 
 type NewsInternal = News & {
@@ -856,6 +871,53 @@ function moodInstruction(): string {
   ].join(' ');
 }
 
+function normalizeNewsType(raw: string): NewsType | undefined {
+  const s = String(raw || '')
+    .trim()
+    .toLowerCase()
+    .replace(/["'`]/g, '')
+    .replace(/[^\p{L}\p{N}\s_-]+/gu, ' ')
+    .replace(/\s+/g, ' ');
+  const direct = s.replace(/[\s_-]/g, '');
+
+  if (direct === 'science' || direct === 'scientific') return 'science';
+  if (direct === 'movies' || direct === 'movie' || direct === 'film' || direct === 'cinema') return 'movies';
+  if (direct === 'politics' || direct === 'political') return 'politics';
+  if (direct === 'business' || direct === 'finance' || direct === 'economy' || direct === 'economic') return 'business';
+  if (direct === 'technology' || direct === 'tech') return 'technology';
+  if (direct === 'sports' || direct === 'sport') return 'sports';
+  if (direct === 'health' || direct === 'medical' || direct === 'medicine') return 'health';
+  if (direct === 'world' || direct === 'international') return 'world';
+  if (direct === 'culture' || direct === 'arts' || direct === 'art') return 'culture';
+  if (direct === 'environment' || direct === 'climate') return 'environment';
+  if (direct === 'crime' || direct === 'criminal' || direct === 'law') return 'crime';
+  if (direct === 'education' || direct === 'school' || direct === 'academic') return 'education';
+  if (direct === 'other') return 'other';
+
+  if (s.includes('science')) return 'science';
+  if (s.includes('movie') || s.includes('film') || s.includes('cinema')) return 'movies';
+  if (s.includes('politic')) return 'politics';
+  if (s.includes('business') || s.includes('finance') || s.includes('econom')) return 'business';
+  if (s.includes('technology') || s.includes('tech')) return 'technology';
+  if (s.includes('sport')) return 'sports';
+  if (s.includes('health') || s.includes('medical') || s.includes('medicine')) return 'health';
+  if (s.includes('world') || s.includes('international')) return 'world';
+  if (s.includes('culture') || s.includes('art')) return 'culture';
+  if (s.includes('environment') || s.includes('climate')) return 'environment';
+  if (s.includes('crime') || s.includes('criminal') || s.includes('law')) return 'crime';
+  if (s.includes('education') || s.includes('school') || s.includes('academic')) return 'education';
+  return undefined;
+}
+
+function newsTypeInstruction(): string {
+  return [
+    'Classify the news topic into exactly one label.',
+    'Allowed labels only:',
+    'science, movies, politics, business, technology, sports, health, world, culture, environment, crime, education, other.',
+    'Return exactly one label with no extra words or punctuation.'
+  ].join(' ');
+}
+
 function budgetToTokensSummary(b: BudgetMode) {
   if (b === 'low') return 55;
   if (b === 'high') return 95;
@@ -1063,6 +1125,26 @@ async function classifyMoodForItem(
   return normalizeMood(text);
 }
 
+async function classifyNewsTypeForItem(
+  title: string,
+  source: string,
+  context: string,
+  summary: string,
+  research: string,
+  budget: BudgetMode
+): Promise<NewsType | undefined> {
+  const input =
+    `${newsTypeInstruction()}\n` +
+    `Source: ${source}\n` +
+    `Headline: ${title}\n` +
+    (context ? `Context: ${context}\n` : '') +
+    (summary ? `Summary: ${summary}\n` : '') +
+    (research ? `Research: ${research}\n` : '');
+  const text = await generateAiText('research', input, Math.max(16, Math.min(34, budgetToTokensSummary(budget))), 0);
+  if (!text) return undefined;
+  return normalizeNewsType(text) || 'other';
+}
+
 function askAgentInstruction(lang: ResearchLang): string {
   const langText = lang === 'bg' ? 'Reply in Bulgarian.' : 'Reply in English.';
   return [
@@ -1148,7 +1230,8 @@ function broadcastNewsUpdate(it: NewsInternal) {
     filteredOk: it.filteredOk,
     summary: it.summary,
     research: it.research,
-    mood: it.mood
+    mood: it.mood,
+    newsType: it.newsType
   } satisfies News);
 
   wss.clients.forEach((c: WebSocket) => {
@@ -1192,7 +1275,7 @@ function shouldHaveSummary(it: NewsInternal): boolean {
 }
 
 // ---------------- AI JOB QUEUE (non-blocking) ----------------
-type AiJobKind = 'summary' | 'research' | 'mood';
+type AiJobKind = 'summary' | 'research' | 'mood' | 'news_type';
 type AiJob = { kind: AiJobKind; id: string; feedUrl: string; manual?: boolean };
 
 const aiQueue: AiJob[] = [];
@@ -1260,6 +1343,25 @@ async function runOneJob(job: AiJob) {
       );
       if (mood) {
         it.mood = mood;
+        broadcastNewsUpdate(it);
+        markDirty();
+      }
+      return;
+    }
+
+    if (job.kind === 'news_type') {
+      if (it.newsType) return;
+      if (activeModel('research') === 'none') return;
+      const newsType = await classifyNewsTypeForItem(
+        it.title,
+        it.source,
+        it.__ctx || '',
+        it.summary || '',
+        it.research || '',
+        budget
+      );
+      if (newsType) {
+        it.newsType = newsType;
         broadcastNewsUpdate(it);
         markDirty();
       }
@@ -1503,6 +1605,7 @@ async function processFeed(fi: FeedInfo) {
         summary: undefined,
         research: undefined,
         mood: undefined,
+        newsType: undefined,
         __ctx: ctx
       };
 
@@ -1528,6 +1631,7 @@ async function processFeed(fi: FeedInfo) {
 
         if (wantFeedSummary || wantFilteredSummary) enqueueJob({ kind: 'summary', id, feedUrl: fi.url });
         enqueueJob({ kind: 'mood', id, feedUrl: fi.url });
+        enqueueJob({ kind: 'news_type', id, feedUrl: fi.url });
         if (wantFeedResearch || wantFilteredResearch) enqueueJob({ kind: 'research', id, feedUrl: fi.url });
       }
     }
