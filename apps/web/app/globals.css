@@ -242,6 +242,15 @@ body[data-scheme='forest'] { --panel-border: rgba(91, 173, 117, 0.46); --card-bo
   border: 0;
 }
 
+.spinAnim {
+  animation: spinAnim 1s linear infinite;
+}
+
+@keyframes spinAnim {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
 @media (max-width: 900px) {
   .headerRow {
     flex-direction: column;

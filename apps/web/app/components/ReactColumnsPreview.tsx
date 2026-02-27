@@ -1,11 +1,33 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
+import AutoStoriesIcon from '@mui/icons-material/AutoStories';
+import BoltIcon from '@mui/icons-material/Bolt';
+import ChatIcon from '@mui/icons-material/Chat';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
+import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
+import LinkIcon from '@mui/icons-material/Link';
+import LocalLibraryIcon from '@mui/icons-material/LocalLibrary';
+import ManageSearchIcon from '@mui/icons-material/ManageSearch';
+import MicIcon from '@mui/icons-material/Mic';
+import MovieIcon from '@mui/icons-material/Movie';
+import NewspaperIcon from '@mui/icons-material/Newspaper';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
+import PersonOffIcon from '@mui/icons-material/PersonOff';
+import PrecisionManufacturingIcon from '@mui/icons-material/PrecisionManufacturing';
 import PushPinIcon from '@mui/icons-material/PushPin';
 import PushPinOutlinedIcon from '@mui/icons-material/PushPinOutlined';
+import RocketLaunchIcon from '@mui/icons-material/RocketLaunch';
+import SendIcon from '@mui/icons-material/Send';
+import ShareIcon from '@mui/icons-material/Share';
+import ShieldMoonIcon from '@mui/icons-material/ShieldMoon';
+import SmartToyIcon from '@mui/icons-material/SmartToy';
+import SupportAgentIcon from '@mui/icons-material/SupportAgent';
 import TuneIcon from '@mui/icons-material/Tune';
+import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
+import WizardHatIcon from '@mui/icons-material/AutoAwesome';
 import {
   Alert,
   Box,
@@ -66,180 +88,89 @@ type BodyMode = 'collapsed' | 'expanded' | 'hidden';
 type VibeValue = 'default' | 'anime' | 'arcade' | 'cinema' | 'newspaper' | 'cyberwitch' | 'fantasy' | 'scifi';
 type SchemeValue = 'classic' | 'vivid' | 'sunset' | 'neon' | 'ocean' | 'forest';
 
-const VIBE_BASE_COLORS: Record<VibeValue, [string, string, string]> = {
-  default: ['#3d95ff', '#20cb7d', '#ffac1a'],
-  anime: ['#ff4da6', '#38bdf8', '#ffe15c'],
-  arcade: ['#39ff14', '#ff40ff', '#ffdd00'],
-  cinema: ['#d2a85f', '#b4253a', '#f4c870'],
-  newspaper: ['#4e627a', '#78808c', '#b27418'],
-  cyberwitch: ['#b34cff', '#00ddff', '#ff74e6'],
-  fantasy: ['#56a86e', '#886a4a', '#d9b054'],
-  scifi: ['#00c9ff', '#707cff', '#74ffcf']
-};
+const VIBE_LIST: VibeValue[] = ['default', 'anime', 'arcade', 'cinema', 'newspaper', 'cyberwitch', 'fantasy', 'scifi'];
+const SCHEME_LIST: SchemeValue[] = ['classic', 'vivid', 'sunset', 'neon', 'ocean', 'forest'];
 
-const SCHEME_TUNING: Record<SchemeValue, { hueShift: number; satMul: number; lightMul: number; softAlpha: number }> = {
-  classic: { hueShift: 0, satMul: 1.0, lightMul: 1.0, softAlpha: 0.26 },
-  vivid: { hueShift: 10, satMul: 1.16, lightMul: 1.02, softAlpha: 0.30 },
-  sunset: { hueShift: -22, satMul: 1.08, lightMul: 0.96, softAlpha: 0.29 },
-  neon: { hueShift: 32, satMul: 1.28, lightMul: 1.04, softAlpha: 0.27 },
-  ocean: { hueShift: -52, satMul: 1.03, lightMul: 0.94, softAlpha: 0.30 },
-  forest: { hueShift: -105, satMul: 0.82, lightMul: 0.86, softAlpha: 0.28 }
-};
-
-function clamp(v: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, v));
-}
-
-function hexToRgb(hex: string): { r: number; g: number; b: number } {
-  const s = String(hex || '').trim().replace(/^#/, '');
-  if (!/^[0-9a-fA-F]{6}$/.test(s)) return { r: 127, g: 127, b: 127 };
-  return {
-    r: parseInt(s.slice(0, 2), 16),
-    g: parseInt(s.slice(2, 4), 16),
-    b: parseInt(s.slice(4, 6), 16)
-  };
-}
-
-function rgbToHsl(r: number, g: number, b: number): { h: number; s: number; l: number } {
-  const rn = r / 255;
-  const gn = g / 255;
-  const bn = b / 255;
-  const max = Math.max(rn, gn, bn);
-  const min = Math.min(rn, gn, bn);
-  const d = max - min;
-  let h = 0;
-  let s = 0;
-  const l = (max + min) / 2;
-
-  if (d !== 0) {
-    s = d / (1 - Math.abs(2 * l - 1));
-    if (max === rn) h = 60 * (((gn - bn) / d) % 6);
-    else if (max === gn) h = 60 * (((bn - rn) / d) + 2);
-    else h = 60 * (((rn - gn) / d) + 4);
+const SCHEME_PALETTES: Record<SchemeValue, { a: string; b: string; m: string; aSoft: string; bSoft: string; mSoft: string }> = {
+  classic: {
+    a: 'rgba(61, 149, 255, 0.98)',
+    b: 'rgba(32, 203, 125, 0.98)',
+    m: 'rgba(255, 172, 26, 0.98)',
+    aSoft: 'rgba(61, 149, 255, 0.24)',
+    bSoft: 'rgba(32, 203, 125, 0.22)',
+    mSoft: 'rgba(255, 172, 26, 0.26)'
+  },
+  vivid: {
+    a: 'rgba(16, 185, 255, 1)',
+    b: 'rgba(250, 88, 102, 1)',
+    m: 'rgba(255, 200, 54, 1)',
+    aSoft: 'rgba(16, 185, 255, 0.30)',
+    bSoft: 'rgba(250, 88, 102, 0.24)',
+    mSoft: 'rgba(255, 200, 54, 0.32)'
+  },
+  sunset: {
+    a: 'rgba(255, 127, 80, 1)',
+    b: 'rgba(255, 87, 51, 1)',
+    m: 'rgba(255, 199, 95, 1)',
+    aSoft: 'rgba(255, 127, 80, 0.28)',
+    bSoft: 'rgba(255, 87, 51, 0.24)',
+    mSoft: 'rgba(255, 199, 95, 0.30)'
+  },
+  neon: {
+    a: 'rgba(96, 255, 190, 1)',
+    b: 'rgba(77, 121, 255, 1)',
+    m: 'rgba(255, 77, 166, 1)',
+    aSoft: 'rgba(96, 255, 190, 0.25)',
+    bSoft: 'rgba(77, 121, 255, 0.24)',
+    mSoft: 'rgba(255, 77, 166, 0.22)'
+  },
+  ocean: {
+    a: 'rgba(0, 175, 255, 1)',
+    b: 'rgba(0, 219, 193, 1)',
+    m: 'rgba(255, 203, 52, 1)',
+    aSoft: 'rgba(0, 175, 255, 0.30)',
+    bSoft: 'rgba(0, 219, 193, 0.22)',
+    mSoft: 'rgba(255, 203, 52, 0.28)'
+  },
+  forest: {
+    a: 'rgba(75, 168, 96, 1)',
+    b: 'rgba(121, 85, 72, 1)',
+    m: 'rgba(214, 153, 64, 1)',
+    aSoft: 'rgba(75, 168, 96, 0.30)',
+    bSoft: 'rgba(121, 85, 72, 0.22)',
+    mSoft: 'rgba(214, 153, 64, 0.28)'
   }
+};
 
-  if (h < 0) h += 360;
-  return { h, s, l };
-}
-
-function hslToRgb(h: number, s: number, l: number): { r: number; g: number; b: number } {
-  const c = (1 - Math.abs(2 * l - 1)) * s;
-  const hh = h / 60;
-  const x = c * (1 - Math.abs((hh % 2) - 1));
-  let r1 = 0;
-  let g1 = 0;
-  let b1 = 0;
-
-  if (hh >= 0 && hh < 1) { r1 = c; g1 = x; b1 = 0; }
-  else if (hh < 2) { r1 = x; g1 = c; b1 = 0; }
-  else if (hh < 3) { r1 = 0; g1 = c; b1 = x; }
-  else if (hh < 4) { r1 = 0; g1 = x; b1 = c; }
-  else if (hh < 5) { r1 = x; g1 = 0; b1 = c; }
-  else { r1 = c; g1 = 0; b1 = x; }
-
-  const m = l - c / 2;
-  return {
-    r: Math.round((r1 + m) * 255),
-    g: Math.round((g1 + m) * 255),
-    b: Math.round((b1 + m) * 255)
-  };
-}
-
-function transformHex(hex: string, tuning: { hueShift: number; satMul: number; lightMul: number }): { r: number; g: number; b: number } {
-  const rgb = hexToRgb(hex);
-  const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
-  const h = ((hsl.h + tuning.hueShift) % 360 + 360) % 360;
-  const s = clamp(hsl.s * tuning.satMul, 0.12, 1);
-  const l = clamp(hsl.l * tuning.lightMul, 0.10, 0.86);
-  return hslToRgb(h, s, l);
-}
-
-function rgba(rgb: { r: number; g: number; b: number }, alpha = 1): string {
-  return `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`;
-}
-
-function getPalette(vibe: VibeValue, scheme: SchemeValue): { a: string; b: string; m: string; aSoft: string; bSoft: string; mSoft: string } {
-  const base = VIBE_BASE_COLORS[vibe] || VIBE_BASE_COLORS.default;
-  const tuning = SCHEME_TUNING[scheme] || SCHEME_TUNING.classic;
-  const a = transformHex(base[0], tuning);
-  const b = transformHex(base[1], tuning);
-  const m = transformHex(base[2], tuning);
-  return {
-    a: rgba(a, 1),
-    b: rgba(b, 1),
-    m: rgba(m, 1),
-    aSoft: rgba(a, tuning.softAlpha),
-    bSoft: rgba(b, Math.max(0.16, tuning.softAlpha - 0.03)),
-    mSoft: rgba(m, Math.min(0.36, tuning.softAlpha + 0.03))
-  };
-}
-
-function getVibeIcons(vibe: VibeValue): { summary: string; research: string; ask: string; share: string; hide: string } {
-  const summary = vibe === 'anime'
-    ? 'fa-wand-magic-sparkles'
-    : vibe === 'arcade'
-      ? 'fa-trophy'
-      : vibe === 'cinema'
-        ? 'fa-film'
-        : vibe === 'newspaper'
-          ? 'fa-newspaper'
-          : vibe === 'cyberwitch'
-            ? 'fa-hat-wizard'
-            : vibe === 'fantasy'
-              ? 'fa-book-open'
-              : vibe === 'scifi'
-                ? 'fa-robot'
-                : 'fa-file-lines';
-  const research = vibe === 'anime'
-    ? 'fa-dragon'
-    : vibe === 'arcade'
-      ? 'fa-crosshairs'
-      : vibe === 'cinema'
-        ? 'fa-clapperboard'
-        : vibe === 'newspaper'
-          ? 'fa-magnifying-glass'
-          : vibe === 'cyberwitch'
-            ? 'fa-bolt'
-            : vibe === 'fantasy'
-              ? 'fa-dragon'
-              : vibe === 'scifi'
-                ? 'fa-microchip'
-                : 'fa-magnifying-glass';
-  const share = vibe === 'anime'
-    ? 'fa-paper-plane'
-    : vibe === 'arcade'
-      ? 'fa-share-nodes'
-      : vibe === 'scifi'
-        ? 'fa-shuttle-space'
-        : vibe === 'cyberwitch'
-          ? 'fa-satellite-dish'
-          : 'fa-arrow-up-right-from-square';
-  const hide = vibe === 'arcade'
-    ? 'fa-skull-crossbones'
-    : vibe === 'cinema'
-      ? 'fa-masks-theater'
-      : vibe === 'newspaper'
-        ? 'fa-ban'
-        : vibe === 'cyberwitch'
-          ? 'fa-user-secret'
-          : 'fa-eye-slash';
-  const ask = vibe === 'anime'
-    ? 'fa-comment-dots'
-    : vibe === 'arcade'
-      ? 'fa-headset'
-      : vibe === 'cinema'
-        ? 'fa-microphone-lines'
-        : vibe === 'newspaper'
-          ? 'fa-circle-question'
-          : vibe === 'cyberwitch'
-            ? 'fa-hand-sparkles'
-            : vibe === 'fantasy'
-              ? 'fa-scroll'
-              : vibe === 'scifi'
-                ? 'fa-user-astronaut'
-                : 'fa-comments';
-
-  return { summary, research, ask, share, hide };
+function getVibeIcons(vibe: VibeValue): {
+  summary: React.ElementType;
+  research: React.ElementType;
+  ask: React.ElementType;
+  share: React.ElementType;
+  hide: React.ElementType;
+} {
+  if (vibe === 'anime') {
+    return { summary: WizardHatIcon, research: BoltIcon, ask: ChatIcon, share: SendIcon, hide: VisibilityOffIcon };
+  }
+  if (vibe === 'arcade') {
+    return { summary: EmojiEventsIcon, research: ManageSearchIcon, ask: SupportAgentIcon, share: ShareIcon, hide: PersonOffIcon };
+  }
+  if (vibe === 'cinema') {
+    return { summary: MovieIcon, research: ManageSearchIcon, ask: MicIcon, share: LinkIcon, hide: VisibilityOffIcon };
+  }
+  if (vibe === 'newspaper') {
+    return { summary: NewspaperIcon, research: ManageSearchIcon, ask: HelpOutlineIcon, share: LinkIcon, hide: VisibilityOffIcon };
+  }
+  if (vibe === 'cyberwitch') {
+    return { summary: WizardHatIcon, research: BoltIcon, ask: ChatIcon, share: RocketLaunchIcon, hide: ShieldMoonIcon };
+  }
+  if (vibe === 'fantasy') {
+    return { summary: LocalLibraryIcon, research: ManageSearchIcon, ask: ChatIcon, share: LinkIcon, hide: VisibilityOffIcon };
+  }
+  if (vibe === 'scifi') {
+    return { summary: SmartToyIcon, research: PrecisionManufacturingIcon, ask: SupportAgentIcon, share: RocketLaunchIcon, hide: VisibilityOffIcon };
+  }
+  return { summary: AutoStoriesIcon, research: ManageSearchIcon, ask: ChatIcon, share: OpenInNewIcon, hide: VisibilityOffIcon };
 }
 
 function formatTime(ms: number): string {
@@ -706,9 +637,9 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
   };
 
   const fontScale = fontSize === 'xl' ? 1.17 : fontSize === 'lg' ? 1.09 : fontSize === 'sm' ? 0.93 : 1;
-  const resolvedVibe: VibeValue = (Object.prototype.hasOwnProperty.call(VIBE_BASE_COLORS, vibe) ? vibe : 'default') as VibeValue;
-  const resolvedScheme: SchemeValue = (Object.prototype.hasOwnProperty.call(SCHEME_TUNING, scheme) ? scheme : 'classic') as SchemeValue;
-  const palette = useMemo(() => getPalette(resolvedVibe, resolvedScheme), [resolvedVibe, resolvedScheme]);
+  const resolvedVibe: VibeValue = (VIBE_LIST.includes(vibe as VibeValue) ? vibe : 'default') as VibeValue;
+  const resolvedScheme: SchemeValue = (SCHEME_LIST.includes(scheme as SchemeValue) ? scheme : 'classic') as SchemeValue;
+  const palette = SCHEME_PALETTES[resolvedScheme];
   const vibeIcons = useMemo(() => getVibeIcons(resolvedVibe), [resolvedVibe]);
   const compactBtnSx = {
     minHeight: 30,
@@ -819,7 +750,7 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
                 borderColor: isDropTarget ? accent : (isDragging ? accent : 'rgba(97, 123, 161, 0.42)'),
                 borderTop: `4px solid ${accent}`,
                 boxShadow: isDropTarget ? `0 0 0 2px ${accent}66, 0 18px 34px rgba(0,0,0,0.30)` : '0 10px 22px rgba(0,0,0,0.22)',
-                borderRadius: 16,
+                borderRadius: '16px',
                 color: 'rgba(234, 242, 255, 0.96)',
                 opacity: isDragging ? 0.45 : 1,
                 transform: isDragging ? 'scale(0.985)' : (isDropTarget ? 'translateY(-4px)' : 'translateY(0)'),
@@ -1032,9 +963,10 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
                                 sx={{ ...compactBtnSx, minWidth: buttonMode === 'text' ? 72 : 34, px: buttonMode === 'text' ? 1.1 : 0.75 }}
                                 onClick={() => copyLink(it.link)}
                               >
-                                {buttonMode === 'text'
-                                  ? l.shareLink
-                                  : <><i className={`fa-solid ${vibeIcons.share} iconGlyph`} aria-hidden="true" /><span className="srOnly">{l.shareLink}</span></>}
+                                {buttonMode === 'text' ? l.shareLink : (() => {
+                                  const ShareIconComp = vibeIcons.share;
+                                  return <ShareIconComp sx={{ fontSize: 15 }} aria-hidden />;
+                                })()}
                               </Button>
                             </Tooltip>
                             <Tooltip title={l.hideNews}>
@@ -1046,9 +978,10 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
                                 onClick={() => hideItem(it)}
                                 disabled={!connected}
                               >
-                                {buttonMode === 'text'
-                                  ? l.hideNews
-                                  : <><i className={`fa-solid ${vibeIcons.hide} iconGlyph`} aria-hidden="true" /><span className="srOnly">{l.hideNews}</span></>}
+                                {buttonMode === 'text' ? l.hideNews : (() => {
+                                  const HideIconComp = vibeIcons.hide;
+                                  return <HideIconComp sx={{ fontSize: 15 }} aria-hidden />;
+                                })()}
                               </Button>
                             </Tooltip>
                           </Stack>
@@ -1085,7 +1018,12 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
                             >
                               {buttonMode === 'text'
                                 ? (summaryPendingById[it.id] ? l.generatingSummary : l.summary)
-                                : <><i className={`fa-solid ${summaryPendingById[it.id] ? 'fa-spinner fa-spin' : vibeIcons.summary} iconGlyph`} aria-hidden="true" /><span className="srOnly">{l.summary}</span></>}
+                                : summaryPendingById[it.id]
+                                  ? <AutoFixHighIcon sx={{ fontSize: 15 }} className="spinAnim" aria-hidden />
+                                  : (() => {
+                                    const SummaryIconComp = vibeIcons.summary;
+                                    return <SummaryIconComp sx={{ fontSize: 15 }} aria-hidden />;
+                                  })()}
                             </Button>
                             <Button
                               size="small"
@@ -1096,7 +1034,12 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
                             >
                               {buttonMode === 'text'
                                 ? (researchPendingById[it.id] ? l.researching : l.research)
-                                : <><i className={`fa-solid ${researchPendingById[it.id] ? 'fa-spinner fa-spin' : vibeIcons.research} iconGlyph`} aria-hidden="true" /><span className="srOnly">{l.research}</span></>}
+                                : researchPendingById[it.id]
+                                  ? <AutoFixHighIcon sx={{ fontSize: 15 }} className="spinAnim" aria-hidden />
+                                  : (() => {
+                                    const ResearchIconComp = vibeIcons.research;
+                                    return <ResearchIconComp sx={{ fontSize: 15 }} aria-hidden />;
+                                  })()}
                             </Button>
                             <Button
                               size="small"
@@ -1107,7 +1050,12 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
                             >
                               {buttonMode === 'text'
                                 ? l.askAgent
-                                : <><i className={`fa-solid ${askState.pending ? 'fa-spinner fa-spin' : vibeIcons.ask} iconGlyph`} aria-hidden="true" /><span className="srOnly">{l.askAgent}</span></>}
+                                : askState.pending
+                                  ? <AutoFixHighIcon sx={{ fontSize: 15 }} className="spinAnim" aria-hidden />
+                                  : (() => {
+                                    const AskIconComp = vibeIcons.ask;
+                                    return <AskIconComp sx={{ fontSize: 15 }} aria-hidden />;
+                                  })()}
                             </Button>
                           </Stack>
                         ) : null}

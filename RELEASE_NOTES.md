@@ -62,6 +62,10 @@
   - filtered column items are derived from matched news across all feeds (`isMatch` + `filteredOk`)
   - filtered stream hides remove/pin controls like the legacy UI
   - adjusted column header/title padding to prevent clipped leading text
+- Fixed severe column-card UI regressions:
+  - corrected MUI `sx` border-radius scaling that caused rounded/arched card tops and clipped content
+  - replaced brittle icon-font rendering with guaranteed MUI icon rendering in icon mode
+  - re-separated theme concerns: scheme now drives A/B/MATCH accent palettes; vibe drives icon/style flavor
 
 ### Existing migration milestones already in `main`
 - Next.js web app and Node.js API monorepo with Prisma + SQLite + zod.
