@@ -245,6 +245,7 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
   const [shareNoticeOpen, setShareNoticeOpen] = useState(false);
   const [dragFeedUrl, setDragFeedUrl] = useState<string | null>(null);
   const [dragOverFeedUrl, setDragOverFeedUrl] = useState<string | null>(null);
+  const dragCommittedRef = useRef(false);
   const [hydratedColumns, setHydratedColumns] = useState<Record<string, true>>({});
   const columnNodesRef = useRef<Record<string, HTMLDivElement | null>>({});
   const prevAllControlsHiddenRef = useRef<boolean | null>(null);
@@ -786,6 +787,7 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
                   e.preventDefault();
                   return;
                 }
+                dragCommittedRef.current = false;
                 setDragFeedUrl(feed.url);
                 setDragOverFeedUrl(feed.url);
                 e.dataTransfer.effectAllowed = 'move';
@@ -793,8 +795,12 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
                 e.dataTransfer.setData('application/x-ai-news-feed', feed.url);
               }}
               onDragEnd={() => {
+                if (!dragCommittedRef.current && dragFeedUrl && dragOverFeedUrl && dragFeedUrl !== dragOverFeedUrl) {
+                  dispatch(reorderFeeds({ fromUrl: dragFeedUrl, toUrl: dragOverFeedUrl }));
+                }
                 setDragFeedUrl(null);
                 setDragOverFeedUrl(null);
+                dragCommittedRef.current = false;
               }}
               ref={node => {
                 columnNodesRef.current[feed.url] = node as HTMLDivElement | null;
@@ -821,6 +827,7 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
                   || ''
                 ).trim();
                 if (fromUrl && fromUrl !== feed.url) {
+                  dragCommittedRef.current = true;
                   dispatch(reorderFeeds({ fromUrl, toUrl: feed.url }));
                 }
                 setDragFeedUrl(null);
