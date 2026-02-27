@@ -437,6 +437,25 @@ body::after {
   background: var(--field-bg) !important;
 }
 
+.mobileTopActions .MuiChip-root {
+  backdrop-filter: blur(6px);
+}
+
+.mobileDrawerPaper {
+  width: min(92vw, 430px);
+  background: linear-gradient(180deg, var(--topbar-start), rgba(7, 15, 32, 0.96));
+  border-right: 1px solid var(--panel-border);
+  color: var(--text-main);
+  backdrop-filter: blur(14px);
+}
+
+.mobileDrawerHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+}
+
 .iconGlyph {
   font-size: 13px;
   line-height: 1;
@@ -464,12 +483,28 @@ body::after {
 }
 
 @media (max-width: 900px) {
+  .topbarInner {
+    padding: 12px 14px;
+  }
   .headerRow {
     flex-direction: column;
     align-items: flex-start;
+    gap: 10px;
   }
   .headerRight {
     width: 100%;
     justify-content: flex-start;
+  }
+  .headerLeft {
+    min-width: 100%;
+  }
+  .headerLeft h1 {
+    font-size: calc(1.35rem * var(--ui-font-scale));
+  }
+  .subHint {
+    font-size: calc(0.86rem * var(--ui-font-scale));
+  }
+  .mobileTopActions .topQuickLabel {
+    width: 100%;
   }
 }

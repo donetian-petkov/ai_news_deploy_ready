@@ -1,7 +1,12 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Alert, Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, MenuItem, Select, Stack, TextField, Typography, useMediaQuery } from '@mui/material';
+import { Alert, Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, Divider, Drawer, FormControl, IconButton, MenuItem, Select, Stack, TextField, Typography, useMediaQuery } from '@mui/material';
+import AddIcon from '@mui/icons-material/Add';
+import CloseIcon from '@mui/icons-material/Close';
+import MenuIcon from '@mui/icons-material/Menu';
+import SearchIcon from '@mui/icons-material/Search';
+import TuneIcon from '@mui/icons-material/Tune';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { setLanguage, setSearchQuery, setTopUiState, setHideAllResearch, setNotifySettings, setAiSettings, setAppearanceSettings, hydrateUiSettings, setHelpOpen, dismissToast, triggerShowMoreNewsAll, triggerResetNewsShownAll } from '../store/slices/uiSlice';
 import { sendWsMessage } from '../store/wsClient';
@@ -29,6 +34,7 @@ export default function TopMenu() {
   const dispatch = useAppDispatch();
   const ui = useAppSelector(s => s.ui);
   const prefersDark = useMediaQuery('(prefers-color-scheme: dark)');
+  const isMobile = useMediaQuery('(max-width: 900px)');
   const resolvedColorMode = ui.colorMode === 'system' ? (prefersDark ? 'dark' : 'light') : ui.colorMode;
   const feeds = useAppSelector(s => s.feeds.feeds);
   const lang = ui.language;
@@ -38,6 +44,7 @@ export default function TopMenu() {
   const [feedUrl, setFeedUrl] = useState('');
   const [feedLabel, setFeedLabel] = useState('');
   const [feedInterval, setFeedInterval] = useState('120');
+  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const [deleteAgeAll, setDeleteAgeAll] = useState<'yesterday' | 'week' | 'month' | 'year'>('week');
   const [addStatus, setAddStatus] = useState<{ kind: 'info' | 'success' | 'error'; message: string } | null>(null);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
@@ -151,7 +158,12 @@ export default function TopMenu() {
   }, [ui.addStreamVisible, ui.allColumnControlsHidden, ui.hideAllResearch, ui.buttonMode, ui.colorMode, ui.controlsCollapsed, ui.font, ui.fontSize, ui.language, ui.menuCollapsed, ui.notifyEnabled, ui.notifyMode, ui.scheme, ui.searchVisible, ui.vibe]);
 
   useEffect(() => {
+    if (!isMobile) setMobileDrawerOpen(false);
+  }, [isMobile]);
+
+  useEffect(() => {
     const onPointerDown = (event: PointerEvent) => {
+      if (isMobile) return;
       if (ui.menuCollapsed || ui.controlsCollapsed) return;
       const root = topbarInnerRef.current;
       const target = event.target;
@@ -168,7 +180,7 @@ export default function TopMenu() {
     return () => {
       document.removeEventListener('pointerdown', onPointerDown);
     };
-  }, [dispatch, ui.controlsCollapsed, ui.menuCollapsed]);
+  }, [dispatch, isMobile, ui.controlsCollapsed, ui.menuCollapsed]);
 
   useEffect(() => {
     toasts.forEach(t => {
@@ -320,6 +332,9 @@ export default function TopMenu() {
   };
 
   const toggleSearch = () => {
+    if (isMobile) {
+      setMobileDrawerOpen(true);
+    }
     dispatch(setTopUiState({
       menuCollapsed: false,
       searchVisible: !ui.searchVisible
@@ -327,6 +342,9 @@ export default function TopMenu() {
   };
 
   const toggleAddStream = () => {
+    if (isMobile) {
+      setMobileDrawerOpen(true);
+    }
     dispatch(setTopUiState({
       menuCollapsed: false,
       addStreamVisible: !ui.addStreamVisible
@@ -334,6 +352,9 @@ export default function TopMenu() {
   };
 
   const toggleControls = () => {
+    if (isMobile) {
+      setMobileDrawerOpen(true);
+    }
     dispatch(setTopUiState({
       menuCollapsed: false,
       controlsCollapsed: !ui.controlsCollapsed
@@ -341,6 +362,10 @@ export default function TopMenu() {
   };
 
   const toggleMenu = () => {
+    if (isMobile) {
+      setMobileDrawerOpen(prev => !prev);
+      return;
+    }
     const next = !ui.menuCollapsed;
     dispatch(setTopUiState({
       menuCollapsed: next,
@@ -405,6 +430,322 @@ export default function TopMenu() {
   const controlsLabel = ui.controlsCollapsed ? labels.showTopControls : labels.hideTopControls;
   const allColumnLabel = ui.allColumnControlsHidden ? labels.showAllColumnControls : labels.hideAllColumnControls;
   const menuLabel = ui.menuCollapsed ? labels.showMenu : labels.hideMenu;
+  const showDesktopBody = !isMobile && !ui.menuCollapsed;
+
+  const searchSection = (
+    <Box sx={{ mt: 1.1, mb: 0.9 }}>
+      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+        <TextField
+          inputRef={searchInputRef}
+          size={isMobile ? 'medium' : 'small'}
+          fullWidth
+          value={searchDraft}
+          onChange={e => setSearchDraft(e.target.value)}
+          placeholder={labels.searchPlaceholder}
+        />
+        <Button variant="outlined" size={isMobile ? 'medium' : 'small'} onClick={clearSearch} sx={isMobile ? { width: '100%' } : undefined}>
+          {labels.clear}
+        </Button>
+      </Stack>
+    </Box>
+  );
+
+  const addStreamSection = (
+    <Box sx={{ mt: 0.3, mb: 1 }}>
+      <Stack direction={isMobile ? 'column' : { xs: 'column', md: 'row' }} spacing={1}>
+        <FormControl size={isMobile ? 'medium' : 'small'} sx={{ minWidth: 150 }}>
+          <Select value={feedType} onChange={e => setFeedType(e.target.value as 'rss' | 'reddit' | 'youtube')}>
+            <MenuItem value="rss">RSS</MenuItem>
+            <MenuItem value="reddit">Reddit (subreddit)</MenuItem>
+            <MenuItem value="youtube">YouTube (channel)</MenuItem>
+          </Select>
+        </FormControl>
+        <TextField
+          inputRef={addStreamInputRef}
+          size={isMobile ? 'medium' : 'small'}
+          fullWidth
+          value={feedUrl}
+          onChange={e => setFeedUrl(e.target.value)}
+          placeholder={labels.addUrlPlaceholder}
+        />
+        <TextField
+          size={isMobile ? 'medium' : 'small'}
+          value={feedLabel}
+          onChange={e => setFeedLabel(e.target.value)}
+          placeholder={labels.addLabelPlaceholder}
+          sx={{ minWidth: 180 }}
+        />
+        <FormControl size={isMobile ? 'medium' : 'small'} sx={{ minWidth: 110 }}>
+          <Select value={feedInterval} onChange={e => setFeedInterval(String(e.target.value))}>
+            <MenuItem value="45">45{labels.intervalSuffix}</MenuItem>
+            <MenuItem value="60">60{labels.intervalSuffix}</MenuItem>
+            <MenuItem value="90">90{labels.intervalSuffix}</MenuItem>
+            <MenuItem value="120">120{labels.intervalSuffix}</MenuItem>
+            <MenuItem value="180">180{labels.intervalSuffix}</MenuItem>
+            <MenuItem value="300">300{labels.intervalSuffix}</MenuItem>
+          </Select>
+        </FormControl>
+        <Button
+          variant="contained"
+          size={isMobile ? 'medium' : 'small'}
+          onClick={addStream}
+          sx={{
+            whiteSpace: 'nowrap',
+            minWidth: { xs: '100%', md: 124 },
+            borderRadius: 1.5,
+            alignSelf: { xs: 'stretch', md: 'center' },
+            py: isMobile ? 1.1 : undefined
+          }}
+        >
+          {labels.add}
+        </Button>
+      </Stack>
+      {addStatus ? (
+        <Alert severity={addStatus.kind} sx={{ mt: 1, py: 0 }}>
+          {addStatus.message}
+        </Alert>
+      ) : null}
+    </Box>
+  );
+
+  const controlsPanel = (
+    <div className="controls" style={ui.controlsCollapsed ? { display: 'none' } : undefined}>
+      <div className="controlsCompactRow controlsRow">
+        <div className="controlGroup">
+          <button id="resetBtn" className="btn" type="button" onClick={resetAllNewest}>Reset ALL to newest 10</button>
+          <button id="showMoreNewsAllBtn" className="btn" type="button" onClick={() => dispatch(triggerShowMoreNewsAll())}>
+            {labels.showMoreNewsAll}
+          </button>
+          <button id="resetNewsShownAllBtn" className="btn" type="button" onClick={() => dispatch(triggerResetNewsShownAll())}>
+            {labels.resetNewsShownAll}
+          </button>
+          <label className="checkbox" title="Delete old news by age from all columns">
+            <span id="deleteAgePrefix">Delete age:</span>
+            <select id="deleteAgeSelect" className="select" value={deleteAgeAll} onChange={e => setDeleteAgeAll(e.target.value as 'yesterday' | 'week' | 'month' | 'year')}>
+              <option value="yesterday">Yesterday</option>
+              <option value="week">Past week</option>
+              <option value="month">Past month</option>
+              <option value="year">Past year</option>
+            </select>
+          </label>
+          <button id="deleteAgeAllBtn" className="btn danger" type="button" onClick={deleteOldAllColumns}>Delete old (all columns)</button>
+          <label className="checkbox" title="Embeddings matching, AI dedupe, summaries, research">
+            <input
+              id="aiEnabled"
+              type="checkbox"
+              checked={ui.aiEnabled}
+              disabled={!ui.aiAvailable}
+              onChange={e => {
+                const enabled = e.target.checked;
+                const ok = sendWsMessage({ type: 'toggle_ai', enabled });
+                if (ok) dispatch(setAiSettings({ aiEnabled: enabled }));
+              }}
+            />
+            <span id="aiEnabledLabel">AI Enabled</span>
+          </label>
+          <button id="helpBtn" className="btn" type="button" onClick={() => dispatch(setHelpOpen(true))}>Help</button>
+        </div>
+      </div>
+      <div className="controlsHint" id="controlsHint">
+        Click section headers below to expand/collapse settings.
+      </div>
+
+      <div className="controlsGrid">
+        <details className="controlSection" open>
+          <summary id="notificationsSummary">Notifications</summary>
+          <div className="controlGroup">
+            <label className="checkbox">
+              <input
+                id="notifyEnabled"
+                type="checkbox"
+                checked={ui.notifyEnabled}
+                onChange={async e => {
+                  const enabled = e.target.checked;
+                  dispatch(setNotifySettings({ notifyEnabled: enabled }));
+                  await requestNotificationPermission(enabled);
+                }}
+              />
+              <span id="notifyEnabledLabel">Enable notifications</span>
+            </label>
+            <label className="checkbox">
+              <span id="notifyPrefix">Notify:</span>
+              <select
+                id="notifyMode"
+                className="select"
+                value={ui.notifyMode}
+                onChange={e => dispatch(setNotifySettings({ notifyMode: e.target.value as 'matched' | 'matched_pinned' | 'pinned' | 'all' }))}
+              >
+                <option value="matched">Only matched</option>
+                <option value="matched_pinned">Matched + pinned columns</option>
+                <option value="pinned">Only pinned columns</option>
+                <option value="all">All columns</option>
+              </select>
+            </label>
+          </div>
+        </details>
+
+        <details className="controlSection" open>
+          <summary id="aiSettingsSummary">AI Settings</summary>
+          <div className="controlGroup">
+            <label className="checkbox">
+              <span id="summaryLangPrefix">Summary:</span>
+              <select
+                id="summaryLang"
+                className="select"
+                value={ui.summaryLang}
+                disabled={!ui.aiAvailable}
+                onChange={e => {
+                  const lang = e.target.value as 'bilingual' | 'bg' | 'en';
+                  const ok = sendWsMessage({ type: 'set_summary_lang', lang });
+                  if (ok) dispatch(setAiSettings({ summaryLang: lang }));
+                }}
+              >
+                <option value="bilingual">BG / EN</option>
+                <option value="bg">BG</option>
+                <option value="en">EN</option>
+              </select>
+            </label>
+            <label className="checkbox">
+              <span id="researchLangPrefix">Research:</span>
+              <select
+                id="researchLang"
+                className="select"
+                value={ui.researchLang}
+                disabled={!ui.aiAvailable}
+                onChange={e => {
+                  const lang = e.target.value as 'bg' | 'en';
+                  const ok = sendWsMessage({ type: 'set_research_lang', lang });
+                  if (ok) dispatch(setAiSettings({ researchLang: lang }));
+                }}
+              >
+                <option value="bg">BG</option>
+                <option value="en">EN</option>
+              </select>
+            </label>
+            <label className="checkbox" title="Apply one budget to all columns">
+              <span id="allBudgetPrefix">AI Budget (all):</span>
+              <select
+                id="allBudgetSelect"
+                className="select"
+                value={ui.allBudget}
+                onChange={e => {
+                  const budget = e.target.value as 'mixed' | 'low' | 'standard' | 'high';
+                  if (budget !== 'mixed') applyAllBudget(budget);
+                }}
+              >
+                <option value="mixed">Mixed</option>
+                <option value="low">Low</option>
+                <option value="standard">Standard</option>
+                <option value="high">High</option>
+              </select>
+            </label>
+          </div>
+        </details>
+
+        <details className="controlSection" open>
+          <summary id="appearanceSummary">Appearance</summary>
+          <div className="controlGroup" id="appearanceGroup">
+            <label className="checkbox" title="Change UI font">
+              <span id="fontPrefix">Font:</span>
+              <select
+                id="fontSelect"
+                className="select"
+                value={ui.font}
+                onChange={e => dispatch(setAppearanceSettings({ font: e.target.value as 'system' | 'manrope' | 'grotesk' | 'sora' | 'plex' | 'serif' | 'mono' }))}
+              >
+                <option value="system">System</option>
+                <option value="manrope">Manrope</option>
+                <option value="grotesk">Space Grotesk</option>
+                <option value="sora">Sora</option>
+                <option value="plex">IBM Plex Sans</option>
+                <option value="serif">Serif</option>
+                <option value="mono">Mono</option>
+              </select>
+            </label>
+            <label className="checkbox" title="Scale text size">
+              <span id="fontSizePrefix">Font size:</span>
+              <select
+                id="fontSizeSelect"
+                className="select"
+                value={ui.fontSize}
+                onChange={e => dispatch(setAppearanceSettings({ fontSize: e.target.value as 'sm' | 'md' | 'lg' | 'xl' }))}
+              >
+                <option value="sm">Small</option>
+                <option value="md">Medium</option>
+                <option value="lg">Large</option>
+                <option value="xl">Extra Large</option>
+              </select>
+            </label>
+            <label className="checkbox" title="Column accent scheme">
+              <span id="schemePrefix">Scheme:</span>
+              <select
+                id="schemeSelect"
+                className="select"
+                value={ui.scheme}
+                onChange={e => dispatch(setAppearanceSettings({ scheme: e.target.value as 'classic' | 'vivid' | 'sunset' | 'neon' | 'ocean' | 'forest' }))}
+              >
+                <option value="classic">Classic</option>
+                <option value="vivid">Vivid</option>
+                <option value="sunset">Sunset</option>
+                <option value="neon">Neon</option>
+                <option value="ocean">Ocean</option>
+                <option value="forest">Forest</option>
+              </select>
+            </label>
+            <label className="checkbox" title="Item buttons look">
+              <span id="buttonsPrefix">Buttons:</span>
+              <select
+                id="btnModeSelect"
+                className="select"
+                value={ui.buttonMode}
+                onChange={e => dispatch(setAppearanceSettings({ buttonMode: e.target.value as 'icons' | 'text' }))}
+              >
+                <option value="icons">Icons</option>
+                <option value="text">Text</option>
+              </select>
+            </label>
+            <label className="checkbox" title="Visual vibe preset">
+              <span id="vibePrefix">Vibe:</span>
+              <select
+                id="vibeSelect"
+                className="select"
+                value={ui.vibe}
+                onChange={e => dispatch(setAppearanceSettings({ vibe: e.target.value as VibeValue }))}
+              >
+                <option value="default">Default</option>
+                <option value="anime">Anime Pop</option>
+                <option value="arcade">Video Game</option>
+                <option value="cinema">Movie Night</option>
+                <option value="newspaper">Newspaper</option>
+                <option value="cyberwitch">Cyber Witch</option>
+                <option value="fantasy">Fantasy</option>
+                <option value="scifi">Sci-Fi</option>
+              </select>
+            </label>
+            <label className="checkbox" title="Interface language">
+              <span id="interfaceLangPrefix">Interface:</span>
+              <select
+                id="interfaceLang"
+                className="select"
+                value={ui.language}
+                onChange={e => {
+                  const nextLang = e.target.value as 'en' | 'bg';
+                  dispatch(setLanguage(nextLang));
+                }}
+              >
+                <option value="en">EN</option>
+                <option value="bg">BG</option>
+              </select>
+            </label>
+            <button className="btn" type="button" onClick={cycleTheme}>
+              {labels.colorMode}: {ui.colorMode}
+            </button>
+          </div>
+        </details>
+      </div>
+
+    </div>
+  );
 
   return (
     <div className="topbar">
@@ -419,361 +760,140 @@ export default function TopMenu() {
             </div>
           </Box>
 
-          <Stack className="headerRight" direction="row" flexWrap="wrap" gap={1.1} alignItems="center">
-            <StatusPills />
-            <label className="checkbox topQuickLabel" title="Quick vibe switch">
-              <span id="quickVibeLabelText">{labels.vibe}</span>
-              <select
-                id="quickVibeSelect"
-                className="select topQuickSelect"
-                value={ui.vibe}
-                onChange={e => {
-                  const nextVibe = e.target.value as VibeValue;
-                  dispatch(setAppearanceSettings({ vibe: nextVibe }));
-                }}
-              >
-                <option value="default">{labels.defaultVibe}</option>
-                <option value="anime">{labels.anime}</option>
-                <option value="arcade">{labels.arcade}</option>
-                <option value="cinema">{labels.cinema}</option>
-                <option value="newspaper">{labels.newspaper}</option>
-                <option value="cyberwitch">{labels.cyberwitch}</option>
-                <option value="fantasy">{labels.fantasy}</option>
-                <option value="scifi">{labels.scifi}</option>
-              </select>
-            </label>
-            <Button id="quickSearchBtn" className="btn ghost" size="small" variant="outlined" type="button" onClick={toggleSearch}>{searchLabel}</Button>
-            <Button id="quickAddStreamBtn" className="btn ghost" size="small" variant="outlined" type="button" onClick={toggleAddStream}>{addStreamLabel}</Button>
-            <Button id="controlsToggle" className="btn ghost" size="small" variant="outlined" type="button" onClick={toggleControls}>{controlsLabel}</Button>
-            <Button id="allColControlsToggle" className="btn ghost" size="small" variant="outlined" type="button" onClick={toggleAllColumnControls}>{allColumnLabel}</Button>
-            <Button
-              id="hideAllResearchBtn"
-              className="btn ghost"
-              size="small"
-              variant="outlined"
-              type="button"
-              onClick={() => dispatch(setHideAllResearch(!ui.hideAllResearch))}
-            >
-              {ui.hideAllResearch ? labels.showAllResearch : labels.hideAllResearch}
-            </Button>
-            <Button id="menuToggle" className="btn ghost" size="small" variant="outlined" type="button" onClick={toggleMenu}>{menuLabel}</Button>
-          </Stack>
-        </div>
-
-        {!ui.menuCollapsed && ui.searchVisible ? (
-          <Box sx={{ mt: 1.1, mb: 0.9 }}>
-            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
-              <TextField
-                inputRef={searchInputRef}
-                size="small"
-                fullWidth
-                value={searchDraft}
-                onChange={e => setSearchDraft(e.target.value)}
-                placeholder={labels.searchPlaceholder}
-              />
-              <Button variant="outlined" size="small" onClick={clearSearch}>
-                {labels.clear}
-              </Button>
+          {isMobile ? (
+            <Stack className="headerRight mobileTopActions" spacing={1.1} sx={{ width: '100%' }}>
+              <Stack direction="row" spacing={1} alignItems="center" justifyContent="space-between">
+                <Stack direction="row" spacing={0.8} sx={{ flexWrap: 'wrap' }}>
+                  <StatusPills />
+                </Stack>
+                <IconButton
+                  id="menuToggle"
+                  size="small"
+                  onClick={toggleMenu}
+                  sx={{ border: '1px solid var(--panel-border)', bgcolor: 'var(--field-bg)', color: 'var(--text-main)' }}
+                >
+                  <MenuIcon fontSize="small" />
+                </IconButton>
+              </Stack>
+              <Stack direction="row" spacing={1} alignItems="center">
+                <label className="checkbox topQuickLabel" title="Quick vibe switch" style={{ flex: 1 }}>
+                  <span id="quickVibeLabelText">{labels.vibe}</span>
+                  <select
+                    id="quickVibeSelect"
+                    className="select topQuickSelect"
+                    value={ui.vibe}
+                    onChange={e => {
+                      const nextVibe = e.target.value as VibeValue;
+                      dispatch(setAppearanceSettings({ vibe: nextVibe }));
+                    }}
+                    style={{ width: '100%' }}
+                  >
+                    <option value="default">{labels.defaultVibe}</option>
+                    <option value="anime">{labels.anime}</option>
+                    <option value="arcade">{labels.arcade}</option>
+                    <option value="cinema">{labels.cinema}</option>
+                    <option value="newspaper">{labels.newspaper}</option>
+                    <option value="cyberwitch">{labels.cyberwitch}</option>
+                    <option value="fantasy">{labels.fantasy}</option>
+                    <option value="scifi">{labels.scifi}</option>
+                  </select>
+                </label>
+              </Stack>
+              <Stack direction="row" spacing={1}>
+                <Button id="quickSearchBtn" className="btn ghost" size="small" variant="outlined" type="button" onClick={toggleSearch} startIcon={<SearchIcon fontSize="small" />} sx={{ flex: 1 }}>{searchLabel}</Button>
+                <Button id="quickAddStreamBtn" className="btn ghost" size="small" variant="outlined" type="button" onClick={toggleAddStream} startIcon={<AddIcon fontSize="small" />} sx={{ flex: 1 }}>{addStreamLabel}</Button>
+                <Button id="controlsToggle" className="btn ghost" size="small" variant="outlined" type="button" onClick={toggleControls} startIcon={<TuneIcon fontSize="small" />} sx={{ flex: 1 }}>{controlsLabel}</Button>
+              </Stack>
             </Stack>
-          </Box>
-        ) : null}
-
-        {!ui.menuCollapsed && ui.addStreamVisible ? (
-          <Box sx={{ mt: 0.3, mb: 1 }}>
-            <Stack direction={{ xs: 'column', md: 'row' }} spacing={1}>
-              <FormControl size="small" sx={{ minWidth: 150 }}>
-                <Select value={feedType} onChange={e => setFeedType(e.target.value as 'rss' | 'reddit' | 'youtube')}>
-                  <MenuItem value="rss">RSS</MenuItem>
-                  <MenuItem value="reddit">Reddit (subreddit)</MenuItem>
-                  <MenuItem value="youtube">YouTube (channel)</MenuItem>
-                </Select>
-              </FormControl>
-              <TextField
-                inputRef={addStreamInputRef}
-                size="small"
-                fullWidth
-                value={feedUrl}
-                onChange={e => setFeedUrl(e.target.value)}
-                placeholder={labels.addUrlPlaceholder}
-              />
-              <TextField
-                size="small"
-                value={feedLabel}
-                onChange={e => setFeedLabel(e.target.value)}
-                placeholder={labels.addLabelPlaceholder}
-                sx={{ minWidth: 180 }}
-              />
-              <FormControl size="small" sx={{ minWidth: 110 }}>
-                <Select value={feedInterval} onChange={e => setFeedInterval(String(e.target.value))}>
-                  <MenuItem value="45">45{labels.intervalSuffix}</MenuItem>
-                  <MenuItem value="60">60{labels.intervalSuffix}</MenuItem>
-                  <MenuItem value="90">90{labels.intervalSuffix}</MenuItem>
-                  <MenuItem value="120">120{labels.intervalSuffix}</MenuItem>
-                  <MenuItem value="180">180{labels.intervalSuffix}</MenuItem>
-                  <MenuItem value="300">300{labels.intervalSuffix}</MenuItem>
-                </Select>
-              </FormControl>
-              <Button
-                variant="contained"
-                size="small"
-                onClick={addStream}
-                sx={{
-                  whiteSpace: 'nowrap',
-                  minWidth: { xs: '100%', md: 124 },
-                  borderRadius: 1.5,
-                  alignSelf: { xs: 'stretch', md: 'center' }
-                }}
-              >
-                {labels.add}
-              </Button>
-            </Stack>
-            {addStatus ? (
-              <Alert severity={addStatus.kind} sx={{ mt: 1, py: 0 }}>
-                {addStatus.message}
-              </Alert>
-            ) : null}
-          </Box>
-        ) : null}
-
-        {!ui.menuCollapsed ? (
-        <div className="controls" style={ui.controlsCollapsed ? { display: 'none' } : undefined}>
-          <div className="controlsCompactRow controlsRow">
-            <div className="controlGroup">
-              <button id="resetBtn" className="btn" type="button" onClick={resetAllNewest}>Reset ALL to newest 10</button>
-              <button id="showMoreNewsAllBtn" className="btn" type="button" onClick={() => dispatch(triggerShowMoreNewsAll())}>
-                {labels.showMoreNewsAll}
-              </button>
-              <button id="resetNewsShownAllBtn" className="btn" type="button" onClick={() => dispatch(triggerResetNewsShownAll())}>
-                {labels.resetNewsShownAll}
-              </button>
-              <label className="checkbox" title="Delete old news by age from all columns">
-                <span id="deleteAgePrefix">Delete age:</span>
-                <select id="deleteAgeSelect" className="select" value={deleteAgeAll} onChange={e => setDeleteAgeAll(e.target.value as 'yesterday' | 'week' | 'month' | 'year')}>
-                  <option value="yesterday">Yesterday</option>
-                  <option value="week">Past week</option>
-                  <option value="month">Past month</option>
-                  <option value="year">Past year</option>
+          ) : (
+            <Stack className="headerRight" direction="row" flexWrap="wrap" gap={1.1} alignItems="center">
+              <StatusPills />
+              <label className="checkbox topQuickLabel" title="Quick vibe switch">
+                <span id="quickVibeLabelText">{labels.vibe}</span>
+                <select
+                  id="quickVibeSelect"
+                  className="select topQuickSelect"
+                  value={ui.vibe}
+                  onChange={e => {
+                    const nextVibe = e.target.value as VibeValue;
+                    dispatch(setAppearanceSettings({ vibe: nextVibe }));
+                  }}
+                >
+                  <option value="default">{labels.defaultVibe}</option>
+                  <option value="anime">{labels.anime}</option>
+                  <option value="arcade">{labels.arcade}</option>
+                  <option value="cinema">{labels.cinema}</option>
+                  <option value="newspaper">{labels.newspaper}</option>
+                  <option value="cyberwitch">{labels.cyberwitch}</option>
+                  <option value="fantasy">{labels.fantasy}</option>
+                  <option value="scifi">{labels.scifi}</option>
                 </select>
               </label>
-              <button id="deleteAgeAllBtn" className="btn danger" type="button" onClick={deleteOldAllColumns}>Delete old (all columns)</button>
-              <label className="checkbox" title="Embeddings matching, AI dedupe, summaries, research">
-                <input
-                  id="aiEnabled"
-                  type="checkbox"
-                  checked={ui.aiEnabled}
-                  disabled={!ui.aiAvailable}
-                  onChange={e => {
-                    const enabled = e.target.checked;
-                    const ok = sendWsMessage({ type: 'toggle_ai', enabled });
-                    if (ok) dispatch(setAiSettings({ aiEnabled: enabled }));
-                  }}
-                />
-                <span id="aiEnabledLabel">AI Enabled</span>
-              </label>
-              <button id="helpBtn" className="btn" type="button" onClick={() => dispatch(setHelpOpen(true))}>Help</button>
-            </div>
-          </div>
-          <div className="controlsHint" id="controlsHint">
-            Click section headers below to expand/collapse settings.
-          </div>
-
-          <div className="controlsGrid">
-            <details className="controlSection" open>
-              <summary id="notificationsSummary">Notifications</summary>
-              <div className="controlGroup">
-                <label className="checkbox">
-                  <input
-                    id="notifyEnabled"
-                    type="checkbox"
-                    checked={ui.notifyEnabled}
-                    onChange={async e => {
-                      const enabled = e.target.checked;
-                      dispatch(setNotifySettings({ notifyEnabled: enabled }));
-                      await requestNotificationPermission(enabled);
-                    }}
-                  />
-                  <span id="notifyEnabledLabel">Enable notifications</span>
-                </label>
-                <label className="checkbox">
-                  <span id="notifyPrefix">Notify:</span>
-                  <select
-                    id="notifyMode"
-                    className="select"
-                    value={ui.notifyMode}
-                    onChange={e => dispatch(setNotifySettings({ notifyMode: e.target.value as 'matched' | 'matched_pinned' | 'pinned' | 'all' }))}
-                  >
-                    <option value="matched">Only matched</option>
-                    <option value="matched_pinned">Matched + pinned columns</option>
-                    <option value="pinned">Only pinned columns</option>
-                    <option value="all">All columns</option>
-                  </select>
-                </label>
-              </div>
-            </details>
-
-            <details className="controlSection" open>
-              <summary id="aiSettingsSummary">AI Settings</summary>
-              <div className="controlGroup">
-                <label className="checkbox">
-                  <span id="summaryLangPrefix">Summary:</span>
-                  <select
-                    id="summaryLang"
-                    className="select"
-                    value={ui.summaryLang}
-                    disabled={!ui.aiAvailable}
-                    onChange={e => {
-                      const lang = e.target.value as 'bilingual' | 'bg' | 'en';
-                      const ok = sendWsMessage({ type: 'set_summary_lang', lang });
-                      if (ok) dispatch(setAiSettings({ summaryLang: lang }));
-                    }}
-                  >
-                    <option value="bilingual">BG / EN</option>
-                    <option value="bg">BG</option>
-                    <option value="en">EN</option>
-                  </select>
-                </label>
-                <label className="checkbox">
-                  <span id="researchLangPrefix">Research:</span>
-                  <select
-                    id="researchLang"
-                    className="select"
-                    value={ui.researchLang}
-                    disabled={!ui.aiAvailable}
-                    onChange={e => {
-                      const lang = e.target.value as 'bg' | 'en';
-                      const ok = sendWsMessage({ type: 'set_research_lang', lang });
-                      if (ok) dispatch(setAiSettings({ researchLang: lang }));
-                    }}
-                  >
-                    <option value="bg">BG</option>
-                    <option value="en">EN</option>
-                  </select>
-                </label>
-                <label className="checkbox" title="Apply one budget to all columns">
-                  <span id="allBudgetPrefix">AI Budget (all):</span>
-                  <select
-                    id="allBudgetSelect"
-                    className="select"
-                    value={ui.allBudget}
-                    onChange={e => {
-                      const budget = e.target.value as 'mixed' | 'low' | 'standard' | 'high';
-                      if (budget !== 'mixed') applyAllBudget(budget);
-                    }}
-                  >
-                    <option value="mixed">Mixed</option>
-                    <option value="low">Low</option>
-                    <option value="standard">Standard</option>
-                    <option value="high">High</option>
-                  </select>
-                </label>
-              </div>
-            </details>
-
-            <details className="controlSection" open>
-              <summary id="appearanceSummary">Appearance</summary>
-              <div className="controlGroup" id="appearanceGroup">
-                <label className="checkbox" title="Change UI font">
-                  <span id="fontPrefix">Font:</span>
-                  <select
-                    id="fontSelect"
-                    className="select"
-                    value={ui.font}
-                    onChange={e => dispatch(setAppearanceSettings({ font: e.target.value as 'system' | 'manrope' | 'grotesk' | 'sora' | 'plex' | 'serif' | 'mono' }))}
-                  >
-                    <option value="system">System</option>
-                    <option value="manrope">Manrope</option>
-                    <option value="grotesk">Space Grotesk</option>
-                    <option value="sora">Sora</option>
-                    <option value="plex">IBM Plex Sans</option>
-                    <option value="serif">Serif</option>
-                    <option value="mono">Mono</option>
-                  </select>
-                </label>
-                <label className="checkbox" title="Scale text size">
-                  <span id="fontSizePrefix">Font size:</span>
-                  <select
-                    id="fontSizeSelect"
-                    className="select"
-                    value={ui.fontSize}
-                    onChange={e => dispatch(setAppearanceSettings({ fontSize: e.target.value as 'sm' | 'md' | 'lg' | 'xl' }))}
-                  >
-                    <option value="sm">Small</option>
-                    <option value="md">Medium</option>
-                    <option value="lg">Large</option>
-                    <option value="xl">Extra Large</option>
-                  </select>
-                </label>
-                <label className="checkbox" title="Column accent scheme">
-                  <span id="schemePrefix">Scheme:</span>
-                  <select
-                    id="schemeSelect"
-                    className="select"
-                    value={ui.scheme}
-                    onChange={e => dispatch(setAppearanceSettings({ scheme: e.target.value as 'classic' | 'vivid' | 'sunset' | 'neon' | 'ocean' | 'forest' }))}
-                  >
-                    <option value="classic">Classic</option>
-                    <option value="vivid">Vivid</option>
-                    <option value="sunset">Sunset</option>
-                    <option value="neon">Neon</option>
-                    <option value="ocean">Ocean</option>
-                    <option value="forest">Forest</option>
-                  </select>
-                </label>
-                <label className="checkbox" title="Item buttons look">
-                  <span id="buttonsPrefix">Buttons:</span>
-                  <select
-                    id="btnModeSelect"
-                    className="select"
-                    value={ui.buttonMode}
-                    onChange={e => dispatch(setAppearanceSettings({ buttonMode: e.target.value as 'icons' | 'text' }))}
-                  >
-                    <option value="icons">Icons</option>
-                    <option value="text">Text</option>
-                  </select>
-                </label>
-                <label className="checkbox" title="Visual vibe preset">
-                  <span id="vibePrefix">Vibe:</span>
-                  <select
-                    id="vibeSelect"
-                    className="select"
-                    value={ui.vibe}
-                    onChange={e => dispatch(setAppearanceSettings({ vibe: e.target.value as VibeValue }))}
-                  >
-                    <option value="default">Default</option>
-                    <option value="anime">Anime Pop</option>
-                    <option value="arcade">Video Game</option>
-                    <option value="cinema">Movie Night</option>
-                    <option value="newspaper">Newspaper</option>
-                    <option value="cyberwitch">Cyber Witch</option>
-                    <option value="fantasy">Fantasy</option>
-                    <option value="scifi">Sci-Fi</option>
-                  </select>
-                </label>
-                <label className="checkbox" title="Interface language">
-                  <span id="interfaceLangPrefix">Interface:</span>
-                  <select
-                    id="interfaceLang"
-                    className="select"
-                    value={ui.language}
-                    onChange={e => {
-                      const nextLang = e.target.value as 'en' | 'bg';
-                      dispatch(setLanguage(nextLang));
-                    }}
-                  >
-                    <option value="en">EN</option>
-                    <option value="bg">BG</option>
-                  </select>
-                </label>
-                <button className="btn" type="button" onClick={cycleTheme}>
-                  {labels.colorMode}: {ui.colorMode}
-                </button>
-              </div>
-            </details>
-          </div>
-
+              <Button id="quickSearchBtn" className="btn ghost" size="small" variant="outlined" type="button" onClick={toggleSearch}>{searchLabel}</Button>
+              <Button id="quickAddStreamBtn" className="btn ghost" size="small" variant="outlined" type="button" onClick={toggleAddStream}>{addStreamLabel}</Button>
+              <Button id="controlsToggle" className="btn ghost" size="small" variant="outlined" type="button" onClick={toggleControls}>{controlsLabel}</Button>
+              <Button id="allColControlsToggle" className="btn ghost" size="small" variant="outlined" type="button" onClick={toggleAllColumnControls}>{allColumnLabel}</Button>
+              <Button
+                id="hideAllResearchBtn"
+                className="btn ghost"
+                size="small"
+                variant="outlined"
+                type="button"
+                onClick={() => dispatch(setHideAllResearch(!ui.hideAllResearch))}
+              >
+                {ui.hideAllResearch ? labels.showAllResearch : labels.hideAllResearch}
+              </Button>
+              <Button id="menuToggle" className="btn ghost" size="small" variant="outlined" type="button" onClick={toggleMenu}>{menuLabel}</Button>
+            </Stack>
+          )}
         </div>
-        ) : null}
+
+        {showDesktopBody && ui.searchVisible ? searchSection : null}
+        {showDesktopBody && ui.addStreamVisible ? addStreamSection : null}
+        {showDesktopBody ? controlsPanel : null}
       </div>
+
+      {isMobile ? (
+        <Drawer
+          anchor="left"
+          open={mobileDrawerOpen}
+          onClose={() => setMobileDrawerOpen(false)}
+          PaperProps={{ className: 'mobileDrawerPaper' }}
+        >
+          <Box className="mobileDrawerHeader">
+            <Typography variant="h6" sx={{ fontWeight: 800 }}>{labels.title}</Typography>
+            <IconButton onClick={() => setMobileDrawerOpen(false)} sx={{ color: 'var(--text-main)' }}>
+              <CloseIcon />
+            </IconButton>
+          </Box>
+          <Divider sx={{ borderColor: 'var(--panel-border)' }} />
+          <Box sx={{ p: 1.4, overflowY: 'auto' }}>
+            <Stack spacing={1}>
+              <Button variant="outlined" onClick={toggleSearch} startIcon={<SearchIcon fontSize="small" />}>
+                {searchLabel}
+              </Button>
+              <Button variant="outlined" onClick={toggleAddStream} startIcon={<AddIcon fontSize="small" />}>
+                {addStreamLabel}
+              </Button>
+              <Button variant="outlined" onClick={toggleControls} startIcon={<TuneIcon fontSize="small" />}>
+                {controlsLabel}
+              </Button>
+              <Button variant="outlined" onClick={toggleAllColumnControls}>
+                {allColumnLabel}
+              </Button>
+              <Button
+                variant="outlined"
+                onClick={() => dispatch(setHideAllResearch(!ui.hideAllResearch))}
+              >
+                {ui.hideAllResearch ? labels.showAllResearch : labels.hideAllResearch}
+              </Button>
+            </Stack>
+            {ui.searchVisible ? searchSection : null}
+            {ui.addStreamVisible ? addStreamSection : null}
+            {controlsPanel}
+          </Box>
+        </Drawer>
+      ) : null}
 
       <Dialog open={ui.helpOpen} onClose={() => dispatch(setHelpOpen(false))} maxWidth="sm" fullWidth>
         <DialogTitle>{labels.helpTitle}</DialogTitle>
