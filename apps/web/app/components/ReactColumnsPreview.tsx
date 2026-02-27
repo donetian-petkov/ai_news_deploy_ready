@@ -1522,12 +1522,14 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
           const accent = colTheme === 'a' ? palette.a : colTheme === 'b' ? palette.b : palette.m;
           const soft = colTheme === 'a' ? palette.aSoft : colTheme === 'b' ? palette.bSoft : palette.mSoft;
           const items = isMatchColumn ? filteredColumnItems : (itemsByFeed[feed.url] || []);
-          const moodFilteredItems = moodFilter === 'all'
+          const moodFilterEffective = performanceMode ? 'all' : moodFilter;
+          const typeFilterEffective = performanceMode ? 'all' : typeFilter;
+          const moodFilteredItems = moodFilterEffective === 'all'
             ? items
-            : items.filter(it => it.mood === moodFilter);
-          const typeFilteredItems = typeFilter === 'all'
+            : items.filter(it => it.mood === moodFilterEffective);
+          const typeFilteredItems = typeFilterEffective === 'all'
             ? moodFilteredItems
-            : moodFilteredItems.filter(it => it.newsType === typeFilter);
+            : moodFilteredItems.filter(it => it.newsType === typeFilterEffective);
           const normalizedQuery = String(searchQuery || '').trim().toLowerCase();
           const itemsVisible = normalizedQuery
             ? typeFilteredItems.filter(it => {

@@ -137,6 +137,10 @@ const uiSlice = createSlice({
       if (next.allBudget === 'mixed' || next.allBudget === 'low' || next.allBudget === 'standard' || next.allBudget === 'high') state.allBudget = next.allBudget;
     },
     setMoodFilter(state, action: PayloadAction<UiState['moodFilter']>) {
+      if (state.performanceMode) {
+        state.moodFilter = 'all';
+        return;
+      }
       const next = action.payload;
       if (
         next === 'all'
@@ -155,6 +159,10 @@ const uiSlice = createSlice({
       }
     },
     setTypeFilter(state, action: PayloadAction<UiState['typeFilter']>) {
+      if (state.performanceMode) {
+        state.typeFilter = 'all';
+        return;
+      }
       const next = action.payload;
       if (
         next === 'all'
@@ -188,6 +196,10 @@ const uiSlice = createSlice({
       }
       if (typeof next.performanceMode === 'boolean') {
         state.performanceMode = next.performanceMode;
+        if (next.performanceMode) {
+          state.moodFilter = 'all';
+          state.typeFilter = 'all';
+        }
       }
       if (next.buttonMode === 'icons' || next.buttonMode === 'text') {
         state.buttonMode = next.buttonMode;
@@ -243,6 +255,10 @@ const uiSlice = createSlice({
       if (next.fontSize === 'sm' || next.fontSize === 'md' || next.fontSize === 'lg' || next.fontSize === 'xl') state.fontSize = next.fontSize;
       if (next.scheme === 'classic' || next.scheme === 'vivid' || next.scheme === 'sunset' || next.scheme === 'neon' || next.scheme === 'ocean' || next.scheme === 'forest') state.scheme = next.scheme;
       if (typeof next.performanceMode === 'boolean') state.performanceMode = next.performanceMode;
+      if (state.performanceMode) {
+        state.moodFilter = 'all';
+        state.typeFilter = 'all';
+      }
       if (next.buttonMode === 'icons' || next.buttonMode === 'text') state.buttonMode = next.buttonMode;
       if (typeof next.vibe === 'string' && isVibe(next.vibe)) state.vibe = next.vibe;
     },

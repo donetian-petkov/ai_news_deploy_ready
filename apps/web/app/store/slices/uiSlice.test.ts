@@ -86,6 +86,8 @@ describe('uiSlice', () => {
     expect(state.scheme).toBe('neon');
     expect(state.performanceMode).toBe(true);
     expect(state.buttonMode).toBe('text');
+    expect(state.moodFilter).toBe('all');
+    expect(state.typeFilter).toBe('all');
 
     state = uiReducer(state, setNotifySettings({ notifyEnabled: true, notifyMode: 'all' }));
     expect(state.notifyEnabled).toBe(true);
@@ -120,6 +122,13 @@ describe('uiSlice', () => {
     expect(state.typeFilter).toBe('science');
     state = uiReducer(state, setTypeFilter('not-a-type' as never));
     expect(state.typeFilter).toBe('science');
+
+    state = uiReducer(state, setAppearanceSettings({ performanceMode: true }));
+    expect(state.performanceMode).toBe(true);
+    state = uiReducer(state, setMoodFilter('sadness'));
+    state = uiReducer(state, setTypeFilter('politics'));
+    expect(state.moodFilter).toBe('all');
+    expect(state.typeFilter).toBe('all');
   });
 
   it('hydrates stored prefs for performance mode and ai-related visibility toggles', () => {

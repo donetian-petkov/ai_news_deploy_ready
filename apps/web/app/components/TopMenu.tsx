@@ -123,6 +123,7 @@ export default function TopMenu() {
     typeCrime: bg ? 'Криминални' : 'Crime',
     typeEducation: bg ? 'Образование' : 'Education',
     typeOther: bg ? 'Друго' : 'Other',
+    perfAIFiltersHidden: bg ? 'AI филтрите за настроение/тип са изключени в режим производителност.' : 'Mood/type AI filters are disabled in Performance mode.',
     aiUnavailable: bg ? 'AI не е наличен за избрания доставчик. Добави валиден API ключ от AI Settings.' : 'AI is unavailable for the selected provider. Add a valid API key in AI Settings.',
     perfMode: bg ? 'Режим производителност' : 'Performance mode',
     perfOn: bg ? 'ВКЛ' : 'ON',
@@ -715,53 +716,61 @@ export default function TopMenu() {
                 <option value="en">EN</option>
               </select>
             </label>
-            <label className="checkbox">
-              <span id="moodFilterPrefix">{labels.moodFilter}</span>
-              <select
-                id="moodFilter"
-                className="select"
-                value={ui.moodFilter}
-                disabled={!ui.aiAvailable}
-                onChange={e => dispatch(setMoodFilter(e.target.value as 'all' | 'pesimistic' | 'optimistic' | 'realistic' | 'melancholy' | 'happiness' | 'sadness' | 'rage' | 'uncertainty' | 'neutral' | 'curios'))}
-              >
-                <option value="all">{labels.moodAll}</option>
-                <option value="pesimistic">{labels.moodPesimistic}</option>
-                <option value="optimistic">{labels.moodOptimistic}</option>
-                <option value="realistic">{labels.moodRealistic}</option>
-                <option value="melancholy">{labels.moodMelancholy}</option>
-                <option value="happiness">{labels.moodHappiness}</option>
-                <option value="sadness">{labels.moodSadness}</option>
-                <option value="rage">{labels.moodRage}</option>
-                <option value="uncertainty">{labels.moodUncertainty}</option>
-                <option value="neutral">{labels.moodNeutral}</option>
-                <option value="curios">{labels.moodCurios}</option>
-              </select>
-            </label>
-            <label className="checkbox">
-              <span id="typeFilterPrefix">{labels.typeFilter}</span>
-              <select
-                id="typeFilter"
-                className="select"
-                value={ui.typeFilter}
-                disabled={!ui.aiAvailable}
-                onChange={e => dispatch(setTypeFilter(e.target.value as 'all' | 'science' | 'movies' | 'politics' | 'business' | 'technology' | 'sports' | 'health' | 'world' | 'culture' | 'environment' | 'crime' | 'education' | 'other'))}
-              >
-                <option value="all">{labels.typeAll}</option>
-                <option value="science">{labels.typeScience}</option>
-                <option value="movies">{labels.typeMovies}</option>
-                <option value="politics">{labels.typePolitics}</option>
-                <option value="business">{labels.typeBusiness}</option>
-                <option value="technology">{labels.typeTechnology}</option>
-                <option value="sports">{labels.typeSports}</option>
-                <option value="health">{labels.typeHealth}</option>
-                <option value="world">{labels.typeWorld}</option>
-                <option value="culture">{labels.typeCulture}</option>
-                <option value="environment">{labels.typeEnvironment}</option>
-                <option value="crime">{labels.typeCrime}</option>
-                <option value="education">{labels.typeEducation}</option>
-                <option value="other">{labels.typeOther}</option>
-              </select>
-            </label>
+            {!ui.performanceMode ? (
+              <>
+                <label className="checkbox">
+                  <span id="moodFilterPrefix">{labels.moodFilter}</span>
+                  <select
+                    id="moodFilter"
+                    className="select"
+                    value={ui.moodFilter}
+                    disabled={!ui.aiAvailable}
+                    onChange={e => dispatch(setMoodFilter(e.target.value as 'all' | 'pesimistic' | 'optimistic' | 'realistic' | 'melancholy' | 'happiness' | 'sadness' | 'rage' | 'uncertainty' | 'neutral' | 'curios'))}
+                  >
+                    <option value="all">{labels.moodAll}</option>
+                    <option value="pesimistic">{labels.moodPesimistic}</option>
+                    <option value="optimistic">{labels.moodOptimistic}</option>
+                    <option value="realistic">{labels.moodRealistic}</option>
+                    <option value="melancholy">{labels.moodMelancholy}</option>
+                    <option value="happiness">{labels.moodHappiness}</option>
+                    <option value="sadness">{labels.moodSadness}</option>
+                    <option value="rage">{labels.moodRage}</option>
+                    <option value="uncertainty">{labels.moodUncertainty}</option>
+                    <option value="neutral">{labels.moodNeutral}</option>
+                    <option value="curios">{labels.moodCurios}</option>
+                  </select>
+                </label>
+                <label className="checkbox">
+                  <span id="typeFilterPrefix">{labels.typeFilter}</span>
+                  <select
+                    id="typeFilter"
+                    className="select"
+                    value={ui.typeFilter}
+                    disabled={!ui.aiAvailable}
+                    onChange={e => dispatch(setTypeFilter(e.target.value as 'all' | 'science' | 'movies' | 'politics' | 'business' | 'technology' | 'sports' | 'health' | 'world' | 'culture' | 'environment' | 'crime' | 'education' | 'other'))}
+                  >
+                    <option value="all">{labels.typeAll}</option>
+                    <option value="science">{labels.typeScience}</option>
+                    <option value="movies">{labels.typeMovies}</option>
+                    <option value="politics">{labels.typePolitics}</option>
+                    <option value="business">{labels.typeBusiness}</option>
+                    <option value="technology">{labels.typeTechnology}</option>
+                    <option value="sports">{labels.typeSports}</option>
+                    <option value="health">{labels.typeHealth}</option>
+                    <option value="world">{labels.typeWorld}</option>
+                    <option value="culture">{labels.typeCulture}</option>
+                    <option value="environment">{labels.typeEnvironment}</option>
+                    <option value="crime">{labels.typeCrime}</option>
+                    <option value="education">{labels.typeEducation}</option>
+                    <option value="other">{labels.typeOther}</option>
+                  </select>
+                </label>
+              </>
+            ) : (
+              <Alert severity="info" sx={{ py: 0 }}>
+                {labels.perfAIFiltersHidden}
+              </Alert>
+            )}
             <label className="checkbox" title="Apply one budget to all columns">
               <span id="allBudgetPrefix">AI Budget (all):</span>
               <select
