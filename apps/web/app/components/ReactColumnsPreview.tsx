@@ -114,13 +114,13 @@ type ColumnPalette = { a: string; b: string; m: string; aSoft: string; bSoft: st
 
 const VIBE_BASE_COLORS: Record<VibeValue, [string, string, string]> = {
   default: ['#3d95ff', '#20cb7d', '#ffac1a'],
-  anime: ['#ff4da6', '#38bdf8', '#ffe15c'],
-  arcade: ['#39ff14', '#ff40ff', '#ffdd00'],
-  cinema: ['#d2a85f', '#b4253a', '#f4c870'],
-  newspaper: ['#4e627a', '#78808c', '#b27418'],
-  cyberwitch: ['#b34cff', '#00ddff', '#ff74e6'],
-  fantasy: ['#56a86e', '#886a4a', '#d9b054'],
-  scifi: ['#00c9ff', '#707cff', '#74ffcf']
+  anime: ['#ff63bc', '#5fd5ff', '#ffd764'],
+  arcade: ['#57ff3b', '#ff4de6', '#00d8ff'],
+  cinema: ['#f6b35e', '#cf5a76', '#ffdba2'],
+  newspaper: ['#8f9eab', '#627a92', '#d9b770'],
+  cyberwitch: ['#cc66ff', '#00e5ff', '#ff86d4'],
+  fantasy: ['#4fd08e', '#9b784e', '#ffd06f'],
+  scifi: ['#25d8ff', '#7f8cff', '#7affd8']
 };
 
 const SCHEME_TUNING: Record<SchemeValue, { hueShift: number; satMul: number; lightMul: number; softAlpha: number }> = {
@@ -466,11 +466,13 @@ const NewsCard = memo(function NewsCard({
     <Card
       variant="outlined"
       sx={{
-        background: `linear-gradient(155deg, rgba(5, 12, 25, 0.92), rgba(7, 14, 28, 0.86)), radial-gradient(550px 180px at 0% 0%, ${soft}, transparent 72%)`,
+        background: `linear-gradient(155deg, rgba(5, 12, 25, 0.92), rgba(7, 14, 28, 0.86)), radial-gradient(550px 180px at 0% 0%, ${soft}, transparent 72%), var(--news-card-overlay)`,
         borderColor: item.isMatch ? matchAccent : `${accent}88`,
         color: 'rgba(234, 242, 255, 0.96)',
         contentVisibility: 'auto',
-        containIntrinsicSize: '360px'
+        containIntrinsicSize: '360px',
+        borderRadius: 'var(--news-card-radius, 14px)',
+        boxShadow: '0 10px 20px rgba(0,0,0,0.24), inset 0 1px 0 rgba(255,255,255,0.03)'
       }}
     >
       <CardContent sx={{ pb: '12px !important' }}>
@@ -527,7 +529,8 @@ const NewsCard = memo(function NewsCard({
             lineHeight: 1.32,
             fontWeight: 800,
             color: 'primary.light',
-            mb: 1.1
+            mb: 1.1,
+            fontFamily: 'var(--news-title-font-family, var(--font-family))'
           }}
         >
           <span>{item.title}</span>
@@ -545,7 +548,8 @@ const NewsCard = memo(function NewsCard({
                   fontSize: `${1.08 * fontScale}rem`,
                   lineHeight: 1.56,
                   color: 'rgba(226,234,250,0.96)',
-                  whiteSpace: 'pre-wrap'
+                  whiteSpace: 'pre-wrap',
+                  fontFamily: 'var(--news-body-font-family, var(--font-family))'
                 }}
               >
                 {summaryText}
@@ -587,7 +591,8 @@ const NewsCard = memo(function NewsCard({
                     fontSize: `${0.98 * fontScale}rem`,
                     lineHeight: 1.52,
                     color: 'rgba(205,218,238,0.93)',
-                    whiteSpace: 'pre-wrap'
+                    whiteSpace: 'pre-wrap',
+                    fontFamily: 'var(--news-body-font-family, var(--font-family))'
                   }}
                 >
                   {researchText}
@@ -1526,8 +1531,8 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
               variant="outlined"
               sx={{
                 background: isMatchColumn
-                  ? `linear-gradient(180deg, ${palette.mSoft}, rgba(34, 20, 7, 0.95) 74%, rgba(10, 14, 28, 0.98) 100%)`
-                  : `linear-gradient(180deg, ${soft}, rgba(9, 15, 30, 0.96) 78%)`,
+                  ? `linear-gradient(180deg, ${palette.mSoft}, rgba(34, 20, 7, 0.95) 74%, rgba(10, 14, 28, 0.98) 100%), var(--column-shell-overlay)`
+                  : `linear-gradient(180deg, ${soft}, rgba(9, 15, 30, 0.96) 78%), var(--column-shell-overlay)`,
                 borderColor: isDropTarget
                   ? accent
                   : (isDragging ? accent : (isMatchColumn ? `${palette.m}` : 'rgba(97, 123, 161, 0.42)')),
@@ -1537,7 +1542,7 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
                   : (isMatchColumn
                     ? '0 12px 26px rgba(0,0,0,0.30), inset 0 0 0 1px rgba(255,180,62,0.12)'
                     : '0 10px 22px rgba(0,0,0,0.22)'),
-                borderRadius: '16px',
+                borderRadius: 'var(--column-radius, 16px)',
                 color: 'rgba(234, 242, 255, 0.96)',
                 opacity: isDragging ? 0.45 : 1,
                 transform: isDragging ? 'scale(0.985)' : (isDropTarget ? 'translateY(-4px)' : 'translateY(0)'),
@@ -1549,7 +1554,15 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
                 <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.25 }}>
                   <Typography
                     variant="h6"
-                    sx={{ fontSize: `${18 * fontScale}px`, fontWeight: 800, lineHeight: 1.2, pr: 1, pl: 0.3, color: 'rgba(232,243,255,0.97)' }}
+                    sx={{
+                      fontSize: `${18 * fontScale}px`,
+                      fontWeight: 800,
+                      lineHeight: 1.2,
+                      pr: 1,
+                      pl: 0.3,
+                      color: 'rgba(232,243,255,0.97)',
+                      fontFamily: 'var(--news-title-font-family, var(--font-family))'
+                    }}
                   >
                     {feed.label}
                   </Typography>
