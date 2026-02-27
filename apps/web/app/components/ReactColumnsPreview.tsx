@@ -6,6 +6,7 @@ import AutoStoriesIcon from '@mui/icons-material/AutoStories';
 import BoltIcon from '@mui/icons-material/Bolt';
 import ChatIcon from '@mui/icons-material/Chat';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import LinkIcon from '@mui/icons-material/Link';
@@ -259,6 +260,7 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
     pinned: bg ? 'Закачена' : 'Pinned',
     pin: bg ? 'Закачи' : 'Pin',
     remove: bg ? 'Премахни' : 'Remove',
+    dragColumn: bg ? 'Премести колона' : 'Drag column',
     hideControls: bg ? 'Скрий контроли' : 'Hide controls',
     showControls: bg ? 'Покажи контроли' : 'Show controls',
     summariesOn: bg ? 'Резюмета: ВКЛ' : 'Summaries: ON',
@@ -774,6 +776,7 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
           const isHydrated = !!hydratedColumns[feed.url];
           const pinned = !!pinnedByUrl[feed.url];
           const controlsOpen = typeof controlsOpenByUrl[feed.url] === 'boolean' ? !!controlsOpenByUrl[feed.url] : true;
+          const canDrag = !isMatchColumn;
           const isDragging = dragFeedUrl === feed.url;
           const isDropTarget = !!dragFeedUrl && dragFeedUrl !== feed.url && dragOverFeedUrl === feed.url;
           return (
@@ -783,38 +786,30 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
               ref={node => {
                 columnNodesRef.current[feed.url] = node as HTMLDivElement | null;
               }}
-            >
-            <Card
-              variant="outlined"
-              draggable={!isMatchColumn}
-              onDragStart={e => {
-                if (isMatchColumn) return;
-                setDragFeedUrl(feed.url);
-                setDragOverFeedUrl(feed.url);
-                e.dataTransfer.effectAllowed = 'move';
-                e.dataTransfer.setData('text/plain', feed.url);
-              }}
-              onDragEnd={() => {
-                setDragFeedUrl(null);
-                setDragOverFeedUrl(null);
-              }}
               onDragEnter={() => {
+                if (!canDrag) return;
                 if (dragFeedUrl && dragFeedUrl !== feed.url) setDragOverFeedUrl(feed.url);
               }}
               onDragOver={e => {
+                if (!canDrag) return;
                 e.preventDefault();
                 e.dataTransfer.dropEffect = 'move';
                 if (dragFeedUrl && dragFeedUrl !== feed.url && dragOverFeedUrl !== feed.url) {
                   setDragOverFeedUrl(feed.url);
                 }
               }}
-              onDrop={() => {
+              onDrop={e => {
+                if (!canDrag) return;
+                e.preventDefault();
                 if (dragFeedUrl && dragFeedUrl !== feed.url) {
                   dispatch(reorderFeeds({ fromUrl: dragFeedUrl, toUrl: feed.url }));
                 }
                 setDragFeedUrl(null);
                 setDragOverFeedUrl(null);
               }}
+            >
+            <Card
+              variant="outlined"
               sx={{
                 background: `linear-gradient(180deg, ${soft}, rgba(9, 15, 30, 0.96) 78%)`,
                 borderColor: isDropTarget ? accent : (isDragging ? accent : 'rgba(97, 123, 161, 0.42)'),
@@ -825,14 +820,50 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
                 opacity: isDragging ? 0.45 : 1,
                 transform: isDragging ? 'scale(0.985)' : (isDropTarget ? 'translateY(-4px)' : 'translateY(0)'),
                 transition: 'transform 130ms ease, box-shadow 130ms ease, opacity 130ms ease, border-color 130ms ease',
-                cursor: isDragging ? 'grabbing' : 'grab'
+                cursor: isDragging ? 'grabbing' : 'default'
               }}
             >
               <CardContent sx={{ pb: '12px !important', px: 2.2 }}>
                 <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.25 }}>
-                  <Typography variant="h6" sx={{ fontSize: `${18 * fontScale}px`, fontWeight: 800, lineHeight: 1.2, pr: 1, pl: 0.3, color: 'rgba(232,243,255,0.97)' }}>
-                    {feed.label}
-                  </Typography>
+                  <Stack direction="row" alignItems="center" spacing={0.8} sx={{ minWidth: 0, pr: 1 }}>
+                    {canDrag ? (
+                      <Tooltip title={l.dragColumn}>
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          draggable
+                          onDragStart={e => {
+                            setDragFeedUrl(feed.url);
+                            setDragOverFeedUrl(feed.url);
+                            e.dataTransfer.effectAllowed = 'move';
+                            e.dataTransfer.setData('text/plain', feed.url);
+                          }}
+                          onDragEnd={() => {
+                            setDragFeedUrl(null);
+                            setDragOverFeedUrl(null);
+                          }}
+                          sx={{
+                            minWidth: 30,
+                            width: 30,
+                            height: 30,
+                            borderRadius: 1.25,
+                            p: 0,
+                            borderColor: 'rgba(127, 153, 194, 0.55)',
+                            color: 'rgba(212, 225, 247, 0.92)',
+                            cursor: isDragging ? 'grabbing' : 'grab'
+                          }}
+                        >
+                          <DragIndicatorIcon sx={{ fontSize: 16 }} />
+                        </Button>
+                      </Tooltip>
+                    ) : null}
+                    <Typography
+                      variant="h6"
+                      sx={{ fontSize: `${18 * fontScale}px`, fontWeight: 800, lineHeight: 1.2, color: 'rgba(232,243,255,0.97)' }}
+                    >
+                      {feed.label}
+                    </Typography>
+                  </Stack>
                   <Stack direction="row" spacing={1} alignItems="center">
                     <Chip size="small" label={itemsVisible.length} sx={{ color: 'rgba(231,242,255,0.96)', bgcolor: 'rgba(79, 114, 168, 0.24)', borderColor: accent }} />
                     <Chip size="small" variant="outlined" label={feed.kind} sx={{ color: 'rgba(231,242,255,0.96)', borderColor: accent }} />
