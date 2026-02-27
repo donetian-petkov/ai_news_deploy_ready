@@ -2,12 +2,14 @@
 
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
+import AnimationIcon from '@mui/icons-material/Animation';
 import AutoStoriesIcon from '@mui/icons-material/AutoStories';
 import BoltIcon from '@mui/icons-material/Bolt';
 import ChatIcon from '@mui/icons-material/Chat';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
-import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
+import FactCheckIcon from '@mui/icons-material/FactCheck';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
+import HistoryEduIcon from '@mui/icons-material/HistoryEdu';
 import LinkIcon from '@mui/icons-material/Link';
 import LocalLibraryIcon from '@mui/icons-material/LocalLibrary';
 import ManageSearchIcon from '@mui/icons-material/ManageSearch';
@@ -22,12 +24,14 @@ import PushPinOutlinedIcon from '@mui/icons-material/PushPinOutlined';
 import RedditIcon from '@mui/icons-material/Reddit';
 import RocketLaunchIcon from '@mui/icons-material/RocketLaunch';
 import RssFeedIcon from '@mui/icons-material/RssFeed';
+import ScienceIcon from '@mui/icons-material/Science';
 import SendIcon from '@mui/icons-material/Send';
-import ShareIcon from '@mui/icons-material/Share';
 import ShieldMoonIcon from '@mui/icons-material/ShieldMoon';
 import SmartToyIcon from '@mui/icons-material/SmartToy';
 import SmartDisplayIcon from '@mui/icons-material/SmartDisplay';
+import SportsEsportsIcon from '@mui/icons-material/SportsEsports';
 import SupportAgentIcon from '@mui/icons-material/SupportAgent';
+import TheaterComedyIcon from '@mui/icons-material/TheaterComedy';
 import TuneIcon from '@mui/icons-material/Tune';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import WizardHatIcon from '@mui/icons-material/AutoAwesome';
@@ -246,25 +250,25 @@ function getVibeIcons(vibe: VibeValue): {
   hide: React.ElementType;
 } {
   if (vibe === 'anime') {
-    return { summary: WizardHatIcon, research: BoltIcon, ask: ChatIcon, share: SendIcon, hide: VisibilityOffIcon };
+    return { summary: AnimationIcon, research: WizardHatIcon, ask: TheaterComedyIcon, share: SendIcon, hide: PersonOffIcon };
   }
   if (vibe === 'arcade') {
-    return { summary: EmojiEventsIcon, research: ManageSearchIcon, ask: SupportAgentIcon, share: ShareIcon, hide: PersonOffIcon };
+    return { summary: SportsEsportsIcon, research: BoltIcon, ask: SmartToyIcon, share: RocketLaunchIcon, hide: VisibilityOffIcon };
   }
   if (vibe === 'cinema') {
-    return { summary: MovieIcon, research: ManageSearchIcon, ask: MicIcon, share: LinkIcon, hide: VisibilityOffIcon };
+    return { summary: MovieIcon, research: MicIcon, ask: TheaterComedyIcon, share: OpenInNewIcon, hide: VisibilityOffIcon };
   }
   if (vibe === 'newspaper') {
-    return { summary: NewspaperIcon, research: ManageSearchIcon, ask: HelpOutlineIcon, share: LinkIcon, hide: VisibilityOffIcon };
+    return { summary: NewspaperIcon, research: FactCheckIcon, ask: HistoryEduIcon, share: LinkIcon, hide: VisibilityOffIcon };
   }
   if (vibe === 'cyberwitch') {
-    return { summary: WizardHatIcon, research: BoltIcon, ask: ChatIcon, share: RocketLaunchIcon, hide: ShieldMoonIcon };
+    return { summary: WizardHatIcon, research: ScienceIcon, ask: SupportAgentIcon, share: RocketLaunchIcon, hide: ShieldMoonIcon };
   }
   if (vibe === 'fantasy') {
-    return { summary: LocalLibraryIcon, research: ManageSearchIcon, ask: ChatIcon, share: LinkIcon, hide: VisibilityOffIcon };
+    return { summary: LocalLibraryIcon, research: WizardHatIcon, ask: HelpOutlineIcon, share: LinkIcon, hide: ShieldMoonIcon };
   }
   if (vibe === 'scifi') {
-    return { summary: SmartToyIcon, research: PrecisionManufacturingIcon, ask: SupportAgentIcon, share: RocketLaunchIcon, hide: VisibilityOffIcon };
+    return { summary: SmartToyIcon, research: PrecisionManufacturingIcon, ask: ChatIcon, share: RocketLaunchIcon, hide: VisibilityOffIcon };
   }
   return { summary: AutoStoriesIcon, research: ManageSearchIcon, ask: ChatIcon, share: OpenInNewIcon, hide: VisibilityOffIcon };
 }
