@@ -982,6 +982,15 @@ function eligibleForFeed(it: NewsInternal, feedUrl: string): boolean {
   return it.feedUrl === feedUrl;
 }
 
+function shouldHaveSummary(it: NewsInternal): boolean {
+  const ownFeedSummary = !!feedSettings.get(it.feedUrl)?.summaryEnabled;
+  const filteredSummary =
+    !!feedSettings.get(FILTERED_FEED_URL)?.summaryEnabled &&
+    !!it.isMatch &&
+    it.filteredOk !== false;
+  return ownFeedSummary || filteredSummary;
+}
+
 // ---------------- AI JOB QUEUE (non-blocking) ----------------
 type AiJobKind = 'summary' | 'research';
 type AiJob = { kind: AiJobKind; id: string; feedUrl: string; manual?: boolean };
@@ -1484,8 +1493,34 @@ wss.on('connection', (ws: WebSocket) => {
     if (msg.type === 'set_summary_lang') {
       const lang = msg.lang;
       if (lang === 'bg' || lang === 'en' || lang === 'bilingual') {
+        const prev = summaryLang;
         summaryLang = lang;
         broadcastConfig();
+
+        // Re-render existing summaries in the newly selected global language.
+        if (prev !== lang && aiEnabled && openai && SUMMARY_MODEL !== 'none') {
+          const MAX = 260;
+          const list = recent.slice().sort((a, b) => b.publishedMs - a.publishedMs);
+          let done = 0;
+          for (const it of list) {
+            if (done >= MAX) break;
+            if (hiddenIds.has(it.id)) continue;
+            if (!shouldHaveSummary(it)) continue;
+            if (!it.summary || !it.summary.trim()) continue;
+
+            it.summary = '';
+            broadcastNewsUpdate(it);
+            enqueueJob({ kind: 'summary', id: it.id, feedUrl: it.feedUrl });
+            done++;
+          }
+          if (done > 0) {
+            ws.send(JSON.stringify({
+              type: 'ok',
+              message: `Refreshing ${done} summaries for ${lang.toUpperCase()}`
+            }));
+          }
+        }
+
         markDirty();
       }
       return;
