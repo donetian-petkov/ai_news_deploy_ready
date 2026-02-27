@@ -41,6 +41,11 @@ body[data-react-top-quick-panels='1'] .controls > #addStreamSection {
   display: none !important;
 }
 
+/* React renderer is now the primary visible board; legacy grid stays for compatibility wiring only. */
+body[data-react-renderer='1'] #grid {
+  display: none !important;
+}
+
 .reactPreviewWrap {
   margin-top: 8px;
   margin-bottom: 4px;

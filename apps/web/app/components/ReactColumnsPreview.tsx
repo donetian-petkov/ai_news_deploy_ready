@@ -30,7 +30,6 @@ import {
   Tooltip,
   Typography
 } from '@mui/material';
-import { MAX_COLUMNS } from '../store/constants';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import {
   removeFeedLocally,
@@ -129,7 +128,7 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
   const prevAllControlsHiddenRef = useRef<boolean | null>(null);
   const bg = language === 'bg';
   const l = useMemo(() => ({
-    previewTitle: bg ? 'React Визуализация (Преглед)' : 'React Renderer Preview',
+    previewTitle: bg ? 'Колони На Живо' : 'Live Columns',
     live: bg ? 'На живо през WebSocket' : 'Live via WebSocket',
     disconnected: bg ? 'Разкачен' : 'Disconnected',
     waiting: bg ? 'Изчакване на новини...' : 'Waiting for news...',
@@ -186,9 +185,11 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
   }), [bg]);
 
   useEffect(() => {
+    document.body.dataset.reactRenderer = '1';
     startWsConnection(dispatch, wsUrl);
 
     return () => {
+      delete document.body.dataset.reactRenderer;
       stopWsConnection();
       const ids = Object.keys(pendingTimeoutsRef.current);
       for (const id of ids) {
@@ -249,9 +250,9 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
         if (aPinned !== bPinned) return aPinned ? -1 : 1;
         return 0;
       });
-      return list.slice(0, MAX_COLUMNS);
+      return list;
     }
-    const fallback = Object.keys(itemsByFeed).slice(0, MAX_COLUMNS).map(url => ({
+    const fallback = Object.keys(itemsByFeed).map(url => ({
       url,
       label: url,
       kind: 'rss' as const,

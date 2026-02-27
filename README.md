@@ -104,6 +104,7 @@ GitHub Actions workflow:
 - Keyboard shortcuts are now handled from React top-menu mode and dispatched through the same `ai-news:*` action bridge.
 - Runtime DOM skeleton is now rendered by React components (topbar + grid/help/toast shell), while backend/websocket behavior and card/column rendering are still powered by `legacy/app.js`.
 - Incremental migration path active: React preview columns render from live backend messages in parallel while legacy renderer remains the source of truth for full interaction controls.
+- React columns are now shown as the primary visible board (all streams, no preview cap); legacy `#grid` is hidden in UI and kept only for compatibility wiring during migration.
 - WebSocket event handling is now centralized via RTK dispatch flow for the React renderer; legacy script remains active in parallel until full migration.
 - Web app fonts are now bundled locally via `@fontsource/*` packages (no Google Fonts build-time fetch requirement).
 - WebSocket URL is configurable via `NEXT_PUBLIC_WS_URL` and query param fallback.

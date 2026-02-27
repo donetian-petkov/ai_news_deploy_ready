@@ -423,6 +423,7 @@ export default function TopMenu() {
                 value={ui.vibe}
                 onChange={e => {
                   const nextVibe = e.target.value as VibeValue;
+                  dispatch(setTopUiState({ vibe: nextVibe }));
                   setControlsState(prev => ({ ...prev, vibe: nextVibe }));
                   emit('ai-news:set-vibe', { vibe: nextVibe });
                 }}
