@@ -32,6 +32,11 @@
 - Removed `NewsRuntimeShell` compatibility component.
 - Migrated top-controls behavior to direct Redux/WebSocket flow (no `ai-news:*` bridge in React components).
 - Migrated global preference persistence from legacy runtime to Redux-backed local storage.
+- Fixed top-menu/theme CSS regression:
+  - synchronized resolved color mode (`system` -> `dark`/`light`) between MUI and CSS data attributes
+  - improved contrast variables for top menu, control panels, and fields
+  - normalized MUI button typography (no forced uppercase) and improved small-button readability
+  - improved column/news card readability under vibe + scheme combinations
 
 ### Existing migration milestones already in `main`
 - Next.js web app and Node.js API monorepo with Prisma + SQLite + zod.

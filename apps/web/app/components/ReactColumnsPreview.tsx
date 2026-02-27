@@ -522,7 +522,7 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
   return (
     <Box className="container" sx={{ pt: 1, pb: 0.5 }}>
       <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.25 }}>
-        <Typography variant="overline" sx={{ color: 'rgba(235,240,255,0.8)', letterSpacing: '0.14em', fontWeight: 800 }}>
+        <Typography variant="overline" sx={{ color: 'var(--text-muted)', letterSpacing: '0.14em', fontWeight: 800 }}>
           {l.previewTitle}
         </Typography>
         <Chip
@@ -568,8 +568,9 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
                 setDragFeedUrl(null);
               }}
               sx={{
-                background: `linear-gradient(160deg, rgba(15,22,38,0.88), rgba(7,14,28,0.92)), radial-gradient(600px 220px at 4% 5%, ${accent}${Math.round(schemeOpacity * 255).toString(16).padStart(2, '0')}, transparent 70%)`,
-                borderColor: dragFeedUrl === feed.url ? accent : 'rgba(97, 123, 161, 0.42)'
+                background: `linear-gradient(160deg, rgba(15,22,38,0.92), rgba(7,14,28,0.95)), radial-gradient(600px 220px at 4% 5%, ${accent}${Math.round(schemeOpacity * 255).toString(16).padStart(2, '0')}, transparent 70%)`,
+                borderColor: dragFeedUrl === feed.url ? accent : 'rgba(97, 123, 161, 0.42)',
+                color: 'var(--text-main)'
               }}
             >
               <CardContent sx={{ pb: '12px !important' }}>
@@ -733,8 +734,9 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
                       key={it.id}
                       variant="outlined"
                       sx={{
-                        background: 'rgba(5, 11, 24, 0.72)',
-                        borderColor: it.isMatch ? 'rgba(255, 198, 84, 0.68)' : 'rgba(100, 128, 170, 0.35)'
+                        background: 'rgba(5, 11, 24, 0.78)',
+                        borderColor: it.isMatch ? 'rgba(255, 198, 84, 0.68)' : 'rgba(100, 128, 170, 0.35)',
+                        color: 'var(--text-main)'
                       }}
                     >
                       <CardContent sx={{ pb: '12px !important' }}>

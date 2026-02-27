@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Alert, Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, MenuItem, Select, Stack, TextField, Typography } from '@mui/material';
+import { Alert, Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, MenuItem, Select, Stack, TextField, Typography, useMediaQuery } from '@mui/material';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { setLanguage, setSearchQuery, setTopUiState, triggerHideAllResearch, setNotifySettings, setAiSettings, setAppearanceSettings, hydrateUiSettings, setHelpOpen } from '../store/slices/uiSlice';
 import { sendWsMessage } from '../store/wsClient';
@@ -28,6 +28,8 @@ function StatusPills() {
 export default function TopMenu() {
   const dispatch = useAppDispatch();
   const ui = useAppSelector(s => s.ui);
+  const prefersDark = useMediaQuery('(prefers-color-scheme: dark)');
+  const resolvedColorMode = ui.colorMode === 'system' ? (prefersDark ? 'dark' : 'light') : ui.colorMode;
   const feeds = useAppSelector(s => s.feeds.feeds);
   const lang = ui.language;
   const bg = lang === 'bg';
@@ -112,9 +114,12 @@ export default function TopMenu() {
     document.body.dataset.fontSize = ui.fontSize;
     document.body.dataset.scheme = ui.scheme;
     document.body.dataset.itemButtons = ui.buttonMode;
-    document.documentElement.dataset.theme = ui.colorMode;
+    document.body.dataset.theme = resolvedColorMode;
+    document.documentElement.dataset.theme = resolvedColorMode;
+    document.body.dataset.themeSource = ui.colorMode;
+    document.documentElement.dataset.themeSource = ui.colorMode;
     document.documentElement.lang = ui.language;
-  }, [ui.buttonMode, ui.colorMode, ui.controlsCollapsed, ui.font, ui.fontSize, ui.language, ui.menuCollapsed, ui.scheme, ui.vibe]);
+  }, [resolvedColorMode, ui.buttonMode, ui.colorMode, ui.controlsCollapsed, ui.font, ui.fontSize, ui.language, ui.menuCollapsed, ui.scheme, ui.vibe]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;

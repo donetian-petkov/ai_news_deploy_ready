@@ -29,7 +29,15 @@ function MuiThemeBridge({ children }: { children: React.ReactNode }) {
 
   const theme = useMemo(() => createTheme({
     palette: {
-      mode
+      mode,
+      primary: mode === 'dark' ? { main: '#4da3ff', light: '#97c8ff' } : { main: '#0e63d4', light: '#3f80db' },
+      secondary: mode === 'dark' ? { main: '#31d4a5' } : { main: '#0c946e' },
+      background: mode === 'dark'
+        ? { default: '#050a17', paper: '#121c2e' }
+        : { default: '#eef3ff', paper: '#ffffff' },
+      text: mode === 'dark'
+        ? { primary: '#eaf1ff', secondary: 'rgba(211,223,244,0.82)' }
+        : { primary: '#132033', secondary: 'rgba(34,50,74,0.74)' }
     },
     typography: {
       fontFamily: fontFamilyByPreset[ui.font] || fontFamilyByPreset.system,
@@ -37,6 +45,45 @@ function MuiThemeBridge({ children }: { children: React.ReactNode }) {
     },
     shape: {
       borderRadius: 12
+    },
+    components: {
+      MuiButton: {
+        styleOverrides: {
+          root: {
+            textTransform: 'none',
+            fontWeight: 700,
+            letterSpacing: '0.01em',
+            borderRadius: 999
+          },
+          sizeSmall: {
+            padding: '5px 12px',
+            fontSize: '0.86rem'
+          }
+        }
+      },
+      MuiChip: {
+        styleOverrides: {
+          root: {
+            fontWeight: 700,
+            borderRadius: 999
+          }
+        }
+      },
+      MuiOutlinedInput: {
+        styleOverrides: {
+          root: {
+            borderRadius: 12,
+            backgroundColor: mode === 'dark' ? 'rgba(23, 36, 58, 0.6)' : 'rgba(255, 255, 255, 0.9)'
+          }
+        }
+      },
+      MuiCard: {
+        styleOverrides: {
+          root: {
+            backdropFilter: 'blur(2px)'
+          }
+        }
+      }
     }
   }), [mode, ui.font, ui.fontSize]);
 

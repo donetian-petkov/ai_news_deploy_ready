@@ -25,7 +25,7 @@ html, body {
   padding: 0;
   min-height: 100%;
   background: var(--bg-main, #050a17);
-  color: #eaf1ff;
+  color: var(--text-main, #eaf1ff);
   font-family: var(--font-family, 'Inter', 'Segoe UI', sans-serif);
 }
 
@@ -40,6 +40,12 @@ html, body {
   --panel-border: rgba(106, 132, 178, 0.35);
   --card-bg: rgba(8, 14, 28, 0.86);
   --card-border: rgba(106, 132, 178, 0.34);
+  --text-main: #eaf1ff;
+  --text-muted: rgba(206, 220, 245, 0.78);
+  --section-bg: rgba(15, 24, 40, 0.64);
+  --field-bg: rgba(26, 37, 59, 0.72);
+  --topbar-start: rgba(6, 12, 24, 0.94);
+  --topbar-end: rgba(6, 12, 24, 0.78);
 }
 
 body[data-theme='light'] {
@@ -48,7 +54,12 @@ body[data-theme='light'] {
   --panel-border: rgba(118, 132, 166, 0.45);
   --card-bg: rgba(255, 255, 255, 0.92);
   --card-border: rgba(106, 118, 151, 0.42);
-  color: #122033;
+  --text-main: #122033;
+  --text-muted: rgba(31, 47, 71, 0.74);
+  --section-bg: rgba(239, 244, 255, 0.84);
+  --field-bg: rgba(255, 255, 255, 0.93);
+  --topbar-start: rgba(242, 246, 255, 0.97);
+  --topbar-end: rgba(238, 244, 255, 0.9);
 }
 
 body[data-font='system'] { --font-family: 'Inter', 'Segoe UI', sans-serif; }
@@ -83,8 +94,9 @@ body[data-scheme='forest'] { --panel-border: rgba(91, 173, 117, 0.46); --card-bo
   top: 0;
   z-index: 50;
   backdrop-filter: blur(8px);
-  background: linear-gradient(180deg, rgba(6, 12, 24, 0.92), rgba(6, 12, 24, 0.76));
+  background: linear-gradient(180deg, var(--topbar-start), var(--topbar-end));
   border-bottom: 1px solid var(--panel-border);
+  color: var(--text-main);
 }
 
 .topbarInner {
@@ -106,10 +118,11 @@ body[data-scheme='forest'] { --panel-border: rgba(91, 173, 117, 0.46); --card-bo
 
 .headerLeft h1 {
   font-size: calc(1.6rem * var(--ui-font-scale));
+  color: var(--text-main);
 }
 
 .subHint {
-  color: rgba(206, 220, 245, 0.78);
+  color: var(--text-muted);
   margin-top: 4px;
   font-size: calc(0.95rem * var(--ui-font-scale));
 }
@@ -148,7 +161,7 @@ body[data-scheme='forest'] { --panel-border: rgba(91, 173, 117, 0.46); --card-bo
 
 .controlsHint {
   margin-top: 8px;
-  color: rgba(208, 219, 242, 0.72);
+  color: var(--text-muted);
   font-size: calc(0.88rem * var(--ui-font-scale));
 }
 
@@ -163,7 +176,7 @@ body[data-scheme='forest'] { --panel-border: rgba(91, 173, 117, 0.46); --card-bo
   border: 1px solid var(--panel-border);
   border-radius: 12px;
   padding: 8px;
-  background: rgba(15, 24, 40, 0.64);
+  background: var(--section-bg);
 }
 
 .controlSection > summary {
@@ -183,13 +196,14 @@ body[data-scheme='forest'] { --panel-border: rgba(91, 173, 117, 0.46); --card-bo
   font: inherit;
   border: 1px solid var(--panel-border);
   border-radius: 10px;
-  background: rgba(26, 37, 59, 0.72);
-  color: inherit;
+  background: var(--field-bg);
+  color: var(--text-main);
   padding: 7px 10px;
 }
 
 .btn {
   cursor: pointer;
+  font-weight: 700;
 }
 
 .btn.ghost {
