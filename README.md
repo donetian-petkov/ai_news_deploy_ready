@@ -16,6 +16,7 @@ Next.js + Node.js conversion of the live AI news stream, with Prisma (SQLite) an
 - `apps/web`: Next.js app with native React/MUI UI.
   - Top menu is now a native React component: `apps/web/app/components/TopMenu.tsx`.
   - Live card/column renderer: `apps/web/app/components/ReactColumnsPreview.tsx` (reads `config/news` over WS and renders stream columns/cards).
+  - MUI theme is now driven by Redux appearance settings (`system/dark/light`, font family, font size) via `apps/web/app/providers.tsx`.
   - React preview now supports a working Summary action (`run_summary_item`) with pending state.
   - React preview also supports Research action (`run_research_item`) with pending state and confidence subtitle extraction.
   - React preview now supports Ask Agent flow (`ask_agent_item` + `ask_agent_reply`) with draft, pending, message history, and remaining-question display.

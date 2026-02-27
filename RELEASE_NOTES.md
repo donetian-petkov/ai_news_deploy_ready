@@ -20,6 +20,10 @@
   - help dialog visibility
 - React drag-and-drop stream ordering with local persistence.
 - React browser-notification dispatch for new items (based on notify mode + pinned/match rules).
+- Redux-driven MUI theme bridge (`apps/web/app/providers.tsx`) for:
+  - system/dark/light color mode
+  - font family presets
+  - font size presets
 
 ### Changed
 - Removed runtime dependency on legacy UI from Next.js entrypoints:
