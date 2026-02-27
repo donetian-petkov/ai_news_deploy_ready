@@ -427,9 +427,6 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
         const aFiltered = a.url === FILTERED_FEED_URL;
         const bFiltered = b.url === FILTERED_FEED_URL;
         if (aFiltered !== bFiltered) return aFiltered ? -1 : 1;
-        const aPinned = !!pinnedByUrl[a.url];
-        const bPinned = !!pinnedByUrl[b.url];
-        if (aPinned !== bPinned) return aPinned ? -1 : 1;
         const ai = orderIndex.get(a.url) ?? Number.MAX_SAFE_INTEGER;
         const bi = orderIndex.get(b.url) ?? Number.MAX_SAFE_INTEGER;
         return ai - bi;
