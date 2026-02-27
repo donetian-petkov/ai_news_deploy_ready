@@ -142,13 +142,10 @@ export default function TopMenu() {
     const onTopState = (event: Event) => {
       const detail = (event as CustomEvent<TopStateDetail>).detail || {};
       const next: TopStateDetail = {};
-      if (typeof detail.menuCollapsed === 'boolean') next.menuCollapsed = detail.menuCollapsed;
-      if (typeof detail.controlsCollapsed === 'boolean') next.controlsCollapsed = detail.controlsCollapsed;
-      if (typeof detail.searchVisible === 'boolean') next.searchVisible = detail.searchVisible;
-      if (typeof detail.addStreamVisible === 'boolean') next.addStreamVisible = detail.addStreamVisible;
-      if (typeof detail.allColumnControlsHidden === 'boolean') next.allColumnControlsHidden = detail.allColumnControlsHidden;
       if (typeof detail.vibe === 'string' && VIBES.includes(detail.vibe)) next.vibe = detail.vibe;
-      dispatch(setTopUiState(next));
+      if (Object.keys(next).length) {
+        dispatch(setTopUiState(next));
+      }
       if (next.vibe) {
         setControlsState(prev => ({ ...prev, vibe: next.vibe! }));
       }
@@ -723,44 +720,6 @@ export default function TopMenu() {
             </details>
           </div>
 
-          <details id="searchSection" className="controlSection controlSectionWide" open>
-            <summary id="searchSummary">Search</summary>
-            <div className="searchRow">
-              <input
-                id="searchInput"
-                className="input"
-                placeholder="Search (title + summary + research)..."
-              />
-              <button id="clearSearchBtn" className="btn" type="button">Clear</button>
-            </div>
-            <div id="searchInfo"></div>
-          </details>
-
-          <details id="addStreamSection" className="controlSection controlSectionWide">
-            <summary id="addStreamSummary">Add Stream</summary>
-            <div className="addRow addRow4">
-              <select id="feedType" className="select" defaultValue="rss">
-                <option value="rss">RSS</option>
-                <option value="reddit">Reddit (subreddit)</option>
-                <option value="youtube">YouTube (channel)</option>
-              </select>
-
-              <input id="feedUrl" className="input" placeholder="Paste RSS URL OR subreddit OR YouTube channel URL..." />
-              <input id="feedLabel" className="input" placeholder="Optional label" />
-
-              <select id="feedInterval" className="select" title="Polling interval" defaultValue="120">
-                <option value="45">45s</option>
-                <option value="60">60s</option>
-                <option value="90">90s</option>
-                <option value="120">120s</option>
-                <option value="180">180s</option>
-                <option value="300">300s</option>
-              </select>
-
-              <button id="addFeedBtn" className="btn" type="button">Add Stream</button>
-            </div>
-            <div id="addFeedStatus"></div>
-          </details>
         </div>
         ) : null}
       </div>
