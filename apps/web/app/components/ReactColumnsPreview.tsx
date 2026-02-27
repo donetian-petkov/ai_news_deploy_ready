@@ -337,6 +337,7 @@ type CardLabels = {
   hideSummary: string;
   showMore: string;
   showLess: string;
+  aiUnavailable: string;
   autoResearching: string;
   confidence: string;
   showResearch: string;
@@ -363,6 +364,7 @@ type NewsCardProps = {
   vibeIcons: VibeIcons;
   compactBtnSx: Record<string, unknown>;
   buttonMode: 'icons' | 'text';
+  aiAvailable: boolean;
   performanceMode: boolean;
   fontScale: number;
   connected: boolean;
@@ -402,6 +404,7 @@ const NewsCard = memo(function NewsCard({
   vibeIcons,
   compactBtnSx,
   buttonMode,
+  aiAvailable,
   performanceMode,
   fontScale,
   connected,
@@ -445,6 +448,7 @@ const NewsCard = memo(function NewsCard({
   const HideIconComp = vibeIcons.hide;
   const CopyIconComp = vibeIcons.copy;
   const iconOnly = buttonMode === 'icons';
+  const showAiActions = aiAvailable;
   const actionSx = {
     ...compactBtnSx,
     minWidth: iconOnly ? 36 : 86,
@@ -646,51 +650,57 @@ const NewsCard = memo(function NewsCard({
             : { mt: 0.5, pt: 0 }}
           flexWrap="wrap"
         >
-          <Tooltip title={summaryPending ? labels.generatingSummary : labels.summary}>
-            <Button
-              size="small"
-              variant={summaryPending ? 'contained' : 'outlined'}
-              sx={actionSx}
-              onClick={() => onRequestSummary(item)}
-              disabled={!connected || summaryPending}
-            >
-              {iconOnly
-                ? (summaryPending
-                  ? <AutoFixHighIcon sx={{ fontSize: 15 }} className="spinAnim" aria-hidden />
-                  : <SummaryIconComp sx={{ fontSize: 15 }} aria-hidden />)
-                : (summaryPending ? labels.generatingSummary : labels.summary)}
-            </Button>
-          </Tooltip>
-          <Tooltip title={researchPending ? labels.researching : labels.research}>
-            <Button
-              size="small"
-              variant={researchPending ? 'contained' : 'outlined'}
-              sx={actionSx}
-              onClick={() => onRequestResearch(item)}
-              disabled={!connected || researchPending}
-            >
-              {iconOnly
-                ? (researchPending
-                  ? <AutoFixHighIcon sx={{ fontSize: 15 }} className="spinAnim" aria-hidden />
-                  : <ResearchIconComp sx={{ fontSize: 15 }} aria-hidden />)
-                : (researchPending ? labels.researching : labels.research)}
-            </Button>
-          </Tooltip>
-          <Tooltip title={labels.askAgent}>
-            <Button
-              size="small"
-              variant={askState.open ? 'contained' : 'outlined'}
-              sx={actionSx}
-              onClick={() => onToggleAsk(item.id, item.feedUrl)}
-              disabled={!connected}
-            >
-              {iconOnly
-                ? (askState.pending
-                  ? <AutoFixHighIcon sx={{ fontSize: 15 }} className="spinAnim" aria-hidden />
-                  : <AskIconComp sx={{ fontSize: 15 }} aria-hidden />)
-                : labels.askAgent}
-            </Button>
-          </Tooltip>
+          {showAiActions ? (
+            <>
+              <Tooltip title={summaryPending ? labels.generatingSummary : labels.summary}>
+                <Button
+                  size="small"
+                  variant={summaryPending ? 'contained' : 'outlined'}
+                  sx={actionSx}
+                  onClick={() => onRequestSummary(item)}
+                  disabled={!connected || summaryPending}
+                >
+                  {iconOnly
+                    ? (summaryPending
+                      ? <AutoFixHighIcon sx={{ fontSize: 15 }} className="spinAnim" aria-hidden />
+                      : <SummaryIconComp sx={{ fontSize: 15 }} aria-hidden />)
+                    : (summaryPending ? labels.generatingSummary : labels.summary)}
+                </Button>
+              </Tooltip>
+              <Tooltip title={researchPending ? labels.researching : labels.research}>
+                <Button
+                  size="small"
+                  variant={researchPending ? 'contained' : 'outlined'}
+                  sx={actionSx}
+                  onClick={() => onRequestResearch(item)}
+                  disabled={!connected || researchPending}
+                >
+                  {iconOnly
+                    ? (researchPending
+                      ? <AutoFixHighIcon sx={{ fontSize: 15 }} className="spinAnim" aria-hidden />
+                      : <ResearchIconComp sx={{ fontSize: 15 }} aria-hidden />)
+                    : (researchPending ? labels.researching : labels.research)}
+                </Button>
+              </Tooltip>
+              <Tooltip title={labels.askAgent}>
+                <Button
+                  size="small"
+                  variant={askState.open ? 'contained' : 'outlined'}
+                  sx={actionSx}
+                  onClick={() => onToggleAsk(item.id, item.feedUrl)}
+                  disabled={!connected}
+                >
+                  {iconOnly
+                    ? (askState.pending
+                      ? <AutoFixHighIcon sx={{ fontSize: 15 }} className="spinAnim" aria-hidden />
+                      : <AskIconComp sx={{ fontSize: 15 }} aria-hidden />)
+                    : labels.askAgent}
+                </Button>
+              </Tooltip>
+            </>
+          ) : (
+            <Chip size="small" variant="outlined" label={labels.aiUnavailable} sx={{ color: 'rgba(199,214,238,0.88)', borderColor: 'rgba(122,149,194,0.44)' }} />
+          )}
           {hasSummaryBlock ? (
             <Tooltip title={summaryVisible ? labels.hideSummary : labels.showSummary}>
               <Button
@@ -716,7 +726,7 @@ const NewsCard = memo(function NewsCard({
             </Tooltip>
           ) : null}
         </Stack>
-        {askState.open ? (
+        {askState.open && aiAvailable ? (
           <Box sx={{ mt: 1.1, p: 1, border: '1px solid rgba(106,128,162,0.4)', borderRadius: performanceMode ? 1 : 1.5 }}>
             <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 0.8 }}>
               <Typography variant="caption" sx={{ color: 'rgba(210,219,235,0.74)' }}>
@@ -773,6 +783,7 @@ const NewsCard = memo(function NewsCard({
     && prev.vibeIcons === next.vibeIcons
     && prev.compactBtnSx === next.compactBtnSx
     && prev.buttonMode === next.buttonMode
+    && prev.aiAvailable === next.aiAvailable
     && prev.performanceMode === next.performanceMode
     && prev.fontScale === next.fontScale
     && prev.connected === next.connected
@@ -811,6 +822,7 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
   const showMoreNewsAllSeq = useAppSelector(s => s.ui.showMoreNewsAllSeq);
   const resetNewsShownAllSeq = useAppSelector(s => s.ui.resetNewsShownAllSeq);
   const aiEnabled = useAppSelector(s => s.ui.aiEnabled);
+  const aiAvailable = useAppSelector(s => s.ui.aiAvailable);
   const feeds = useAppSelector(s => s.feeds.feeds);
   const pinnedByUrl = useAppSelector(s => s.feeds.pinnedByUrl);
   const controlsOpenByUrl = useAppSelector(s => s.feeds.controlsOpenByUrl);
@@ -894,6 +906,7 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
     confidence: bg ? 'Увереност' : 'Confidence',
     showSummary: bg ? 'Покажи резюме' : 'Show Summary',
     hideSummary: bg ? 'Скрий резюме' : 'Hide Summary',
+    aiUnavailable: bg ? 'AI изключен' : 'AI unavailable',
     showResearch: bg ? 'Покажи проучване' : 'Show Research',
     hideResearch: bg ? 'Скрий проучване' : 'Hide Research',
     showMore: bg ? 'Покажи още' : 'Show More',
@@ -1423,6 +1436,7 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
     hideSummary: l.hideSummary,
     showMore: l.showMore,
     showLess: l.showLess,
+    aiUnavailable: l.aiUnavailable,
     autoResearching: l.autoResearching,
     confidence: l.confidence,
     showResearch: l.showResearch,
@@ -1694,37 +1708,45 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
                       }
                     }}
                   >
-                    <Button
-                      size="small"
-                      fullWidth
-                      variant={feed.summaryEnabled ? 'contained' : 'outlined'}
-                      onClick={() => toggleFeedSummary(feed)}
-                      disabled={!connected}
-                      sx={compactBtnSx}
-                    >
-                      {feed.summaryEnabled ? l.summariesOn : l.summariesOff}
-                    </Button>
-                    <Button
-                      size="small"
-                      fullWidth
-                      variant={feed.researchEnabled ? 'contained' : 'outlined'}
-                      onClick={() => toggleFeedResearch(feed)}
-                      disabled={!connected}
-                      sx={compactBtnSx}
-                    >
-                      {feed.researchEnabled ? l.researchOn : l.researchOff}
-                    </Button>
-                    <FormControl size="small" fullWidth sx={compactFormSx}>
-                      <Select
-                        value={feed.budget}
-                        onChange={e => setFeedBudget(feed, e.target.value as BudgetMode)}
-                        disabled={!connected}
-                      >
-                        <MenuItem value="low">{l.budgetLow}</MenuItem>
-                        <MenuItem value="standard">{l.budgetStandard}</MenuItem>
-                        <MenuItem value="high">{l.budgetHigh}</MenuItem>
-                      </Select>
-                    </FormControl>
+                    {aiAvailable ? (
+                      <>
+                        <Button
+                          size="small"
+                          fullWidth
+                          variant={feed.summaryEnabled ? 'contained' : 'outlined'}
+                          onClick={() => toggleFeedSummary(feed)}
+                          disabled={!connected}
+                          sx={compactBtnSx}
+                        >
+                          {feed.summaryEnabled ? l.summariesOn : l.summariesOff}
+                        </Button>
+                        <Button
+                          size="small"
+                          fullWidth
+                          variant={feed.researchEnabled ? 'contained' : 'outlined'}
+                          onClick={() => toggleFeedResearch(feed)}
+                          disabled={!connected}
+                          sx={compactBtnSx}
+                        >
+                          {feed.researchEnabled ? l.researchOn : l.researchOff}
+                        </Button>
+                        <FormControl size="small" fullWidth sx={compactFormSx}>
+                          <Select
+                            value={feed.budget}
+                            onChange={e => setFeedBudget(feed, e.target.value as BudgetMode)}
+                            disabled={!connected}
+                          >
+                            <MenuItem value="low">{l.budgetLow}</MenuItem>
+                            <MenuItem value="standard">{l.budgetStandard}</MenuItem>
+                            <MenuItem value="high">{l.budgetHigh}</MenuItem>
+                          </Select>
+                        </FormControl>
+                      </>
+                    ) : (
+                      <Alert severity="info" variant="outlined" sx={{ gridColumn: '1 / -1' }}>
+                        {l.aiUnavailable}
+                      </Alert>
+                    )}
                     <FormControl size="small" fullWidth sx={compactFormSx}>
                       <Select
                         value={String(feed.intervalSec || 120)}
@@ -1847,6 +1869,7 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
                         vibeIcons={vibeIcons}
                         compactBtnSx={compactBtnSx}
                         buttonMode={buttonMode}
+                        aiAvailable={aiAvailable}
                         performanceMode={performanceMode}
                         fontScale={fontScale}
                         connected={connected}
@@ -1858,7 +1881,7 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
                         accent={accent}
                         soft={soft}
                         matchAccent={palette.m}
-                        showAutoResearching={feed.researchEnabled && aiEnabled && !it.research && !researchPendingById[it.id] && !hideAllResearch}
+                        showAutoResearching={aiAvailable && feed.researchEnabled && aiEnabled && !it.research && !researchPendingById[it.id] && !hideAllResearch}
                         summaryMode={summaryMode}
                         summaryLong={summaryLong}
                         summaryText={summaryText}

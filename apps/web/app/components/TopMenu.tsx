@@ -96,6 +96,7 @@ export default function TopMenu() {
     openai: 'OpenAI',
     claude: 'Claude',
     openrouter: 'OpenRouter',
+    aiUnavailable: bg ? 'AI не е наличен за избрания доставчик. Добави валиден API ключ от AI Settings.' : 'AI is unavailable for the selected provider. Add a valid API key in AI Settings.',
     perfMode: bg ? 'Режим производителност' : 'Performance mode',
     perfOn: bg ? 'ВКЛ' : 'ON',
     perfOff: bg ? 'ИЗКЛ' : 'OFF'
@@ -572,18 +573,24 @@ export default function TopMenu() {
           </label>
           <button id="deleteAgeAllBtn" className="btn danger" type="button" onClick={deleteOldAllColumns}>Delete old (all columns)</button>
           <label className="checkbox" title="Embeddings matching, AI dedupe, summaries, research">
-            <input
-              id="aiEnabled"
-              type="checkbox"
-              checked={ui.aiEnabled}
-              disabled={!ui.aiAvailable}
-              onChange={e => {
-                const enabled = e.target.checked;
-                const ok = sendWsMessage({ type: 'toggle_ai', enabled });
-                if (ok) dispatch(setAiSettings({ aiEnabled: enabled }));
-              }}
-            />
-            <span id="aiEnabledLabel">AI Enabled</span>
+            {ui.aiAvailable ? (
+              <>
+                <input
+                  id="aiEnabled"
+                  type="checkbox"
+                  checked={ui.aiEnabled}
+                  disabled={!ui.aiAvailable}
+                  onChange={e => {
+                    const enabled = e.target.checked;
+                    const ok = sendWsMessage({ type: 'toggle_ai', enabled });
+                    if (ok) dispatch(setAiSettings({ aiEnabled: enabled }));
+                  }}
+                />
+                <span id="aiEnabledLabel">AI Enabled</span>
+              </>
+            ) : (
+              <span id="aiUnavailableLabel">{labels.aiUnavailable}</span>
+            )}
           </label>
           <button id="helpBtn" className="btn" type="button" onClick={() => dispatch(setHelpOpen(true))}>Help</button>
         </div>
@@ -683,6 +690,7 @@ export default function TopMenu() {
                 id="allBudgetSelect"
                 className="select"
                 value={ui.allBudget}
+                disabled={!ui.aiAvailable}
                 onChange={e => {
                   const budget = e.target.value as 'mixed' | 'low' | 'standard' | 'high';
                   if (budget !== 'mixed') applyAllBudget(budget);
@@ -694,6 +702,11 @@ export default function TopMenu() {
                 <option value="high">High</option>
               </select>
             </label>
+            {!ui.aiAvailable ? (
+              <Alert severity="info" sx={{ py: 0 }}>
+                {labels.aiUnavailable}
+              </Alert>
+            ) : null}
           </div>
         </details>
 
