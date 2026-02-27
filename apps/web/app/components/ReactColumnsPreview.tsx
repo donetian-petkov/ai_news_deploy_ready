@@ -1007,58 +1007,56 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
                           <OpenInNewIcon sx={{ fontSize: 14 }} />
                         </MuiLink>
 
-                        {controlsOpen ? (
-                          <Stack direction="row" spacing={1} sx={{ mb: it.summary ? 1 : 0 }} flexWrap="wrap">
-                            <Button
-                              size="small"
-                              variant={summaryPendingById[it.id] ? 'contained' : 'outlined'}
-                              sx={{ ...compactBtnSx, minWidth: buttonMode === 'text' ? 84 : 34, px: buttonMode === 'text' ? 1.05 : 0.8 }}
-                              onClick={() => requestSummary(it)}
-                              disabled={!connected || !!summaryPendingById[it.id]}
-                            >
-                              {buttonMode === 'text'
-                                ? (summaryPendingById[it.id] ? l.generatingSummary : l.summary)
-                                : summaryPendingById[it.id]
-                                  ? <AutoFixHighIcon sx={{ fontSize: 15 }} className="spinAnim" aria-hidden />
-                                  : (() => {
-                                    const SummaryIconComp = vibeIcons.summary;
-                                    return <SummaryIconComp sx={{ fontSize: 15 }} aria-hidden />;
-                                  })()}
-                            </Button>
-                            <Button
-                              size="small"
-                              variant={researchPendingById[it.id] ? 'contained' : 'outlined'}
-                              sx={{ ...compactBtnSx, minWidth: buttonMode === 'text' ? 84 : 34, px: buttonMode === 'text' ? 1.05 : 0.8 }}
-                              onClick={() => requestResearch(it)}
-                              disabled={!connected || !!researchPendingById[it.id]}
-                            >
-                              {buttonMode === 'text'
-                                ? (researchPendingById[it.id] ? l.researching : l.research)
-                                : researchPendingById[it.id]
-                                  ? <AutoFixHighIcon sx={{ fontSize: 15 }} className="spinAnim" aria-hidden />
-                                  : (() => {
-                                    const ResearchIconComp = vibeIcons.research;
-                                    return <ResearchIconComp sx={{ fontSize: 15 }} aria-hidden />;
-                                  })()}
-                            </Button>
-                            <Button
-                              size="small"
-                              variant={askState.open ? 'contained' : 'outlined'}
-                              sx={{ ...compactBtnSx, minWidth: buttonMode === 'text' ? 84 : 34, px: buttonMode === 'text' ? 1.05 : 0.8 }}
-                              onClick={() => dispatch(toggleAskOpen({ id: it.id, feedUrl: it.feedUrl }))}
-                              disabled={!connected}
-                            >
-                              {buttonMode === 'text'
-                                ? l.askAgent
-                                : askState.pending
-                                  ? <AutoFixHighIcon sx={{ fontSize: 15 }} className="spinAnim" aria-hidden />
-                                  : (() => {
-                                    const AskIconComp = vibeIcons.ask;
-                                    return <AskIconComp sx={{ fontSize: 15 }} aria-hidden />;
-                                  })()}
-                            </Button>
-                          </Stack>
-                        ) : null}
+                        <Stack direction="row" spacing={1} sx={{ mb: it.summary ? 1 : 0 }} flexWrap="wrap">
+                          <Button
+                            size="small"
+                            variant={summaryPendingById[it.id] ? 'contained' : 'outlined'}
+                            sx={{ ...compactBtnSx, minWidth: buttonMode === 'text' ? 84 : 34, px: buttonMode === 'text' ? 1.05 : 0.8 }}
+                            onClick={() => requestSummary(it)}
+                            disabled={!connected || !!summaryPendingById[it.id]}
+                          >
+                            {buttonMode === 'text'
+                              ? (summaryPendingById[it.id] ? l.generatingSummary : l.summary)
+                              : summaryPendingById[it.id]
+                                ? <AutoFixHighIcon sx={{ fontSize: 15 }} className="spinAnim" aria-hidden />
+                                : (() => {
+                                  const SummaryIconComp = vibeIcons.summary;
+                                  return <SummaryIconComp sx={{ fontSize: 15 }} aria-hidden />;
+                                })()}
+                          </Button>
+                          <Button
+                            size="small"
+                            variant={researchPendingById[it.id] ? 'contained' : 'outlined'}
+                            sx={{ ...compactBtnSx, minWidth: buttonMode === 'text' ? 84 : 34, px: buttonMode === 'text' ? 1.05 : 0.8 }}
+                            onClick={() => requestResearch(it)}
+                            disabled={!connected || !!researchPendingById[it.id]}
+                          >
+                            {buttonMode === 'text'
+                              ? (researchPendingById[it.id] ? l.researching : l.research)
+                              : researchPendingById[it.id]
+                                ? <AutoFixHighIcon sx={{ fontSize: 15 }} className="spinAnim" aria-hidden />
+                                : (() => {
+                                  const ResearchIconComp = vibeIcons.research;
+                                  return <ResearchIconComp sx={{ fontSize: 15 }} aria-hidden />;
+                                })()}
+                          </Button>
+                          <Button
+                            size="small"
+                            variant={askState.open ? 'contained' : 'outlined'}
+                            sx={{ ...compactBtnSx, minWidth: buttonMode === 'text' ? 84 : 34, px: buttonMode === 'text' ? 1.05 : 0.8 }}
+                            onClick={() => dispatch(toggleAskOpen({ id: it.id, feedUrl: it.feedUrl }))}
+                            disabled={!connected}
+                          >
+                            {buttonMode === 'text'
+                              ? l.askAgent
+                              : askState.pending
+                                ? <AutoFixHighIcon sx={{ fontSize: 15 }} className="spinAnim" aria-hidden />
+                                : (() => {
+                                  const AskIconComp = vibeIcons.ask;
+                                  return <AskIconComp sx={{ fontSize: 15 }} aria-hidden />;
+                                })()}
+                          </Button>
+                        </Stack>
 
                         {it.summary ? (() => {
                           const key = bodyKey(it, 'summary');

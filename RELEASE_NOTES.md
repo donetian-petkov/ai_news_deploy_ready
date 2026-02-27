@@ -66,6 +66,9 @@
   - corrected MUI `sx` border-radius scaling that caused rounded/arched card tops and clipped content
   - replaced brittle icon-font rendering with guaranteed MUI icon rendering in icon mode
   - re-separated theme concerns: scheme now drives A/B/MATCH accent palettes; vibe drives icon/style flavor
+- Restored always-visible item actions on news cards:
+  - Summary / Research / Ask Agent buttons are no longer hidden behind column-control visibility
+  - Ask Agent is available directly from every visible news item, matching expected UX
 
 ### Existing migration milestones already in `main`
 - Next.js web app and Node.js API monorepo with Prisma + SQLite + zod.
