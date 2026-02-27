@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import uiReducer, { setSearchQuery, setTopUiState, triggerHideAllResearch, setAppearanceSettings, setNotifySettings } from './uiSlice';
+import uiReducer, { setSearchQuery, setTopUiState, triggerHideAllResearch, setAppearanceSettings, setNotifySettings, setAiSettings, hydrateUiSettings, enqueueToast, dismissToast } from './uiSlice';
 
 describe('uiSlice', () => {
   it('returns the initial state', () => {
@@ -78,14 +78,69 @@ describe('uiSlice', () => {
   });
 
   it('updates appearance and notify settings', () => {
-    let state = uiReducer(undefined, setAppearanceSettings({ font: 'sora', fontSize: 'lg', scheme: 'neon', buttonMode: 'text' }));
+    let state = uiReducer(undefined, setAppearanceSettings({ font: 'sora', fontSize: 'lg', scheme: 'neon', performanceMode: true, buttonMode: 'text' }));
     expect(state.font).toBe('sora');
     expect(state.fontSize).toBe('lg');
     expect(state.scheme).toBe('neon');
+    expect(state.performanceMode).toBe(true);
     expect(state.buttonMode).toBe('text');
 
     state = uiReducer(state, setNotifySettings({ notifyEnabled: true, notifyMode: 'all' }));
     expect(state.notifyEnabled).toBe(true);
     expect(state.notifyMode).toBe('all');
+  });
+
+  it('updates ai provider/settings and ignores invalid provider', () => {
+    let state = uiReducer(undefined, setAiSettings({
+      aiAvailable: true,
+      aiEnabled: true,
+      aiProvider: 'claude',
+      summaryLang: 'bg',
+      researchLang: 'en',
+      allBudget: 'high'
+    }));
+    expect(state.aiAvailable).toBe(true);
+    expect(state.aiEnabled).toBe(true);
+    expect(state.aiProvider).toBe('claude');
+    expect(state.summaryLang).toBe('bg');
+    expect(state.researchLang).toBe('en');
+    expect(state.allBudget).toBe('high');
+
+    state = uiReducer(state, setAiSettings({ aiProvider: 'invalid-provider' as never }));
+    expect(state.aiProvider).toBe('claude');
+  });
+
+  it('hydrates stored prefs for performance mode and ai-related visibility toggles', () => {
+    const state = uiReducer(undefined, hydrateUiSettings({
+      menuCollapsed: true,
+      controlsCollapsed: true,
+      searchVisible: false,
+      addStreamVisible: true,
+      hideAllResearch: true,
+      hideAllSummaries: true,
+      performanceMode: true,
+      vibe: 'cyberwitch'
+    }));
+    expect(state.menuCollapsed).toBe(true);
+    expect(state.controlsCollapsed).toBe(true);
+    expect(state.searchVisible).toBe(false);
+    expect(state.addStreamVisible).toBe(true);
+    expect(state.hideAllResearch).toBe(true);
+    expect(state.hideAllSummaries).toBe(true);
+    expect(state.performanceMode).toBe(true);
+    expect(state.vibe).toBe('cyberwitch');
+  });
+
+  it('enqueues and dismisses toasts with bounded list', () => {
+    let state = uiReducer(undefined, { type: '@@INIT' });
+    for (let i = 0; i < 10; i++) {
+      state = uiReducer(state, enqueueToast({ kind: 'info', message: `toast-${i}` }));
+    }
+    expect(state.toasts).toHaveLength(8);
+    const firstToastId = state.toasts[0]?.id;
+    expect(firstToastId).toBeTruthy();
+
+    state = uiReducer(state, dismissToast(firstToastId || ''));
+    expect(state.toasts.some(t => t.id === firstToastId)).toBe(false);
   });
 });

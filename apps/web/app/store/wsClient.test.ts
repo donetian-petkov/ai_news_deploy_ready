@@ -96,6 +96,11 @@ describe('wsClient', () => {
 
     sock.emitMessage({
       type: 'config',
+      aiAvailable: true,
+      aiEnabled: true,
+      aiProvider: 'claude',
+      summaryLang: 'bg',
+      researchLang: 'en',
       feeds: [
         { url: 'https://a', label: 'A', kind: 'rss', intervalSec: 45 },
         { url: '__filtered__', label: 'Filtered', kind: 'rss', intervalSec: 45 }
@@ -140,6 +145,13 @@ describe('wsClient', () => {
     ]);
 
     expect(actions.find(a => a.type === 'news/setHiddenIds')?.payload).toEqual(['hid-1']);
+    expect(actions.find(a => a.type === 'ui/setAiSettings')?.payload).toMatchObject({
+      aiAvailable: true,
+      aiEnabled: true,
+      aiProvider: 'claude',
+      summaryLang: 'bg',
+      researchLang: 'en'
+    });
     expect(actions.find(a => a.type === 'aiUsage/setUsage')?.payload).toEqual({
       inputTokens: 10,
       outputTokens: 20,
@@ -207,12 +219,40 @@ describe('wsClient', () => {
       publishedMs: 2,
       isMatch: true
     });
+    await new Promise(resolve => setTimeout(resolve, 70));
+    const batchAction = actions.find(a => a.type === 'news/upsertNewsBatch');
+    expect(batchAction).toBeTruthy();
+    expect(Array.isArray(batchAction?.payload)).toBe(true);
+    expect((batchAction?.payload as Array<{ id: string; title: string; feedUrl: string }>)[0]).toMatchObject({
+      id: 'n-2',
+      title: 'Visible title',
+      feedUrl: 'https://a'
+    });
+  });
+
+  it('maps feed errors into stackable toast actions', async () => {
+    const mod = await import('./wsClient');
+    const actions: AnyAction[] = [];
+    const dispatch = (action: AnyAction) => {
+      actions.push(action);
+      return action;
+    };
+
+    mod.startWsConnection(dispatch as never, 'ws://unit-test');
+    const sock = MockWebSocket.instances[0];
+    sock.emitOpen();
+
+    sock.emitMessage({
+      type: 'feed_error',
+      feedLabel: 'A feed',
+      error: 'HTTP 429'
+    });
+
     expect(actions.at(-1)).toMatchObject({
-      type: 'news/upsertNewsItem',
+      type: 'ui/enqueueToast',
       payload: {
-        id: 'n-2',
-        title: 'Visible title',
-        feedUrl: 'https://a'
+        kind: 'error',
+        message: 'A feed: HTTP 429'
       }
     });
   });

@@ -44,7 +44,7 @@ describe('feedsSlice', () => {
     expect(next.pinnedByUrl['https://old']).toBeUndefined();
     expect(next.controlsOpenByUrl['https://old']).toBeUndefined();
     expect(next.deleteAgeByUrl['https://old']).toBeUndefined();
-    expect(next.controlsOpenByUrl['https://new']).toBe(true);
+    expect(next.controlsOpenByUrl['https://new']).toBe(false);
     expect(next.deleteAgeByUrl['https://new']).toBe('week');
   });
 
@@ -58,10 +58,42 @@ describe('feedsSlice', () => {
     expect(state.pinnedByUrl['https://a']).toBe(false);
 
     state = feedsReducer(state, toggleFeedControls('https://a'));
-    expect(state.controlsOpenByUrl['https://a']).toBe(false);
+    expect(state.controlsOpenByUrl['https://a']).toBe(true);
 
     state = feedsReducer(state, toggleFeedControls('https://missing'));
     expect(state.controlsOpenByUrl['https://missing']).toBe(false);
+  });
+
+  it('reorders feed urls and hydrates persisted ui maps safely', () => {
+    let state = feedsReducer(undefined, setFeeds([
+      makeFeed('https://a', 'A'),
+      makeFeed('https://b', 'B'),
+      makeFeed('https://c', 'C')
+    ]));
+
+    state = feedsReducer(state, {
+      type: 'feeds/reorderFeeds',
+      payload: { fromUrl: 'https://c', toUrl: 'https://a' }
+    });
+    expect(state.orderByUrl).toEqual(['https://c', 'https://a', 'https://b']);
+
+    state = feedsReducer(state, {
+      type: 'feeds/hydrateFeedUiState',
+      payload: {
+        pinnedByUrl: { 'https://b': true, 'https://missing': true },
+        controlsOpenByUrl: { 'https://a': true, 'https://missing': true },
+        deleteAgeByUrl: { 'https://c': 'year', 'https://missing': 'month' },
+        orderByUrl: ['https://b', 'https://a']
+      }
+    });
+
+    expect(state.pinnedByUrl['https://b']).toBe(true);
+    expect(state.pinnedByUrl['https://missing']).toBeUndefined();
+    expect(state.controlsOpenByUrl['https://a']).toBe(true);
+    expect(state.controlsOpenByUrl['https://missing']).toBeUndefined();
+    expect(state.deleteAgeByUrl['https://c']).toBe('year');
+    expect(state.deleteAgeByUrl['https://missing']).toBeUndefined();
+    expect(state.orderByUrl).toEqual(['https://b', 'https://a', 'https://c']);
   });
 
   it('sets all feed controls open/closed', () => {

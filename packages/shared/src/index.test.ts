@@ -1,0 +1,62 @@
+import { describe, expect, it } from 'vitest';
+import { clientMsgSchema } from './index';
+
+describe('shared clientMsgSchema', () => {
+  it('accepts provider switching messages with supported providers', () => {
+    const openAi = clientMsgSchema.safeParse({
+      type: 'set_ai_provider',
+      provider: 'openai',
+      apiKey: 'sk-openai'
+    });
+    const claude = clientMsgSchema.safeParse({
+      type: 'set_ai_provider',
+      provider: 'claude',
+      apiKey: 'sk-ant'
+    });
+    const openrouter = clientMsgSchema.safeParse({
+      type: 'set_ai_provider',
+      provider: 'openrouter',
+      apiKey: 'sk-or'
+    });
+
+    expect(openAi.success).toBe(true);
+    expect(claude.success).toBe(true);
+    expect(openrouter.success).toBe(true);
+  });
+
+  it('rejects unsupported provider values', () => {
+    const result = clientMsgSchema.safeParse({
+      type: 'set_ai_provider',
+      provider: 'gemini',
+      apiKey: 'x'
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it('accepts ai toggle and language updates', () => {
+    expect(clientMsgSchema.safeParse({ type: 'toggle_ai', enabled: true }).success).toBe(true);
+    expect(clientMsgSchema.safeParse({ type: 'set_summary_lang', lang: 'bilingual' }).success).toBe(true);
+    expect(clientMsgSchema.safeParse({ type: 'set_summary_lang', lang: 'de' }).success).toBe(false);
+    expect(clientMsgSchema.safeParse({ type: 'set_research_lang', lang: 'bg' }).success).toBe(true);
+    expect(clientMsgSchema.safeParse({ type: 'set_research_lang', lang: 'de' }).success).toBe(false);
+  });
+
+  it('accepts ask-agent research modes and rejects invalid mode', () => {
+    const ok = clientMsgSchema.safeParse({
+      type: 'ask_agent_item',
+      id: 'n1',
+      feedUrl: 'https://feed',
+      question: 'What happened?',
+      researchMode: 'force'
+    });
+    const bad = clientMsgSchema.safeParse({
+      type: 'ask_agent_item',
+      id: 'n1',
+      feedUrl: 'https://feed',
+      question: 'What happened?',
+      researchMode: 'always'
+    });
+    expect(ok.success).toBe(true);
+    expect(bad.success).toBe(false);
+  });
+});

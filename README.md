@@ -96,8 +96,15 @@ npm run dev:api
 # Build all workspaces
 npm run build
 
-# Web tests (vitest)
+# Full test suite (web + shared)
 npm run test
+
+# Alias for full suite
+npm run test:all
+
+# Per-workspace tests
+npm run test -w @ai-news/web
+npm run test -w @ai-news/shared
 ```
 
 ## Current Functional Scope
@@ -132,6 +139,7 @@ Current automated coverage includes:
 
 - Redux slices (`ui`, `feeds`, `news`, `connection`, `aiUsage`)
 - WebSocket client message mapping and connection lifecycle
+- Shared zod schema contracts (`clientMsgSchema`) including AI provider switching message validation
 
 Run:
 
