@@ -1,116 +1,157 @@
-# ai_news_next_node
+# AI News Next + Node
 
-Next.js + Node.js conversion of the live AI news stream, with Prisma (SQLite) and zod validation.
+[![CI](https://github.com/donetian-petkov/ai_news_next_node/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/donetian-petkov/ai_news_next_node/actions/workflows/ci.yml)
+![Next.js](https://img.shields.io/badge/Next.js-14.2-black?logo=next.js)
+![Node.js](https://img.shields.io/badge/Node.js-20+-339933?logo=node.js&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)
+![Prisma](https://img.shields.io/badge/Prisma-SQLite-2D3748?logo=prisma&logoColor=white)
+![Redux Toolkit](https://img.shields.io/badge/Redux_Toolkit-Enabled-764ABC?logo=redux&logoColor=white)
+![MUI](https://img.shields.io/badge/MUI-7-007FFF?logo=mui&logoColor=white)
 
-## Stack
+Next.js + Node.js implementation of the live AI news stream app, with WebSocket updates, per-column controls, Ask Agent, and persisted state via Prisma + SQLite.
 
-- Frontend: Next.js 14 (`apps/web`)
-- Backend: Node.js + Express + WebSocket (`apps/api`)
-- Validation: zod (`packages/shared`)
-- DB: Prisma + SQLite (`apps/api/prisma`)
-- State management (web): Redux Toolkit + React Redux
-- UI components (web): Material UI (MUI)
+## Highlights
 
-## Repo structure
+- Real-time news cards over WebSocket with feed-level controls.
+- AI summary + research actions (manual and auto modes).
+- Ask Agent per news item with usage guardrails and question limits.
+- Filtered stream for matched items.
+- Theme/vibe, fonts, color scheme, notifications, and mobile-aware UI behavior.
+- Redux Toolkit state with typed slices and WebSocket dispatch flow.
+- Performance improvements:
+  - WebSocket news batching to reduce render thrash.
+  - Lazy hydration for below-fold columns.
 
-- `apps/web`: Next.js app with native React/MUI UI.
-  - Top menu is now a native React component: `apps/web/app/components/TopMenu.tsx`.
-  - Live card/column renderer: `apps/web/app/components/ReactColumnsPreview.tsx` (reads `config/news` over WS and renders stream columns/cards).
-  - MUI theme is now driven by Redux appearance settings (`system/dark/light`, font family, font size) via `apps/web/app/providers.tsx`.
-  - React preview now supports a working Summary action (`run_summary_item`) with pending state.
-  - React preview also supports Research action (`run_research_item`) with pending state and confidence subtitle extraction.
-  - React preview now supports Ask Agent flow (`ask_agent_item` + `ask_agent_reply`) with draft, pending, message history, and remaining-question display.
-  - React preview UI is now built with MUI components (`Card`, `Chip`, `Button`, `Typography`, etc.).
-  - React preview now has stream-level controls: `Pin`, `Remove`, and per-stream `Show/Hide controls`.
-  - React preview now reads `feedSettings` and supports per-stream `Summaries`, `Auto Research`, and `Budget` controls via WebSocket.
-  - React preview now supports per-stream `Sort` and filter toggles (`Matches`, `Researched`, `Summaries`) via `set_feed_column_settings`.
-  - React preview now supports per-stream polling interval updates via `set_feed_interval`.
-  - React preview cards now support per-item `Show More / Show Less / Hide Summary / Hide Research` text controls.
-  - React preview cards now include item-level `Share Link` and `Hide News` actions (`hide_item` wired to backend).
-  - React preview labels now follow interface language (EN/BG) for migrated controls and item actions.
-  - React preview now supports per-stream delete-age cleanup (`Yesterday`, `Past week`, `Past month`, `Past year`) with `Delete old`.
-  - Unit tests cover Redux slices and WebSocket dispatch mapping (`apps/web/app/store/**/*.test.ts`).
-  - Top header surface uses MUI primitives (`Chip`, `Button`, `Typography`) and Redux-owned state/actions.
-  - Search/Add Stream quick buttons control React-owned quick panels directly under the top menu.
-  - Global search query is now mirrored into RTK state and applied to React preview stream filtering.
-  - Extended top controls are React-owned (`Notifications`, `AI Settings`, `Appearance`) and send WebSocket messages directly.
-  - Column order supports drag-and-drop in React with local persistence.
-  - UI preferences (menu/control visibility, theme, vibe, font, notifications) are persisted from Redux state to local storage.
-  - RTK store and slices:
-    - `apps/web/app/store/store.ts`
-    - `apps/web/app/store/slices/connectionSlice.ts`
-    - `apps/web/app/store/slices/feedsSlice.ts`
-    - `apps/web/app/store/slices/newsSlice.ts`
-    - `apps/web/app/store/slices/uiSlice.ts`
-    - `apps/web/app/store/slices/aiUsageSlice.ts`
-  - Centralized WS dispatcher: `apps/web/app/store/wsClient.ts`
-- `apps/api`: Polling/AI/WebSocket server (migrated from the original project), now with:
-  - zod WebSocket message validation
-  - Prisma SQLite app-state persistence + AI usage snapshots
-- `packages/shared`: shared zod schemas/types used by backend
+## Architecture
 
-## Environment
+| Layer | Tech | Location |
+|---|---|---|
+| Frontend | Next.js 14 + React 18 + MUI + RTK | `apps/web` |
+| Backend | Node.js + Express + ws | `apps/api` |
+| Validation | zod schemas/types | `packages/shared` |
+| Persistence | Prisma + SQLite | `apps/api/prisma` |
 
-Copy `.env.example` to `.env` in repo root and set:
+## Monorepo Structure
+
+```text
+ai_news_next_node/
+  apps/
+    api/        # polling, matching, AI jobs, websocket server
+    web/        # next.js ui
+  packages/
+    shared/     # zod contracts + shared types
+```
+
+## Quick Start
+
+### 1) Prerequisites
+
+- Node.js 20+
+- npm 10+
+
+### 2) Configure environment
+
+Copy `.env.example` to `.env` in the repository root:
+
+```bash
+cp .env.example .env
+```
+
+Required variables:
 
 - `OPENAI_API_KEY`
-- `NEXT_PUBLIC_WS_URL` (default local backend: `ws://localhost:4000`)
-- `DATABASE_URL` (SQLite path, default: `file:./dev.db`)
+- `NEXT_PUBLIC_WS_URL` (default: `ws://localhost:4000`)
+- `DATABASE_URL` (default: `file:./dev.db`)
 
-## Run locally
+### 3) Install + initialize
 
 ```bash
 npm install
 npm run prisma:generate
 npm run prisma:migrate
+```
+
+### 4) Run in development
+
+```bash
 npm run dev
 ```
 
 Services:
 
 - Web: `http://localhost:3000`
-- API WS/health: `ws://localhost:4000`, `http://localhost:4000/health`
+- API health: `http://localhost:4000/health`
+- WebSocket: `ws://localhost:4000`
 
-## Build
+## Scripts
 
 ```bash
+# Run web + api together
+npm run dev
+
+# Run individually
+npm run dev:web
+npm run dev:api
+
+# Build all workspaces
 npm run build
+
+# Web tests (vitest)
+npm run test
 ```
 
-## Tests
+## Current Functional Scope
+
+- Top menu + expanded controls are React-owned.
+- Search/Add Stream quick panels are controlled from top menu buttons.
+- Stream order drag-and-drop with local persistence.
+- Per-stream settings:
+  - Summaries
+  - Auto Research
+  - Budget
+  - Poll interval
+  - Sort + filter toggles
+  - Delete old by age window
+- Per-item actions:
+  - Summary
+  - Research
+  - Ask Agent
+  - Share Link
+  - Hide News
+  - Show More / Show Less / Hide summary/research content
+- Notifications:
+  - only matched
+  - only pinned columns
+  - matched + pinned columns
+  - all columns
+- BG/EN interface support.
+
+## Testing
+
+Current automated coverage includes:
+
+- Redux slices (`ui`, `feeds`, `news`, `connection`, `aiUsage`)
+- WebSocket client message mapping and connection lifecycle
+
+Run:
 
 ```bash
 npm run test
 ```
 
-Current unit coverage includes:
+## Build for Production
 
-- Redux slices: `ui`, `feeds`, `news`, `connection`, `aiUsage`
-- WebSocket client dispatch flow: `apps/web/app/store/wsClient.ts`
+```bash
+npm run build
+npm run start
+```
 
-## CI
+## Self-Hosting on Your Own Computer
 
-GitHub Actions workflow:
+For always-on local hosting:
 
-- `.github/workflows/ci.yml`
-- Runs on push/PR: install, Prisma client generation, unit tests, and full build
-
-## Notes on this conversion
-
-- Top menu, help modal, search/add-stream panels, and stream columns are now React-owned.
-- Global top actions affect React preview directly (`Hide all column controls`, `Hide all research`, menu/control toggles).
-- Keyboard shortcuts are handled directly in React.
-- WebSocket event handling is centralized via RTK dispatch flow for the React renderer.
-- Legacy runtime/script/style are no longer loaded by the Next.js page/layout.
-- Web app fonts are now bundled locally via `@fontsource/*` packages (no Google Fonts build-time fetch requirement).
-- WebSocket URL is configurable via `NEXT_PUBLIC_WS_URL` and query param fallback.
-- Backend JSON state fallback remains for safety, while primary persistence is now Prisma/SQLite.
-- `prisma:migrate` pre-creates `apps/api/prisma/dev.db` before applying migrations (required for SQLite startup in this setup).
-
-## Host on your own computer
-
-1. Keep machine awake and online.
-2. Start both services with PM2:
+1. Keep machine awake and connected.
+2. Run with PM2:
 
 ```bash
 pm2 start "npm run dev:api" --name ai-news-api
@@ -118,4 +159,19 @@ pm2 start "npm run dev:web" --name ai-news-web
 pm2 save
 ```
 
-3. For internet access, use Cloudflare Tunnel to expose only web (`3000`) and keep API internal.
+3. (Optional) expose web safely with Cloudflare Tunnel and keep API internal.
+
+## CI
+
+GitHub Actions workflow: `.github/workflows/ci.yml`
+
+Pipeline runs:
+
+- dependency install
+- Prisma generate/migrate
+- unit tests
+- full monorepo build
+
+## Release Notes
+
+See [RELEASE_NOTES.md](./RELEASE_NOTES.md) for chronological change history.
