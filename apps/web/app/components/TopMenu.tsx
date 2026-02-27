@@ -1,62 +1,15 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Alert, Box, Button, Chip, FormControl, MenuItem, Select, Stack, TextField, Typography } from '@mui/material';
+import { Alert, Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, MenuItem, Select, Stack, TextField, Typography } from '@mui/material';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
-import { setLanguage, setSearchQuery, setTopUiState, triggerHideAllResearch } from '../store/slices/uiSlice';
+import { setLanguage, setSearchQuery, setTopUiState, triggerHideAllResearch, setNotifySettings, setAiSettings, setAppearanceSettings, hydrateUiSettings, setHelpOpen } from '../store/slices/uiSlice';
 import { sendWsMessage } from '../store/wsClient';
+import { setFeedBudgetSetting } from '../store/slices/feedsSlice';
+import { removeOldItemsInFeed, resetAllToNewestLimit } from '../store/slices/newsSlice';
 
 type VibeValue = 'default' | 'anime' | 'arcade' | 'cinema' | 'newspaper' | 'cyberwitch' | 'fantasy' | 'scifi';
-type TopStateDetail = {
-  menuCollapsed?: boolean;
-  controlsCollapsed?: boolean;
-  searchVisible?: boolean;
-  addStreamVisible?: boolean;
-  allColumnControlsHidden?: boolean;
-  vibe?: VibeValue;
-  language?: 'en' | 'bg';
-};
-
-type ControlsState = {
-  notifyEnabled: boolean;
-  notifyMode: 'matched' | 'matched_pinned' | 'pinned' | 'all';
-  aiAvailable: boolean;
-  aiEnabled: boolean;
-  summaryLang: 'bilingual' | 'bg' | 'en';
-  researchLang: 'bg' | 'en';
-  allBudget: 'mixed' | 'low' | 'standard' | 'high';
-  font: 'system' | 'manrope' | 'grotesk' | 'sora' | 'plex' | 'serif' | 'mono';
-  fontSize: 'sm' | 'md' | 'lg' | 'xl';
-  scheme: 'classic' | 'vivid' | 'sunset' | 'neon' | 'ocean' | 'forest';
-  buttonMode: 'icons' | 'text';
-  interfaceLang: 'en' | 'bg';
-  vibe: VibeValue;
-};
-
-type ControlsStateDetail = Partial<ControlsState>;
-type LegacyControlsStateDetail = {
-  notifyEnabled?: boolean;
-  notifyMode?: 'matched' | 'matched_pinned' | 'pinned' | 'all';
-  aiAvailable?: boolean;
-  aiEnabled?: boolean;
-  summaryLang?: 'bilingual' | 'bg' | 'en';
-  researchLang?: 'bg' | 'en';
-  allBudget?: 'mixed' | 'low' | 'standard' | 'high';
-  font?: 'system' | 'manrope' | 'grotesk' | 'sora' | 'plex' | 'serif' | 'mono';
-  fontSize?: 'sm' | 'md' | 'lg' | 'xl';
-  scheme?: 'classic' | 'vivid' | 'sunset' | 'neon' | 'ocean' | 'forest';
-  buttonMode?: 'icons' | 'text';
-  interfaceLang?: 'en' | 'bg';
-  vibe?: VibeValue;
-};
-
 const VIBES: VibeValue[] = ['default', 'anime', 'arcade', 'cinema', 'newspaper', 'cyberwitch', 'fantasy', 'scifi'];
-
-declare global {
-  interface Window {
-    __AI_NEWS_USE_REACT_TOPMENU?: boolean;
-  }
-}
 
 function StatusPills() {
   const connected = useAppSelector(s => s.connection.connected);
@@ -75,6 +28,7 @@ function StatusPills() {
 export default function TopMenu() {
   const dispatch = useAppDispatch();
   const ui = useAppSelector(s => s.ui);
+  const feeds = useAppSelector(s => s.feeds.feeds);
   const lang = ui.language;
   const bg = lang === 'bg';
   const [searchDraft, setSearchDraft] = useState('');
@@ -82,22 +36,8 @@ export default function TopMenu() {
   const [feedUrl, setFeedUrl] = useState('');
   const [feedLabel, setFeedLabel] = useState('');
   const [feedInterval, setFeedInterval] = useState('120');
+  const [deleteAgeAll, setDeleteAgeAll] = useState<'yesterday' | 'week' | 'month' | 'year'>('week');
   const [addStatus, setAddStatus] = useState<{ kind: 'info' | 'success' | 'error'; message: string } | null>(null);
-  const [controlsState, setControlsState] = useState<ControlsState>({
-    notifyEnabled: false,
-    notifyMode: 'matched',
-    aiAvailable: false,
-    aiEnabled: false,
-    summaryLang: 'bilingual',
-    researchLang: 'bg',
-    allBudget: 'standard',
-    font: 'system',
-    fontSize: 'md',
-    scheme: 'classic',
-    buttonMode: 'icons',
-    interfaceLang: 'en',
-    vibe: 'default'
-  });
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const addStreamInputRef = useRef<HTMLInputElement | null>(null);
   const topbarInnerRef = useRef<HTMLDivElement | null>(null);
@@ -132,64 +72,71 @@ export default function TopMenu() {
     searchPlaceholder: bg ? 'Търси (заглавие + резюме + проучване)...' : 'Search (title + summary + research)...',
     addUrlPlaceholder: bg ? 'Постави RSS URL, subreddit или YouTube канал...' : 'Paste RSS URL, subreddit, or YouTube channel URL...',
     addLabelPlaceholder: bg ? 'Етикет (по избор)' : 'Optional label',
-    intervalSuffix: bg ? 'с' : 's'
+    intervalSuffix: bg ? 'с' : 's',
+    helpTitle: bg ? 'Помощ' : 'Help',
+    close: bg ? 'Затвори' : 'Close',
+    colorMode: bg ? 'Цветове' : 'Color mode'
   } as const;
 
   useEffect(() => {
-    window.__AI_NEWS_USE_REACT_TOPMENU = true;
-    document.body.dataset.reactTopQuickPanels = '1';
-
-    const onTopState = (event: Event) => {
-      const detail = (event as CustomEvent<TopStateDetail>).detail || {};
-      const next: TopStateDetail = {};
-      if (typeof detail.vibe === 'string' && VIBES.includes(detail.vibe)) next.vibe = detail.vibe;
-      if (Object.keys(next).length) {
-        dispatch(setTopUiState(next));
+    if (typeof window === 'undefined') return;
+    try {
+      const raw = window.localStorage.getItem('aiNews.uiPrefs.v2');
+      if (raw) {
+        const parsed = JSON.parse(raw) as Partial<{
+          language: 'en' | 'bg';
+          colorMode: 'system' | 'dark' | 'light';
+          menuCollapsed: boolean;
+          controlsCollapsed: boolean;
+          searchVisible: boolean;
+          addStreamVisible: boolean;
+          allColumnControlsHidden: boolean;
+          notifyEnabled: boolean;
+          notifyMode: 'matched' | 'matched_pinned' | 'pinned' | 'all';
+          font: 'system' | 'manrope' | 'grotesk' | 'sora' | 'plex' | 'serif' | 'mono';
+          fontSize: 'sm' | 'md' | 'lg' | 'xl';
+          scheme: 'classic' | 'vivid' | 'sunset' | 'neon' | 'ocean' | 'forest';
+          buttonMode: 'icons' | 'text';
+          vibe: VibeValue;
+        }>;
+        dispatch(hydrateUiSettings(parsed));
       }
-      if (next.vibe) {
-        setControlsState(prev => ({ ...prev, vibe: next.vibe! }));
-      }
-      if (detail.language === 'en' || detail.language === 'bg') {
-        dispatch(setLanguage(detail.language));
-        setControlsState(prev => ({ ...prev, interfaceLang: detail.language! }));
-      }
-    };
-
-    const onControlsState = (event: Event) => {
-      const detail = (event as CustomEvent<LegacyControlsStateDetail>).detail || {};
-      setControlsState(prev => ({
-        notifyEnabled: typeof detail.notifyEnabled === 'boolean' ? detail.notifyEnabled : prev.notifyEnabled,
-        notifyMode: detail.notifyMode || prev.notifyMode,
-        aiAvailable: typeof detail.aiAvailable === 'boolean' ? detail.aiAvailable : prev.aiAvailable,
-        aiEnabled: typeof detail.aiEnabled === 'boolean' ? detail.aiEnabled : prev.aiEnabled,
-        summaryLang: detail.summaryLang || prev.summaryLang,
-        researchLang: detail.researchLang || prev.researchLang,
-        allBudget: detail.allBudget || prev.allBudget,
-        font: detail.font || prev.font,
-        fontSize: detail.fontSize || prev.fontSize,
-        scheme: detail.scheme || prev.scheme,
-        buttonMode: detail.buttonMode || prev.buttonMode,
-        interfaceLang: detail.interfaceLang || prev.interfaceLang,
-        vibe: detail.vibe || prev.vibe
-      }));
-    };
-
-    window.addEventListener('ai-news:top-state', onTopState as EventListener);
-    window.addEventListener('ai-news:controls-state', onControlsState as EventListener);
-    window.dispatchEvent(new CustomEvent('ai-news:request-top-state'));
-    window.dispatchEvent(new CustomEvent('ai-news:request-controls-state'));
-
-    return () => {
-      window.removeEventListener('ai-news:top-state', onTopState as EventListener);
-      window.removeEventListener('ai-news:controls-state', onControlsState as EventListener);
-      delete document.body.dataset.reactTopQuickPanels;
-    };
+    } catch {}
   }, [dispatch]);
 
   useEffect(() => {
     document.body.classList.toggle('menu-collapsed', ui.menuCollapsed);
     document.body.classList.toggle('controls-collapsed', ui.controlsCollapsed);
-  }, [ui.controlsCollapsed, ui.menuCollapsed]);
+    document.body.dataset.vibe = ui.vibe;
+    document.body.dataset.font = ui.font;
+    document.body.dataset.fontSize = ui.fontSize;
+    document.body.dataset.scheme = ui.scheme;
+    document.body.dataset.itemButtons = ui.buttonMode;
+    document.documentElement.dataset.theme = ui.colorMode;
+    document.documentElement.lang = ui.language;
+  }, [ui.buttonMode, ui.colorMode, ui.controlsCollapsed, ui.font, ui.fontSize, ui.language, ui.menuCollapsed, ui.scheme, ui.vibe]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      window.localStorage.setItem('aiNews.uiPrefs.v2', JSON.stringify({
+        language: ui.language,
+        colorMode: ui.colorMode,
+        menuCollapsed: ui.menuCollapsed,
+        controlsCollapsed: ui.controlsCollapsed,
+        searchVisible: ui.searchVisible,
+        addStreamVisible: ui.addStreamVisible,
+        allColumnControlsHidden: ui.allColumnControlsHidden,
+        notifyEnabled: ui.notifyEnabled,
+        notifyMode: ui.notifyMode,
+        font: ui.font,
+        fontSize: ui.fontSize,
+        scheme: ui.scheme,
+        buttonMode: ui.buttonMode,
+        vibe: ui.vibe
+      }));
+    } catch {}
+  }, [ui.addStreamVisible, ui.allColumnControlsHidden, ui.buttonMode, ui.colorMode, ui.controlsCollapsed, ui.font, ui.fontSize, ui.language, ui.menuCollapsed, ui.notifyEnabled, ui.notifyMode, ui.scheme, ui.searchVisible, ui.vibe]);
 
   useEffect(() => {
     const onPointerDown = (event: PointerEvent) => {
@@ -209,34 +156,16 @@ export default function TopMenu() {
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
-      emit('ai-news:set-search-query', { query: searchDraft });
+      dispatch(setSearchQuery(searchDraft));
     }, 90);
-    dispatch(setSearchQuery(searchDraft));
     return () => window.clearTimeout(timer);
   }, [dispatch, searchDraft]);
 
   useEffect(() => {
-    const onAddStatus = (event: Event) => {
-      const detail = (event as CustomEvent<{ message?: string; type?: string }>).detail || {};
-      const message = typeof detail.message === 'string' ? detail.message.trim() : '';
-      if (!message) return;
-      const kind = detail.type === 'error'
-        ? 'error'
-        : detail.type === 'success'
-          ? 'success'
-          : 'info';
-      setAddStatus({ kind, message });
-      if (kind === 'success') {
-        setFeedUrl('');
-        setFeedLabel('');
-      }
-    };
-
-    window.addEventListener('ai-news:add-feed-status', onAddStatus as EventListener);
-    return () => {
-      window.removeEventListener('ai-news:add-feed-status', onAddStatus as EventListener);
-    };
-  }, []);
+    if (!searchDraft && ui.searchQuery) {
+      setSearchDraft(ui.searchQuery);
+    }
+  }, [searchDraft, ui.searchQuery]);
 
   useEffect(() => {
     if (ui.searchVisible) {
@@ -253,7 +182,7 @@ export default function TopMenu() {
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        emit('ai-news:close-help');
+        dispatch(setHelpOpen(false));
         return;
       }
 
@@ -272,7 +201,7 @@ export default function TopMenu() {
 
       if (key === '?') {
         e.preventDefault();
-        emit('ai-news:toggle-help');
+        dispatch(setHelpOpen(!ui.helpOpen));
         return;
       }
       if (key === '/') {
@@ -283,7 +212,7 @@ export default function TopMenu() {
       }
       if (lower === 'h') {
         e.preventDefault();
-        emit('ai-news:toggle-help');
+        dispatch(setHelpOpen(!ui.helpOpen));
         return;
       }
       if (lower === 'm') {
@@ -313,12 +242,12 @@ export default function TopMenu() {
       }
       if (lower === 't') {
         e.preventDefault();
-        emit('ai-news:cycle-theme');
+        cycleTheme();
         return;
       }
       if (lower === 'v') {
         e.preventDefault();
-        emit('ai-news:cycle-vibe');
+        cycleVibe();
       }
     };
 
@@ -326,16 +255,11 @@ export default function TopMenu() {
     return () => {
       window.removeEventListener('keydown', onKeyDown);
     };
-  }, [ui.addStreamVisible, ui.allColumnControlsHidden, ui.controlsCollapsed, ui.menuCollapsed, ui.searchVisible]);
-
-  const emit = (type: string, detail?: object) => {
-    window.dispatchEvent(new CustomEvent(type, { detail }));
-  };
+  }, [dispatch, ui.addStreamVisible, ui.allColumnControlsHidden, ui.controlsCollapsed, ui.helpOpen, ui.menuCollapsed, ui.searchVisible, ui.vibe, ui.colorMode]);
 
   const clearSearch = () => {
     setSearchDraft('');
     dispatch(setSearchQuery(''));
-    emit('ai-news:clear-search');
   };
 
   const addStream = () => {
@@ -356,7 +280,11 @@ export default function TopMenu() {
         kind: 'error',
         message: bg ? 'Няма връзка със сървъра' : 'No server connection'
       });
+      return;
     }
+    setAddStatus({ kind: 'success', message: bg ? 'Потокът е изпратен' : 'Stream submitted' });
+    setFeedUrl('');
+    setFeedLabel('');
   };
 
   const toggleSearch = () => {
@@ -390,8 +318,54 @@ export default function TopMenu() {
 
   const toggleAllColumnControls = () => {
     dispatch(setTopUiState({ allColumnControlsHidden: !ui.allColumnControlsHidden }));
-    // Keep legacy columns in sync while migration is in progress.
-    emit('ai-news:toggle-all-column-controls');
+  };
+
+  const cycleTheme = () => {
+    const order: Array<'system' | 'dark' | 'light'> = ['system', 'dark', 'light'];
+    const idx = order.indexOf(ui.colorMode);
+    dispatch(setAppearanceSettings({ colorMode: order[(idx + 1) % order.length] }));
+  };
+
+  const cycleVibe = () => {
+    const idx = VIBES.indexOf(ui.vibe);
+    dispatch(setAppearanceSettings({ vibe: VIBES[(idx + 1) % VIBES.length] }));
+  };
+
+  const cutoffFromAge = (age: 'yesterday' | 'week' | 'month' | 'year'): number => {
+    const now = Date.now();
+    if (age === 'yesterday') return now - 24 * 60 * 60 * 1000;
+    if (age === 'month') return now - 30 * 24 * 60 * 60 * 1000;
+    if (age === 'year') return now - 365 * 24 * 60 * 60 * 1000;
+    return now - 7 * 24 * 60 * 60 * 1000;
+  };
+
+  const applyAllBudget = (budget: 'low' | 'standard' | 'high') => {
+    const ok = sendWsMessage({ type: 'set_all_budget', budget });
+    if (!ok) return;
+    dispatch(setAiSettings({ allBudget: budget }));
+    feeds.forEach(feed => {
+      dispatch(setFeedBudgetSetting({ feedUrl: feed.url, budget }));
+    });
+  };
+
+  const requestNotificationPermission = async (enabled: boolean) => {
+    if (!enabled || typeof Notification === 'undefined') return;
+    try {
+      if (Notification.permission === 'default') {
+        await Notification.requestPermission();
+      }
+    } catch {}
+  };
+
+  const resetAllNewest = () => {
+    dispatch(resetAllToNewestLimit(10));
+  };
+
+  const deleteOldAllColumns = () => {
+    const cutoffMs = cutoffFromAge(deleteAgeAll);
+    feeds.forEach(feed => {
+      dispatch(removeOldItemsInFeed({ feedUrl: feed.url, cutoffMs }));
+    });
   };
 
   const searchLabel = ui.searchVisible ? labels.hideSearch : labels.search;
@@ -423,9 +397,7 @@ export default function TopMenu() {
                 value={ui.vibe}
                 onChange={e => {
                   const nextVibe = e.target.value as VibeValue;
-                  dispatch(setTopUiState({ vibe: nextVibe }));
-                  setControlsState(prev => ({ ...prev, vibe: nextVibe }));
-                  emit('ai-news:set-vibe', { vibe: nextVibe });
+                  dispatch(setAppearanceSettings({ vibe: nextVibe }));
                 }}
               >
                 <option value="default">{labels.defaultVibe}</option>
@@ -448,11 +420,7 @@ export default function TopMenu() {
               size="small"
               variant="outlined"
               type="button"
-              onClick={() => {
-                dispatch(triggerHideAllResearch());
-                // Keep legacy columns in sync while migration is in progress.
-                emit('ai-news:hide-all-research');
-              }}
+              onClick={() => dispatch(triggerHideAllResearch())}
             >
               {labels.hideAllResearch}
             </Button>
@@ -529,28 +497,32 @@ export default function TopMenu() {
         <div className="controls" style={ui.controlsCollapsed ? { display: 'none' } : undefined}>
           <div className="controlsCompactRow controlsRow">
             <div className="controlGroup">
-              <button id="resetBtn" className="btn" type="button">Reset ALL to newest 10</button>
+              <button id="resetBtn" className="btn" type="button" onClick={resetAllNewest}>Reset ALL to newest 10</button>
               <label className="checkbox" title="Delete old news by age from all columns">
                 <span id="deleteAgePrefix">Delete age:</span>
-                <select id="deleteAgeSelect" className="select" defaultValue="week">
+                <select id="deleteAgeSelect" className="select" value={deleteAgeAll} onChange={e => setDeleteAgeAll(e.target.value as 'yesterday' | 'week' | 'month' | 'year')}>
                   <option value="yesterday">Yesterday</option>
                   <option value="week">Past week</option>
                   <option value="month">Past month</option>
                   <option value="year">Past year</option>
                 </select>
               </label>
-              <button id="deleteAgeAllBtn" className="btn danger" type="button">Delete old (all columns)</button>
+              <button id="deleteAgeAllBtn" className="btn danger" type="button" onClick={deleteOldAllColumns}>Delete old (all columns)</button>
               <label className="checkbox" title="Embeddings matching, AI dedupe, summaries, research">
                 <input
                   id="aiEnabled"
                   type="checkbox"
-                  checked={controlsState.aiEnabled}
-                  disabled={!controlsState.aiAvailable}
-                  onChange={e => setControlsState(prev => ({ ...prev, aiEnabled: e.target.checked }))}
+                  checked={ui.aiEnabled}
+                  disabled={!ui.aiAvailable}
+                  onChange={e => {
+                    const enabled = e.target.checked;
+                    const ok = sendWsMessage({ type: 'toggle_ai', enabled });
+                    if (ok) dispatch(setAiSettings({ aiEnabled: enabled }));
+                  }}
                 />
                 <span id="aiEnabledLabel">AI Enabled</span>
               </label>
-              <button id="helpBtn" className="btn" type="button">Help</button>
+              <button id="helpBtn" className="btn" type="button" onClick={() => dispatch(setHelpOpen(true))}>Help</button>
             </div>
           </div>
           <div className="controlsHint" id="controlsHint">
@@ -565,8 +537,12 @@ export default function TopMenu() {
                   <input
                     id="notifyEnabled"
                     type="checkbox"
-                    checked={controlsState.notifyEnabled}
-                    onChange={e => setControlsState(prev => ({ ...prev, notifyEnabled: e.target.checked }))}
+                    checked={ui.notifyEnabled}
+                    onChange={async e => {
+                      const enabled = e.target.checked;
+                      dispatch(setNotifySettings({ notifyEnabled: enabled }));
+                      await requestNotificationPermission(enabled);
+                    }}
                   />
                   <span id="notifyEnabledLabel">Enable notifications</span>
                 </label>
@@ -575,8 +551,8 @@ export default function TopMenu() {
                   <select
                     id="notifyMode"
                     className="select"
-                    value={controlsState.notifyMode}
-                    onChange={e => setControlsState(prev => ({ ...prev, notifyMode: e.target.value as ControlsState['notifyMode'] }))}
+                    value={ui.notifyMode}
+                    onChange={e => dispatch(setNotifySettings({ notifyMode: e.target.value as 'matched' | 'matched_pinned' | 'pinned' | 'all' }))}
                   >
                     <option value="matched">Only matched</option>
                     <option value="matched_pinned">Matched + pinned columns</option>
@@ -595,9 +571,13 @@ export default function TopMenu() {
                   <select
                     id="summaryLang"
                     className="select"
-                    value={controlsState.summaryLang}
-                    disabled={!controlsState.aiAvailable}
-                    onChange={e => setControlsState(prev => ({ ...prev, summaryLang: e.target.value as ControlsState['summaryLang'] }))}
+                    value={ui.summaryLang}
+                    disabled={!ui.aiAvailable}
+                    onChange={e => {
+                      const lang = e.target.value as 'bilingual' | 'bg' | 'en';
+                      const ok = sendWsMessage({ type: 'set_summary_lang', lang });
+                      if (ok) dispatch(setAiSettings({ summaryLang: lang }));
+                    }}
                   >
                     <option value="bilingual">BG / EN</option>
                     <option value="bg">BG</option>
@@ -609,9 +589,13 @@ export default function TopMenu() {
                   <select
                     id="researchLang"
                     className="select"
-                    value={controlsState.researchLang}
-                    disabled={!controlsState.aiAvailable}
-                    onChange={e => setControlsState(prev => ({ ...prev, researchLang: e.target.value as ControlsState['researchLang'] }))}
+                    value={ui.researchLang}
+                    disabled={!ui.aiAvailable}
+                    onChange={e => {
+                      const lang = e.target.value as 'bg' | 'en';
+                      const ok = sendWsMessage({ type: 'set_research_lang', lang });
+                      if (ok) dispatch(setAiSettings({ researchLang: lang }));
+                    }}
                   >
                     <option value="bg">BG</option>
                     <option value="en">EN</option>
@@ -622,8 +606,11 @@ export default function TopMenu() {
                   <select
                     id="allBudgetSelect"
                     className="select"
-                    value={controlsState.allBudget}
-                    onChange={e => setControlsState(prev => ({ ...prev, allBudget: e.target.value as ControlsState['allBudget'] }))}
+                    value={ui.allBudget}
+                    onChange={e => {
+                      const budget = e.target.value as 'mixed' | 'low' | 'standard' | 'high';
+                      if (budget !== 'mixed') applyAllBudget(budget);
+                    }}
                   >
                     <option value="mixed">Mixed</option>
                     <option value="low">Low</option>
@@ -642,8 +629,8 @@ export default function TopMenu() {
                   <select
                     id="fontSelect"
                     className="select"
-                    value={controlsState.font}
-                    onChange={e => setControlsState(prev => ({ ...prev, font: e.target.value as ControlsState['font'] }))}
+                    value={ui.font}
+                    onChange={e => dispatch(setAppearanceSettings({ font: e.target.value as 'system' | 'manrope' | 'grotesk' | 'sora' | 'plex' | 'serif' | 'mono' }))}
                   >
                     <option value="system">System</option>
                     <option value="manrope">Manrope</option>
@@ -659,8 +646,8 @@ export default function TopMenu() {
                   <select
                     id="fontSizeSelect"
                     className="select"
-                    value={controlsState.fontSize}
-                    onChange={e => setControlsState(prev => ({ ...prev, fontSize: e.target.value as ControlsState['fontSize'] }))}
+                    value={ui.fontSize}
+                    onChange={e => dispatch(setAppearanceSettings({ fontSize: e.target.value as 'sm' | 'md' | 'lg' | 'xl' }))}
                   >
                     <option value="sm">Small</option>
                     <option value="md">Medium</option>
@@ -673,8 +660,8 @@ export default function TopMenu() {
                   <select
                     id="schemeSelect"
                     className="select"
-                    value={controlsState.scheme}
-                    onChange={e => setControlsState(prev => ({ ...prev, scheme: e.target.value as ControlsState['scheme'] }))}
+                    value={ui.scheme}
+                    onChange={e => dispatch(setAppearanceSettings({ scheme: e.target.value as 'classic' | 'vivid' | 'sunset' | 'neon' | 'ocean' | 'forest' }))}
                   >
                     <option value="classic">Classic</option>
                     <option value="vivid">Vivid</option>
@@ -689,8 +676,8 @@ export default function TopMenu() {
                   <select
                     id="btnModeSelect"
                     className="select"
-                    value={controlsState.buttonMode}
-                    onChange={e => setControlsState(prev => ({ ...prev, buttonMode: e.target.value as ControlsState['buttonMode'] }))}
+                    value={ui.buttonMode}
+                    onChange={e => dispatch(setAppearanceSettings({ buttonMode: e.target.value as 'icons' | 'text' }))}
                   >
                     <option value="icons">Icons</option>
                     <option value="text">Text</option>
@@ -701,8 +688,8 @@ export default function TopMenu() {
                   <select
                     id="vibeSelect"
                     className="select"
-                    value={controlsState.vibe}
-                    onChange={e => setControlsState(prev => ({ ...prev, vibe: e.target.value as VibeValue }))}
+                    value={ui.vibe}
+                    onChange={e => dispatch(setAppearanceSettings({ vibe: e.target.value as VibeValue }))}
                   >
                     <option value="default">Default</option>
                     <option value="anime">Anime Pop</option>
@@ -719,10 +706,9 @@ export default function TopMenu() {
                   <select
                     id="interfaceLang"
                     className="select"
-                    value={controlsState.interfaceLang}
+                    value={ui.language}
                     onChange={e => {
                       const nextLang = e.target.value as 'en' | 'bg';
-                      setControlsState(prev => ({ ...prev, interfaceLang: nextLang }));
                       dispatch(setLanguage(nextLang));
                     }}
                   >
@@ -730,6 +716,9 @@ export default function TopMenu() {
                     <option value="bg">BG</option>
                   </select>
                 </label>
+                <button className="btn" type="button" onClick={cycleTheme}>
+                  {labels.colorMode}: {ui.colorMode}
+                </button>
               </div>
             </details>
           </div>
@@ -737,6 +726,25 @@ export default function TopMenu() {
         </div>
         ) : null}
       </div>
+
+      <Dialog open={ui.helpOpen} onClose={() => dispatch(setHelpOpen(false))} maxWidth="sm" fullWidth>
+        <DialogTitle>{labels.helpTitle}</DialogTitle>
+        <DialogContent dividers>
+          <Typography variant="body2">`?` / `H`: Help</Typography>
+          <Typography variant="body2">`M`: Toggle menu</Typography>
+          <Typography variant="body2">`C`: Toggle top controls</Typography>
+          <Typography variant="body2">`G`: Toggle all column controls</Typography>
+          <Typography variant="body2">`S`: Toggle search section</Typography>
+          <Typography variant="body2">`/`: Focus search</Typography>
+          <Typography variant="body2">`A`: Toggle add stream section</Typography>
+          <Typography variant="body2">`T`: Cycle color mode</Typography>
+          <Typography variant="body2">`V`: Cycle vibe</Typography>
+          <Typography variant="body2">`Esc`: Close help</Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => dispatch(setHelpOpen(false))}>{labels.close}</Button>
+        </DialogActions>
+      </Dialog>
     </div>
   );
 }

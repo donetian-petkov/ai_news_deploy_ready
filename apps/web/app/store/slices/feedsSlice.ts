@@ -6,13 +6,15 @@ type FeedsState = {
   pinnedByUrl: Record<string, boolean>;
   controlsOpenByUrl: Record<string, boolean>;
   deleteAgeByUrl: Record<string, 'yesterday' | 'week' | 'month' | 'year'>;
+  orderByUrl: string[];
 };
 
 const initialState: FeedsState = {
   feeds: [],
   pinnedByUrl: {},
   controlsOpenByUrl: {},
-  deleteAgeByUrl: {}
+  deleteAgeByUrl: {},
+  orderByUrl: []
 };
 
 const feedsSlice = createSlice({
@@ -23,6 +25,11 @@ const feedsSlice = createSlice({
       const nextFeeds = action.payload;
       const nextUrls = new Set(nextFeeds.map(f => f.url));
       state.feeds = nextFeeds;
+
+      state.orderByUrl = [
+        ...state.orderByUrl.filter(url => nextUrls.has(url)),
+        ...nextFeeds.map(f => f.url).filter(url => !state.orderByUrl.includes(url))
+      ];
 
       Object.keys(state.pinnedByUrl).forEach(url => {
         if (!nextUrls.has(url)) delete state.pinnedByUrl[url];
@@ -64,6 +71,7 @@ const feedsSlice = createSlice({
       delete state.pinnedByUrl[feedUrl];
       delete state.controlsOpenByUrl[feedUrl];
       delete state.deleteAgeByUrl[feedUrl];
+      state.orderByUrl = state.orderByUrl.filter(url => url !== feedUrl);
     },
     setFeedDeleteAge(state, action: PayloadAction<{ feedUrl: string; age: 'yesterday' | 'week' | 'month' | 'year' }>) {
       const { feedUrl, age } = action.payload;
@@ -105,6 +113,49 @@ const feedsSlice = createSlice({
           ...action.payload.filters
         };
       }
+    },
+    reorderFeeds(state, action: PayloadAction<{ fromUrl: string; toUrl: string }>) {
+      const { fromUrl, toUrl } = action.payload;
+      if (!fromUrl || !toUrl || fromUrl === toUrl) return;
+      const fromIdx = state.orderByUrl.indexOf(fromUrl);
+      const toIdx = state.orderByUrl.indexOf(toUrl);
+      if (fromIdx < 0 || toIdx < 0) return;
+      const next = [...state.orderByUrl];
+      const [moved] = next.splice(fromIdx, 1);
+      next.splice(toIdx, 0, moved);
+      state.orderByUrl = next;
+    },
+    hydrateFeedUiState(state, action: PayloadAction<Partial<Pick<FeedsState, 'pinnedByUrl' | 'controlsOpenByUrl' | 'deleteAgeByUrl' | 'orderByUrl'>>>) {
+      const next = action.payload || {};
+      const urls = new Set(state.feeds.map(f => f.url));
+
+      if (next.pinnedByUrl && typeof next.pinnedByUrl === 'object') {
+        for (const [url, v] of Object.entries(next.pinnedByUrl)) {
+          if (urls.has(url)) state.pinnedByUrl[url] = !!v;
+        }
+      }
+
+      if (next.controlsOpenByUrl && typeof next.controlsOpenByUrl === 'object') {
+        for (const [url, v] of Object.entries(next.controlsOpenByUrl)) {
+          if (urls.has(url) && typeof v === 'boolean') state.controlsOpenByUrl[url] = v;
+        }
+      }
+
+      if (next.deleteAgeByUrl && typeof next.deleteAgeByUrl === 'object') {
+        for (const [url, age] of Object.entries(next.deleteAgeByUrl)) {
+          if (!urls.has(url)) continue;
+          if (age === 'yesterday' || age === 'week' || age === 'month' || age === 'year') {
+            state.deleteAgeByUrl[url] = age;
+          }
+        }
+      }
+
+      if (Array.isArray(next.orderByUrl)) {
+        state.orderByUrl = [
+          ...next.orderByUrl.filter(url => urls.has(url)),
+          ...state.feeds.map(f => f.url).filter(url => !next.orderByUrl!.includes(url))
+        ];
+      }
     }
   }
 });
@@ -120,6 +171,8 @@ export const {
   setFeedResearchSetting,
   setFeedBudgetSetting,
   setFeedIntervalSetting,
-  setFeedColumnSettings
+  setFeedColumnSettings,
+  reorderFeeds,
+  hydrateFeedUiState
 } = feedsSlice.actions;
 export default feedsSlice.reducer;

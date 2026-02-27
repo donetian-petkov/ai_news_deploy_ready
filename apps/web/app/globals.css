@@ -24,98 +24,193 @@ html, body {
   margin: 0;
   padding: 0;
   min-height: 100%;
-  background: #050a17;
+  background: var(--bg-main, #050a17);
+  color: #eaf1ff;
+  font-family: var(--font-family, 'Inter', 'Segoe UI', sans-serif);
 }
 
 * {
   box-sizing: border-box;
 }
 
-body[data-react-top-quick-panels='1'].controls-collapsed .controls.quick-sections-active #searchSection,
-body[data-react-top-quick-panels='1'].controls-collapsed .controls.quick-sections-active #addStreamSection {
-  display: none !important;
+:root {
+  --ui-font-scale: 1;
+  --bg-main: #050a17;
+  --panel-bg: rgba(14, 21, 38, 0.8);
+  --panel-border: rgba(106, 132, 178, 0.35);
+  --card-bg: rgba(8, 14, 28, 0.86);
+  --card-border: rgba(106, 132, 178, 0.34);
 }
 
-body[data-react-top-quick-panels='1'] .controls > #searchSection,
-body[data-react-top-quick-panels='1'] .controls > #addStreamSection {
-  display: none !important;
+body[data-theme='light'] {
+  --bg-main: #eef3ff;
+  --panel-bg: rgba(255, 255, 255, 0.88);
+  --panel-border: rgba(118, 132, 166, 0.45);
+  --card-bg: rgba(255, 255, 255, 0.92);
+  --card-border: rgba(106, 118, 151, 0.42);
+  color: #122033;
 }
 
-/* React renderer is now the primary visible board; legacy grid stays for compatibility wiring only. */
-body[data-react-renderer='1'] #grid {
-  display: none !important;
+body[data-font='system'] { --font-family: 'Inter', 'Segoe UI', sans-serif; }
+body[data-font='manrope'] { --font-family: 'Manrope', 'Segoe UI', sans-serif; }
+body[data-font='grotesk'] { --font-family: 'Space Grotesk', 'Segoe UI', sans-serif; }
+body[data-font='sora'] { --font-family: 'Sora', 'Segoe UI', sans-serif; }
+body[data-font='plex'] { --font-family: 'IBM Plex Sans', 'Segoe UI', sans-serif; }
+body[data-font='serif'] { --font-family: 'Cinzel', Georgia, serif; }
+body[data-font='mono'] { --font-family: 'IBM Plex Mono', 'SF Mono', monospace; }
+
+body[data-font-size='sm'] { --ui-font-scale: 0.92; }
+body[data-font-size='md'] { --ui-font-scale: 1; }
+body[data-font-size='lg'] { --ui-font-scale: 1.08; }
+body[data-font-size='xl'] { --ui-font-scale: 1.16; }
+
+body[data-vibe='anime'] { --bg-main: radial-gradient(1200px 500px at 0% 0%, rgba(255, 77, 166, 0.18), transparent 60%), #060b1d; }
+body[data-vibe='arcade'] { --bg-main: radial-gradient(1200px 500px at 0% 0%, rgba(57, 255, 20, 0.16), transparent 60%), #040914; }
+body[data-vibe='cinema'] { --bg-main: radial-gradient(1200px 500px at 0% 0%, rgba(210, 168, 95, 0.18), transparent 60%), #0a0b13; }
+body[data-vibe='newspaper'] { --bg-main: radial-gradient(1200px 500px at 0% 0%, rgba(78, 98, 122, 0.18), transparent 60%), #0a1018; }
+body[data-vibe='cyberwitch'] { --bg-main: radial-gradient(1200px 500px at 0% 0%, rgba(179, 76, 255, 0.2), transparent 60%), #050919; }
+body[data-vibe='fantasy'] { --bg-main: radial-gradient(1200px 500px at 0% 0%, rgba(86, 168, 110, 0.2), transparent 60%), #07110d; }
+body[data-vibe='scifi'] { --bg-main: radial-gradient(1200px 500px at 0% 0%, rgba(0, 201, 255, 0.2), transparent 60%), #050d1b; }
+
+body[data-scheme='vivid'] { --panel-border: rgba(118, 165, 255, 0.48); --card-border: rgba(118, 165, 255, 0.44); }
+body[data-scheme='sunset'] { --panel-border: rgba(255, 157, 102, 0.45); --card-border: rgba(255, 157, 102, 0.4); }
+body[data-scheme='neon'] { --panel-border: rgba(0, 221, 255, 0.52); --card-border: rgba(0, 221, 255, 0.48); }
+body[data-scheme='ocean'] { --panel-border: rgba(79, 169, 242, 0.5); --card-border: rgba(79, 169, 242, 0.44); }
+body[data-scheme='forest'] { --panel-border: rgba(91, 173, 117, 0.46); --card-border: rgba(91, 173, 117, 0.42); }
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  backdrop-filter: blur(8px);
+  background: linear-gradient(180deg, rgba(6, 12, 24, 0.92), rgba(6, 12, 24, 0.76));
+  border-bottom: 1px solid var(--panel-border);
 }
 
-.reactPreviewWrap {
-  margin-top: 8px;
-  margin-bottom: 4px;
+.topbarInner {
+  max-width: 1860px;
+  margin: 0 auto;
+  padding: 14px 18px;
 }
 
-.reactPreviewHead {
+.headerRow {
   display: flex;
-  align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 8px;
+  align-items: center;
+  gap: 14px;
 }
 
-.reactPreviewTitle {
-  font-size: 12px;
-  font-weight: 800;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: rgba(235, 240, 255, 0.76);
+.headerLeft {
+  min-width: 320px;
 }
 
-.reactPreviewStatus {
-  font-size: 12px;
-  font-weight: 700;
-  padding: 4px 10px;
-  border-radius: 999px;
-  border: 1px solid rgba(130, 150, 185, 0.35);
-  background: rgba(22, 30, 48, 0.5);
-  color: rgba(200, 214, 235, 0.86);
+.headerLeft h1 {
+  font-size: calc(1.6rem * var(--ui-font-scale));
 }
 
-.reactPreviewStatus.ok {
-  border-color: rgba(65, 214, 141, 0.45);
-  color: rgba(148, 250, 194, 0.95);
-}
-
-.reactPreviewStatus.off {
-  border-color: rgba(255, 146, 146, 0.42);
-  color: rgba(255, 187, 187, 0.95);
-}
-
-.reactPreviewGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 12px;
-}
-
-.reactPreviewActions {
-  display: flex;
-  gap: 8px;
+.subHint {
+  color: rgba(206, 220, 245, 0.78);
   margin-top: 4px;
-  margin-bottom: 8px;
+  font-size: calc(0.95rem * var(--ui-font-scale));
 }
 
-.reactPreviewActionBtn {
-  border: 1px solid rgba(120, 146, 188, 0.35);
-  background: rgba(28, 44, 73, 0.72);
-  color: rgba(224, 236, 255, 0.95);
-  border-radius: 10px;
-  padding: 5px 10px;
-  font-size: 11px;
+.headerRight {
+  flex: 1;
+  justify-content: flex-end;
+}
+
+.container {
+  max-width: 1860px;
+  margin: 0 auto;
+  padding: 10px 18px 16px;
+}
+
+.controls {
+  margin-top: 10px;
+  border: 1px solid var(--panel-border);
+  border-radius: 16px;
+  background: var(--panel-bg);
+  padding: 12px;
+}
+
+.controlsRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.controlGroup {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.controlsHint {
+  margin-top: 8px;
+  color: rgba(208, 219, 242, 0.72);
+  font-size: calc(0.88rem * var(--ui-font-scale));
+}
+
+.controlsGrid {
+  margin-top: 10px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 10px;
+}
+
+.controlSection {
+  border: 1px solid var(--panel-border);
+  border-radius: 12px;
+  padding: 8px;
+  background: rgba(15, 24, 40, 0.64);
+}
+
+.controlSection > summary {
+  cursor: pointer;
   font-weight: 700;
+}
+
+.checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.select,
+.input,
+.btn {
+  font: inherit;
+  border: 1px solid var(--panel-border);
+  border-radius: 10px;
+  background: rgba(26, 37, 59, 0.72);
+  color: inherit;
+  padding: 7px 10px;
+}
+
+.btn {
   cursor: pointer;
 }
 
-.reactPreviewActionBtn:hover {
-  border-color: rgba(121, 198, 255, 0.52);
+.btn.ghost {
+  background: transparent;
 }
 
-.reactPreviewActionBtn:disabled {
-  cursor: not-allowed;
-  opacity: 0.72;
+.btn.danger {
+  color: #ffb2b2;
+}
+
+.statusPill {
+  border-color: var(--panel-border) !important;
+}
+
+@media (max-width: 900px) {
+  .headerRow {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .headerRight {
+    width: 100%;
+    justify-content: flex-start;
+  }
 }

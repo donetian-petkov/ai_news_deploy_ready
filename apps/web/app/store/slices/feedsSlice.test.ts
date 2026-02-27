@@ -34,7 +34,8 @@ describe('feedsSlice', () => {
       feeds: [makeFeed('https://old')],
       pinnedByUrl: { 'https://old': true },
       controlsOpenByUrl: { 'https://old': false },
-      deleteAgeByUrl: { 'https://old': 'month' as const }
+      deleteAgeByUrl: { 'https://old': 'month' as const },
+      orderByUrl: ['https://old']
     };
 
     const next = feedsReducer(previous, setFeeds([makeFeed('https://new')]));

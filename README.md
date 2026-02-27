@@ -13,10 +13,9 @@ Next.js + Node.js conversion of the live AI news stream, with Prisma (SQLite) an
 
 ## Repo structure
 
-- `apps/web`: Next.js app, reuses legacy UI (`public/legacy`) rendered directly in-page (no iframe).
+- `apps/web`: Next.js app with native React/MUI UI.
   - Top menu is now a native React component: `apps/web/app/components/TopMenu.tsx`.
-  - News runtime shell is now native React: `apps/web/app/components/NewsRuntimeShell.tsx`.
-  - First React live card/column renderer added: `apps/web/app/components/ReactColumnsPreview.tsx` (reads `config/news` over WS and renders preview columns/cards).
+  - Live card/column renderer: `apps/web/app/components/ReactColumnsPreview.tsx` (reads `config/news` over WS and renders stream columns/cards).
   - React preview now supports a working Summary action (`run_summary_item`) with pending state.
   - React preview also supports Research action (`run_research_item`) with pending state and confidence subtitle extraction.
   - React preview now supports Ask Agent flow (`ask_agent_item` + `ask_agent_reply`) with draft, pending, message history, and remaining-question display.
@@ -30,12 +29,12 @@ Next.js + Node.js conversion of the live AI news stream, with Prisma (SQLite) an
   - React preview labels now follow interface language (EN/BG) for migrated controls and item actions.
   - React preview now supports per-stream delete-age cleanup (`Yesterday`, `Past week`, `Past month`, `Past year`) with `Delete old`.
   - Unit tests cover Redux slices and WebSocket dispatch mapping (`apps/web/app/store/**/*.test.ts`).
-  - Top header surface now uses MUI primitives (`Chip`, `Button`, `Typography`) while preserving legacy DOM ids for compatibility.
-  - Topbar actions are now React-driven via a custom-event bridge (`ai-news:*`) into legacy runtime handlers.
-  - Search/Add Stream quick buttons now stay in quick-section mode and no longer reopen the full extended controls panel.
-  - Search and Add Stream inputs are now rendered as React quick panels directly under the top menu and bridged to legacy handlers.
+  - Top header surface uses MUI primitives (`Chip`, `Button`, `Typography`) and Redux-owned state/actions.
+  - Search/Add Stream quick buttons control React-owned quick panels directly under the top menu.
   - Global search query is now mirrored into RTK state and applied to React preview stream filtering.
-  - Extended top controls are now React-controlled and synced via `ai-news:controls-state` (`Notifications`, `AI Settings`, `Appearance` values).
+  - Extended top controls are React-owned (`Notifications`, `AI Settings`, `Appearance`) and send WebSocket messages directly.
+  - Column order supports drag-and-drop in React with local persistence.
+  - UI preferences (menu/control visibility, theme, vibe, font, notifications) are persisted from Redux state to local storage.
   - RTK store and slices:
     - `apps/web/app/store/store.ts`
     - `apps/web/app/store/slices/connectionSlice.ts`
@@ -97,15 +96,11 @@ GitHub Actions workflow:
 
 ## Notes on this conversion
 
-- Existing UX logic and behavior are preserved by reusing the mature UI code in `apps/web/public/legacy/app.js`.
-- Top menu state (`menu/controls/search/add-stream/vibe`) is synchronized from legacy runtime into RTK `uiSlice` and used by React topbar labels.
-- Legacy runtime now exposes top-controls state snapshots on demand (`ai-news:request-controls-state` / `ai-news:controls-state`) for React-controlled settings UI.
-- Global top actions now also affect the React preview (`Hide all column controls`, `Hide all research`).
-- Keyboard shortcuts are now handled from React top-menu mode and dispatched through the same `ai-news:*` action bridge.
-- Runtime DOM skeleton is now rendered by React components (topbar + grid/help/toast shell), while backend/websocket behavior and card/column rendering are still powered by `legacy/app.js`.
-- Incremental migration path active: React preview columns render from live backend messages in parallel while legacy renderer remains the source of truth for full interaction controls.
-- React columns are now shown as the primary visible board (all streams, no preview cap); legacy `#grid` is hidden in UI and kept only for compatibility wiring during migration.
-- WebSocket event handling is now centralized via RTK dispatch flow for the React renderer; legacy script remains active in parallel until full migration.
+- Top menu, help modal, search/add-stream panels, and stream columns are now React-owned.
+- Global top actions affect React preview directly (`Hide all column controls`, `Hide all research`, menu/control toggles).
+- Keyboard shortcuts are handled directly in React.
+- WebSocket event handling is centralized via RTK dispatch flow for the React renderer.
+- Legacy runtime/script/style are no longer loaded by the Next.js page/layout.
 - Web app fonts are now bundled locally via `@fontsource/*` packages (no Google Fonts build-time fetch requirement).
 - WebSocket URL is configurable via `NEXT_PUBLIC_WS_URL` and query param fallback.
 - Backend JSON state fallback remains for safety, while primary persistence is now Prisma/SQLite.

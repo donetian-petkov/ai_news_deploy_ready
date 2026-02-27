@@ -75,6 +75,14 @@ const newsSlice = createSlice({
       if (!Array.isArray(list)) return;
       state.itemsByFeed[feedUrl] = list.filter(it => !Number.isFinite(it.publishedMs) || it.publishedMs >= cutoffMs);
     },
+    resetAllToNewestLimit(state, action: PayloadAction<number>) {
+      const limit = Math.max(1, Math.min(50, Math.floor(action.payload || 10)));
+      Object.keys(state.itemsByFeed).forEach(feedUrl => {
+        const list = Array.isArray(state.itemsByFeed[feedUrl]) ? [...state.itemsByFeed[feedUrl]] : [];
+        list.sort((a, b) => b.publishedMs - a.publishedMs);
+        state.itemsByFeed[feedUrl] = list.slice(0, limit);
+      });
+    },
     upsertNewsItem(state, action: PayloadAction<NewsItem>) {
       const item = action.payload;
       if (item.filteredOk === false) return;
@@ -186,6 +194,7 @@ export const {
   setHiddenIds,
   hideItemLocally,
   removeOldItemsInFeed,
+  resetAllToNewestLimit,
   upsertNewsItem,
   setSummaryPending,
   clearSummaryPending,

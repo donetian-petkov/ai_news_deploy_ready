@@ -7,6 +7,7 @@ import { setStatus } from './slices/connectionSlice';
 import { setFeeds } from './slices/feedsSlice';
 import { receiveAskReply, setHiddenIds, upsertNewsItem } from './slices/newsSlice';
 import { setUsage } from './slices/aiUsageSlice';
+import { setAiSettings } from './slices/uiSlice';
 
 let ws: WebSocket | null = null;
 let wsUrlCurrent = '';
@@ -62,6 +63,15 @@ function parseFeedInfos(v: unknown, feedSettingsRaw: unknown): FeedInfo[] {
     });
   }
   return out;
+}
+
+function deriveAllBudget(feeds: FeedInfo[]): 'mixed' | 'low' | 'standard' | 'high' {
+  if (!feeds.length) return 'standard';
+  const first = feeds[0].budget;
+  for (const f of feeds) {
+    if (f.budget !== first) return 'mixed';
+  }
+  return first;
 }
 
 function parseNews(v: unknown): NewsItem | null {
@@ -132,7 +142,19 @@ export function startWsConnection(dispatch: AppDispatch, explicitUrl: string) {
     const msg = raw as Record<string, unknown>;
 
     if (msg.type === 'config') {
-      dispatch(setFeeds(parseFeedInfos(msg.feeds, msg.feedSettings)));
+      const parsedFeeds = parseFeedInfos(msg.feeds, msg.feedSettings);
+      dispatch(setFeeds(parsedFeeds));
+      dispatch(setAiSettings({
+        aiAvailable: !!msg.aiAvailable,
+        aiEnabled: !!msg.aiEnabled,
+        summaryLang: msg.summaryLang === 'bg' || msg.summaryLang === 'en' || msg.summaryLang === 'bilingual'
+          ? msg.summaryLang
+          : 'bilingual',
+        researchLang: msg.researchLang === 'bg' || msg.researchLang === 'en'
+          ? msg.researchLang
+          : 'bg',
+        allBudget: deriveAllBudget(parsedFeeds)
+      }));
 
       const hidden: string[] = [];
       if (Array.isArray(msg.hiddenIds)) {

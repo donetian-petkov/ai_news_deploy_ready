@@ -33,6 +33,8 @@ import {
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import {
   removeFeedLocally,
+  hydrateFeedUiState,
+  reorderFeeds,
   setAllFeedControlsOpen,
   setFeedBudgetSetting,
   setFeedColumnSettings,
@@ -109,11 +111,18 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
   const connected = useAppSelector(s => s.connection.connected);
   const status = useAppSelector(s => s.connection.status);
   const language = useAppSelector(s => s.ui.language);
+  const vibe = useAppSelector(s => s.ui.vibe);
+  const scheme = useAppSelector(s => s.ui.scheme);
+  const buttonMode = useAppSelector(s => s.ui.buttonMode);
+  const fontSize = useAppSelector(s => s.ui.fontSize);
+  const notifyEnabled = useAppSelector(s => s.ui.notifyEnabled);
+  const notifyMode = useAppSelector(s => s.ui.notifyMode);
   const hideAllResearchSeq = useAppSelector(s => s.ui.hideAllResearchSeq);
   const feeds = useAppSelector(s => s.feeds.feeds);
   const pinnedByUrl = useAppSelector(s => s.feeds.pinnedByUrl);
   const controlsOpenByUrl = useAppSelector(s => s.feeds.controlsOpenByUrl);
   const deleteAgeByUrl = useAppSelector(s => s.feeds.deleteAgeByUrl);
+  const orderByUrl = useAppSelector(s => s.feeds.orderByUrl);
   const searchQuery = useAppSelector(s => s.ui.searchQuery);
   const allColumnControlsHidden = useAppSelector(s => s.ui.allColumnControlsHidden);
   const itemsByFeed = useAppSelector(s => s.news.itemsByFeed);
@@ -122,9 +131,13 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
   const askByItem = useAppSelector(s => s.news.askByItem);
   const pendingTimeoutsRef = useRef<Record<string, number>>({});
   const researchTimeoutsRef = useRef<Record<string, number>>({});
+  const hydratedFeedUiRef = useRef(false);
+  const seenNewsIdsRef = useRef<Set<string>>(new Set());
+  const notificationsPrimedRef = useRef(false);
   const [hideAllResearch, setHideAllResearch] = useState(false);
   const [bodyModes, setBodyModes] = useState<Record<string, BodyMode>>({});
   const [shareNoticeOpen, setShareNoticeOpen] = useState(false);
+  const [dragFeedUrl, setDragFeedUrl] = useState<string | null>(null);
   const prevAllControlsHiddenRef = useRef<boolean | null>(null);
   const bg = language === 'bg';
   const l = useMemo(() => ({
@@ -205,14 +218,67 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
   }, [dispatch, wsUrl]);
 
   useEffect(() => {
-    const onSetVibe = () => {
-      // keep React preview in sync with top controls interactions
+    if (typeof window === 'undefined' || hydratedFeedUiRef.current || !feeds.length) return;
+    try {
+      const raw = window.localStorage.getItem('aiNews.feedUi.v1');
+      if (raw) {
+        const parsed = JSON.parse(raw) as {
+          pinnedByUrl?: Record<string, boolean>;
+          controlsOpenByUrl?: Record<string, boolean>;
+          deleteAgeByUrl?: Record<string, 'yesterday' | 'week' | 'month' | 'year'>;
+          orderByUrl?: string[];
+        };
+        dispatch(hydrateFeedUiState(parsed));
+      }
+    } catch {}
+    hydratedFeedUiRef.current = true;
+  }, [dispatch, feeds.length]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !feeds.length) return;
+    try {
+      window.localStorage.setItem('aiNews.feedUi.v1', JSON.stringify({
+        pinnedByUrl,
+        controlsOpenByUrl,
+        deleteAgeByUrl,
+        orderByUrl
+      }));
+    } catch {}
+  }, [controlsOpenByUrl, deleteAgeByUrl, feeds.length, orderByUrl, pinnedByUrl]);
+
+  useEffect(() => {
+    const allItems = Object.entries(itemsByFeed).flatMap(([feedUrl, items]) =>
+      (items || []).map(item => ({ feedUrl, item }))
+    );
+    if (!notificationsPrimedRef.current) {
+      allItems.forEach(({ item }) => seenNewsIdsRef.current.add(item.id));
+      notificationsPrimedRef.current = true;
+      return;
+    }
+
+    if (!notifyEnabled || typeof Notification === 'undefined' || Notification.permission !== 'granted') {
+      allItems.forEach(({ item }) => seenNewsIdsRef.current.add(item.id));
+      return;
+    }
+
+    const shouldNotify = (feedUrl: string, it: NewsItem): boolean => {
+      if (notifyMode === 'all') return true;
+      if (notifyMode === 'pinned') return !!pinnedByUrl[feedUrl];
+      if (notifyMode === 'matched_pinned') return !!it.isMatch && !!pinnedByUrl[feedUrl];
+      return !!it.isMatch;
     };
-    window.addEventListener('ai-news:set-vibe', onSetVibe);
-    return () => {
-      window.removeEventListener('ai-news:set-vibe', onSetVibe);
-    };
-  }, []);
+
+    allItems.forEach(({ feedUrl, item }) => {
+      if (seenNewsIdsRef.current.has(item.id)) return;
+      seenNewsIdsRef.current.add(item.id);
+      if (!shouldNotify(feedUrl, item)) return;
+      const body = String(item.summary || item.research || '').trim();
+      const n = new Notification(item.isMatch ? `MATCH · ${item.title}` : item.title, {
+        body: body || item.link
+      });
+      n.onclick = () => window.open(item.link, '_blank', 'noopener,noreferrer');
+    });
+  }, [itemsByFeed, notifyEnabled, notifyMode, pinnedByUrl]);
 
   useEffect(() => {
     if (hideAllResearchSeq > 0) {
@@ -244,11 +310,14 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
   const previewFeeds = useMemo(() => {
     if (feeds.length) {
       const list = [...feeds];
+      const orderIndex = new Map(orderByUrl.map((url, idx) => [url, idx]));
       list.sort((a, b) => {
         const aPinned = !!pinnedByUrl[a.url];
         const bPinned = !!pinnedByUrl[b.url];
         if (aPinned !== bPinned) return aPinned ? -1 : 1;
-        return 0;
+        const ai = orderIndex.get(a.url) ?? Number.MAX_SAFE_INTEGER;
+        const bi = orderIndex.get(b.url) ?? Number.MAX_SAFE_INTEGER;
+        return ai - bi;
       });
       return list;
     }
@@ -264,7 +333,7 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
       filters: { onlyMatches: false, onlyResearched: false, onlySummaries: false }
     }));
     return fallback;
-  }, [feeds, itemsByFeed, pinnedByUrl]);
+  }, [feeds, itemsByFeed, orderByUrl, pinnedByUrl]);
 
   const requestSummary = (it: NewsItem) => {
     if (!connected) return;
@@ -436,6 +505,20 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
     }));
   };
 
+  const schemeOpacity = scheme === 'neon' ? 0.32 : scheme === 'vivid' ? 0.28 : scheme === 'sunset' ? 0.30 : scheme === 'ocean' ? 0.27 : scheme === 'forest' ? 0.25 : 0.23;
+  const fontScale = fontSize === 'xl' ? 1.17 : fontSize === 'lg' ? 1.09 : fontSize === 'sm' ? 0.93 : 1;
+  const vibeColors: Record<string, [string, string, string]> = {
+    default: ['#3d95ff', '#20cb7d', '#ffac1a'],
+    anime: ['#ff4da6', '#38bdf8', '#ffe15c'],
+    arcade: ['#39ff14', '#ff40ff', '#ffdd00'],
+    cinema: ['#d2a85f', '#b4253a', '#f4c870'],
+    newspaper: ['#4e627a', '#78808c', '#b27418'],
+    cyberwitch: ['#b34cff', '#00ddff', '#ff74e6'],
+    fantasy: ['#56a86e', '#886a4a', '#d9b054'],
+    scifi: ['#00c9ff', '#707cff', '#74ffcf']
+  };
+  const palette = vibeColors[vibe] || vibeColors.default;
+
   return (
     <Box className="container" sx={{ pt: 1, pb: 0.5 }}>
       <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.25 }}>
@@ -458,6 +541,8 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
         }}
       >
         {previewFeeds.map((feed: FeedInfo) => {
+          const columnIdx = Math.max(0, previewFeeds.findIndex(f => f.url === feed.url));
+          const accent = palette[columnIdx % palette.length];
           const items = itemsByFeed[feed.url] || [];
           const normalizedQuery = String(searchQuery || '').trim().toLowerCase();
           const itemsVisible = normalizedQuery
@@ -469,10 +554,27 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
           const pinned = !!pinnedByUrl[feed.url];
           const controlsOpen = typeof controlsOpenByUrl[feed.url] === 'boolean' ? !!controlsOpenByUrl[feed.url] : true;
           return (
-            <Card key={feed.url} variant="outlined" sx={{ background: 'rgba(15, 22, 38, 0.8)', borderColor: 'rgba(97, 123, 161, 0.42)' }}>
+            <Card
+              key={feed.url}
+              variant="outlined"
+              draggable
+              onDragStart={() => setDragFeedUrl(feed.url)}
+              onDragEnd={() => setDragFeedUrl(null)}
+              onDragOver={e => e.preventDefault()}
+              onDrop={() => {
+                if (dragFeedUrl && dragFeedUrl !== feed.url) {
+                  dispatch(reorderFeeds({ fromUrl: dragFeedUrl, toUrl: feed.url }));
+                }
+                setDragFeedUrl(null);
+              }}
+              sx={{
+                background: `linear-gradient(160deg, rgba(15,22,38,0.88), rgba(7,14,28,0.92)), radial-gradient(600px 220px at 4% 5%, ${accent}${Math.round(schemeOpacity * 255).toString(16).padStart(2, '0')}, transparent 70%)`,
+                borderColor: dragFeedUrl === feed.url ? accent : 'rgba(97, 123, 161, 0.42)'
+              }}
+            >
               <CardContent sx={{ pb: '12px !important' }}>
                 <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.25 }}>
-                  <Typography variant="h6" sx={{ fontSize: 18, fontWeight: 800, lineHeight: 1.2, pr: 1 }}>
+                  <Typography variant="h6" sx={{ fontSize: `${18 * fontScale}px`, fontWeight: 800, lineHeight: 1.2, pr: 1 }}>
                     {feed.label}
                   </Typography>
                   <Stack direction="row" spacing={1} alignItems="center">
@@ -658,10 +760,10 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
                               <Button
                                 size="small"
                                 variant="outlined"
-                                sx={{ minWidth: 34, px: 0.75 }}
+                                sx={{ minWidth: buttonMode === 'text' ? 72 : 34, px: buttonMode === 'text' ? 1.1 : 0.75 }}
                                 onClick={() => copyLink(it.link)}
                               >
-                                <ContentCopyIcon sx={{ fontSize: 15 }} />
+                                {buttonMode === 'text' ? l.shareLink : <ContentCopyIcon sx={{ fontSize: 15 }} />}
                               </Button>
                             </Tooltip>
                             <Tooltip title={l.hideNews}>
@@ -669,11 +771,11 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
                                 size="small"
                                 variant="outlined"
                                 color="warning"
-                                sx={{ minWidth: 34, px: 0.75 }}
+                                sx={{ minWidth: buttonMode === 'text' ? 72 : 34, px: buttonMode === 'text' ? 1.1 : 0.75 }}
                                 onClick={() => hideItem(it)}
                                 disabled={!connected}
                               >
-                                <VisibilityOffIcon sx={{ fontSize: 15 }} />
+                                {buttonMode === 'text' ? l.hideNews : <VisibilityOffIcon sx={{ fontSize: 15 }} />}
                               </Button>
                             </Tooltip>
                           </Stack>
@@ -688,7 +790,7 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
                             display: 'inline-flex',
                             alignItems: 'center',
                             gap: 0.6,
-                            fontSize: '1.03rem',
+                            fontSize: `${1.03 * fontScale}rem`,
                             lineHeight: 1.32,
                             fontWeight: 800,
                             color: 'primary.light',
@@ -708,7 +810,7 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
                               onClick={() => requestSummary(it)}
                               disabled={!connected || !!summaryPendingById[it.id]}
                             >
-                              {summaryPendingById[it.id] ? l.generatingSummary : l.summary}
+                              {buttonMode === 'text' ? (summaryPendingById[it.id] ? l.generatingSummary : l.summary) : ''}
                             </Button>
                             <Button
                               size="small"
@@ -717,7 +819,7 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
                               onClick={() => requestResearch(it)}
                               disabled={!connected || !!researchPendingById[it.id]}
                             >
-                              {researchPendingById[it.id] ? l.researching : l.research}
+                              {buttonMode === 'text' ? (researchPendingById[it.id] ? l.researching : l.research) : ''}
                             </Button>
                             <Button
                               size="small"
@@ -726,7 +828,7 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
                               onClick={() => dispatch(toggleAskOpen({ id: it.id, feedUrl: it.feedUrl }))}
                               disabled={!connected}
                             >
-                              {l.askAgent}
+                              {buttonMode === 'text' ? l.askAgent : ''}
                             </Button>
                           </Stack>
                         ) : null}
