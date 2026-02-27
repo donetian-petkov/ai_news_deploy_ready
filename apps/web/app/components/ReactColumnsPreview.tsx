@@ -664,6 +664,8 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
     if (saved) return saved;
     return String(text || '').trim().length > threshold ? 'collapsed' : 'expanded';
   };
+  const getDefaultBodyMode = (text: string, threshold: number): BodyMode =>
+    String(text || '').trim().length > threshold ? 'collapsed' : 'expanded';
 
   const setBodyMode = (key: string, mode: BodyMode) => {
     setBodyModes(prev => ({ ...prev, [key]: mode }));
@@ -1337,7 +1339,12 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
 
                         {it.summary ? (() => {
                           const key = bodyKey(it, 'summary');
-                          const mode = getBodyMode(key, it.summary, 260);
+                          const researchKeyForSummary = bodyKey(it, 'research');
+                          const researchHiddenByChoice = hideAllResearch || bodyModes[researchKeyForSummary] === 'hidden';
+                          const savedSummaryMode = bodyModes[key];
+                          const mode = researchHiddenByChoice && savedSummaryMode === 'hidden'
+                            ? getDefaultBodyMode(it.summary, 260)
+                            : getBodyMode(key, it.summary, 260);
                           const visible = mode !== 'hidden';
                           const longText = String(it.summary).trim().length > 260;
                           const text = mode === 'collapsed' ? collapseText(it.summary, 260) : it.summary;
@@ -1388,15 +1395,17 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
                           const text = mode === 'collapsed' ? compactResearch(it.research) : it.research;
                           return (
                             <Box sx={{ mt: 1 }}>
-                              {extractConfidence(it.research) ? (
-                                <Typography variant="caption" sx={{ color: 'rgba(212,220,236,0.75)', display: 'block', mb: 0.35 }}>
-                                  {l.confidence}: {extractConfidence(it.research)}
-                                </Typography>
-                              ) : null}
                               {visible ? (
-                                <Typography variant="body2" sx={{ color: 'rgba(205,218,238,0.92)', whiteSpace: 'pre-wrap' }}>
-                                  {text}
-                                </Typography>
+                                <>
+                                  {extractConfidence(it.research) ? (
+                                    <Typography variant="caption" sx={{ color: 'rgba(212,220,236,0.75)', display: 'block', mb: 0.35 }}>
+                                      {l.confidence}: {extractConfidence(it.research)}
+                                    </Typography>
+                                  ) : null}
+                                  <Typography variant="body2" sx={{ color: 'rgba(205,218,238,0.92)', whiteSpace: 'pre-wrap' }}>
+                                    {text}
+                                  </Typography>
+                                </>
                               ) : null}
                               <Stack direction="row" spacing={1} sx={{ mt: 0.7 }} flexWrap="wrap">
                                 {mode === 'hidden' ? (
