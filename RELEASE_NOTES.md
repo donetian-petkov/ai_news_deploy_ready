@@ -37,6 +37,9 @@
   - improved contrast variables for top menu, control panels, and fields
   - normalized MUI button typography (no forced uppercase) and improved small-button readability
   - improved column/news card readability under vibe + scheme combinations
+- Fixed WebSocket item handling in Next frontend:
+  - regular feed columns no longer discard items with `filteredOk=false`
+  - resolves empty “Waiting for news...” columns when keywords are empty or strict matching is enabled
 
 ### Existing migration milestones already in `main`
 - Next.js web app and Node.js API monorepo with Prisma + SQLite + zod.

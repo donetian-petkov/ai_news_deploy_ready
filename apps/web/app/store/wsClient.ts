@@ -201,7 +201,6 @@ export function startWsConnection(dispatch: AppDispatch, explicitUrl: string) {
     const news = parseNews(msg);
     if (!news) return;
     if (hiddenIds.has(news.id)) return;
-    if (news.filteredOk === false) return;
     dispatch(upsertNewsItem(news));
   };
 }
