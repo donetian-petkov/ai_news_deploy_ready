@@ -513,7 +513,17 @@ export default function TopMenu() {
                   <MenuItem value="300">300{labels.intervalSuffix}</MenuItem>
                 </Select>
               </FormControl>
-              <Button variant="contained" size="small" onClick={addStream}>
+              <Button
+                variant="contained"
+                size="small"
+                onClick={addStream}
+                sx={{
+                  whiteSpace: 'nowrap',
+                  minWidth: { xs: '100%', md: 124 },
+                  borderRadius: 1.5,
+                  alignSelf: { xs: 'stretch', md: 'center' }
+                }}
+              >
                 {labels.add}
               </Button>
             </Stack>
