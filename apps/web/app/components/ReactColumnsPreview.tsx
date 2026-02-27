@@ -6,6 +6,7 @@ import AnimationIcon from '@mui/icons-material/Animation';
 import AutoStoriesIcon from '@mui/icons-material/AutoStories';
 import BoltIcon from '@mui/icons-material/Bolt';
 import ChatIcon from '@mui/icons-material/Chat';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import FactCheckIcon from '@mui/icons-material/FactCheck';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
@@ -324,6 +325,7 @@ type CardLabels = {
   unpinNews: string;
   match: string;
   shareLink: string;
+  copyNews: string;
   hideNews: string;
   generatingSummary: string;
   summary: string;
@@ -378,6 +380,7 @@ type NewsCardProps = {
   researchConfidence: string;
   onTogglePinnedNews: (id: string) => void;
   onCopyLink: (url: string) => void;
+  onCopyNews: (it: NewsItem) => void;
   onHideItem: (it: NewsItem) => void;
   onRequestSummary: (it: NewsItem) => void;
   onRequestResearch: (it: NewsItem) => void;
@@ -414,6 +417,7 @@ const NewsCard = memo(function NewsCard({
   researchConfidence,
   onTogglePinnedNews,
   onCopyLink,
+  onCopyNews,
   onHideItem,
   onRequestSummary,
   onRequestResearch,
@@ -500,6 +504,16 @@ const NewsCard = memo(function NewsCard({
                 onClick={() => onCopyLink(item.link)}
               >
                 {iconOnly ? <ShareIconComp sx={{ fontSize: 15 }} aria-hidden /> : labels.shareLink}
+              </Button>
+            </Tooltip>
+            <Tooltip title={labels.copyNews}>
+              <Button
+                size="small"
+                variant="outlined"
+                sx={actionSx}
+                onClick={() => onCopyNews(item)}
+              >
+                {iconOnly ? <ContentCopyIcon sx={{ fontSize: 15 }} aria-hidden /> : labels.copyNews}
               </Button>
             </Tooltip>
             <Tooltip title={labels.hideNews}>
@@ -796,7 +810,8 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
   const seenNewsIdsRef = useRef<Set<string>>(new Set());
   const notificationsPrimedRef = useRef(false);
   const [bodyModes, setBodyModes] = useState<Record<string, BodyMode>>({});
-  const [shareNoticeOpen, setShareNoticeOpen] = useState(false);
+  const [clipboardNoticeOpen, setClipboardNoticeOpen] = useState(false);
+  const [clipboardNotice, setClipboardNotice] = useState('');
   const [dragFeedUrl, setDragFeedUrl] = useState<string | null>(null);
   const [dragOverFeedUrl, setDragOverFeedUrl] = useState<string | null>(null);
   const [advancedControlsByUrl, setAdvancedControlsByUrl] = useState<Record<string, boolean>>({});
@@ -850,6 +865,7 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
     summaries: bg ? 'Резюмета' : 'Summaries',
     match: bg ? 'СЪВПАДЕНИЕ' : 'MATCH',
     shareLink: bg ? 'Сподели линк' : 'Share Link',
+    copyNews: bg ? 'Копирай новината' : 'Copy News',
     hideNews: bg ? 'Скрий новина' : 'Hide News',
     generatingSummary: bg ? 'Генериране на резюме...' : 'Generating Summary...',
     summary: bg ? 'Резюме' : 'Summary',
@@ -873,6 +889,7 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
     thinking: bg ? 'Мисля...' : 'Thinking...',
     send: bg ? 'Изпрати' : 'Send',
     linkCopied: bg ? 'Линкът е копиран' : 'Link copied',
+    newsCopied: bg ? 'Новината е копирана' : 'News copied',
     deleteYesterday: bg ? 'Изтрий: Вчера' : 'Delete: Yesterday',
     deleteWeek: bg ? 'Изтрий: Седмица' : 'Delete: Past week',
     deleteMonth: bg ? 'Изтрий: Месец' : 'Delete: Past month',
@@ -1215,9 +1232,33 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
     if (!value) return;
     try {
       await navigator.clipboard.writeText(value);
-      setShareNoticeOpen(true);
+      setClipboardNotice(l.linkCopied);
+      setClipboardNoticeOpen(true);
     } catch {
       window.open(value, '_blank', 'noopener,noreferrer');
+    }
+  };
+
+  const copyNewsPayload = async (it: NewsItem) => {
+    const title = String(it.title || '').trim();
+    const summary = String(it.summary || '').trim();
+    const research = String(it.research || '').trim();
+    const link = String(it.link || '').trim();
+    if (!title && !summary && !research && !link) return;
+
+    const chunks: string[] = [];
+    if (title) chunks.push(`Title: ${title}`);
+    if (summary) chunks.push(`Summary: ${summary}`);
+    if (research) chunks.push(`Research: ${research}`);
+    if (link) chunks.push(`Link: ${link}`);
+    const payload = chunks.join('\n\n');
+
+    try {
+      await navigator.clipboard.writeText(payload);
+      setClipboardNotice(l.newsCopied);
+      setClipboardNoticeOpen(true);
+    } catch {
+      if (link) window.open(link, '_blank', 'noopener,noreferrer');
     }
   };
 
@@ -1352,6 +1393,7 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
     unpinNews: l.unpinNews,
     match: l.match,
     shareLink: l.shareLink,
+    copyNews: l.copyNews,
     hideNews: l.hideNews,
     generatingSummary: l.generatingSummary,
     summary: l.summary,
@@ -1801,6 +1843,7 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
                         researchConfidence={researchConfidence}
                         onTogglePinnedNews={(id: string) => dispatch(togglePinnedNews(id))}
                         onCopyLink={copyLink}
+                        onCopyNews={copyNewsPayload}
                         onHideItem={hideItem}
                         onRequestSummary={requestSummary}
                         onRequestResearch={requestResearch}
@@ -1840,10 +1883,10 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
         })}
       </Box>
       <Snackbar
-        open={shareNoticeOpen}
+        open={clipboardNoticeOpen}
         autoHideDuration={1400}
-        onClose={() => setShareNoticeOpen(false)}
-        message={l.linkCopied}
+        onClose={() => setClipboardNoticeOpen(false)}
+        message={clipboardNotice || l.linkCopied}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       />
     </Box>
