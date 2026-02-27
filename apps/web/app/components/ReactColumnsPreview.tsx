@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
 import AutoStoriesIcon from '@mui/icons-material/AutoStories';
 import BoltIcon from '@mui/icons-material/Bolt';
@@ -274,6 +274,391 @@ function cutoffFromAge(age: 'yesterday' | 'week' | 'month' | 'year'): number {
   if (age === 'year') return now - 365 * 24 * 60 * 60 * 1000;
   return now - 7 * 24 * 60 * 60 * 1000;
 }
+
+type AskCardState = {
+  open: boolean;
+  draft: string;
+  pending: boolean;
+  remaining: number;
+  messages: Array<{ q: string; a?: string; error?: string }>;
+};
+
+type CardLabels = {
+  pinNews: string;
+  unpinNews: string;
+  match: string;
+  shareLink: string;
+  hideNews: string;
+  generatingSummary: string;
+  summary: string;
+  researching: string;
+  research: string;
+  askAgent: string;
+  showSummary: string;
+  hideSummary: string;
+  showMore: string;
+  showLess: string;
+  autoResearching: string;
+  confidence: string;
+  showResearch: string;
+  hideResearch: string;
+  questionsLeft: string;
+  askPlaceholder: string;
+  thinking: string;
+  send: string;
+};
+
+type VibeIcons = {
+  summary: React.ElementType;
+  research: React.ElementType;
+  ask: React.ElementType;
+  share: React.ElementType;
+  hide: React.ElementType;
+};
+
+type NewsCardProps = {
+  item: NewsItem;
+  askState: AskCardState;
+  labels: CardLabels;
+  vibeIcons: VibeIcons;
+  compactBtnSx: Record<string, unknown>;
+  buttonMode: 'icons' | 'text';
+  fontScale: number;
+  connected: boolean;
+  hideAllResearch: boolean;
+  summaryPending: boolean;
+  researchPending: boolean;
+  isPinnedNews: boolean;
+  accent: string;
+  soft: string;
+  matchAccent: string;
+  showAutoResearching: boolean;
+  summaryMode: BodyMode;
+  summaryLong: boolean;
+  summaryText: string;
+  researchMode: BodyMode;
+  researchLong: boolean;
+  researchText: string;
+  researchConfidence: string;
+  onTogglePinnedNews: (id: string) => void;
+  onCopyLink: (url: string) => void;
+  onHideItem: (it: NewsItem) => void;
+  onRequestSummary: (it: NewsItem) => void;
+  onRequestResearch: (it: NewsItem) => void;
+  onToggleAsk: (id: string, feedUrl: string) => void;
+  onSetSummaryMode: (mode: BodyMode) => void;
+  onSetResearchMode: (mode: BodyMode) => void;
+  onAskDraft: (id: string, feedUrl: string, draft: string) => void;
+  onAskSubmit: (it: NewsItem) => void;
+};
+
+const NewsCard = memo(function NewsCard({
+  item,
+  askState,
+  labels,
+  vibeIcons,
+  compactBtnSx,
+  buttonMode,
+  fontScale,
+  connected,
+  hideAllResearch,
+  summaryPending,
+  researchPending,
+  isPinnedNews,
+  accent,
+  soft,
+  matchAccent,
+  showAutoResearching,
+  summaryMode,
+  summaryLong,
+  summaryText,
+  researchMode,
+  researchLong,
+  researchText,
+  researchConfidence,
+  onTogglePinnedNews,
+  onCopyLink,
+  onHideItem,
+  onRequestSummary,
+  onRequestResearch,
+  onToggleAsk,
+  onSetSummaryMode,
+  onSetResearchMode,
+  onAskDraft,
+  onAskSubmit
+}: NewsCardProps) {
+  const summaryVisible = summaryMode !== 'hidden';
+  const researchVisible = researchMode !== 'hidden';
+  const SummaryIconComp = vibeIcons.summary;
+  const ResearchIconComp = vibeIcons.research;
+  const AskIconComp = vibeIcons.ask;
+  const ShareIconComp = vibeIcons.share;
+  const HideIconComp = vibeIcons.hide;
+
+  return (
+    <Card
+      variant="outlined"
+      sx={{
+        background: `linear-gradient(155deg, rgba(5, 12, 25, 0.92), rgba(7, 14, 28, 0.86)), radial-gradient(550px 180px at 0% 0%, ${soft}, transparent 72%)`,
+        borderColor: item.isMatch ? matchAccent : `${accent}88`,
+        color: 'rgba(234, 242, 255, 0.96)',
+        contentVisibility: 'auto',
+        containIntrinsicSize: '360px'
+      }}
+    >
+      <CardContent sx={{ pb: '12px !important' }}>
+        <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 0.8 }}>
+          <Typography variant="caption" sx={{ color: 'rgba(210,219,235,0.74)' }}>
+            {formatTime(item.publishedMs)}
+          </Typography>
+          <Stack direction="row" spacing={0.6} alignItems="center">
+            <Tooltip title={isPinnedNews ? labels.unpinNews : labels.pinNews}>
+              <Button
+                size="small"
+                variant={isPinnedNews ? 'contained' : 'outlined'}
+                sx={{ ...compactBtnSx, minWidth: 34, px: 0.75 }}
+                onClick={() => onTogglePinnedNews(item.id)}
+              >
+                <PushPinIcon sx={{ fontSize: 15 }} aria-hidden />
+              </Button>
+            </Tooltip>
+            {item.isMatch ? <Chip size="small" label={labels.match} color="warning" variant="outlined" /> : null}
+            <Tooltip title={labels.shareLink}>
+              <Button
+                size="small"
+                variant="outlined"
+                sx={{ ...compactBtnSx, minWidth: buttonMode === 'text' ? 72 : 34, px: buttonMode === 'text' ? 1.1 : 0.75 }}
+                onClick={() => onCopyLink(item.link)}
+              >
+                {buttonMode === 'text' ? labels.shareLink : <ShareIconComp sx={{ fontSize: 15 }} aria-hidden />}
+              </Button>
+            </Tooltip>
+            <Tooltip title={labels.hideNews}>
+              <Button
+                size="small"
+                variant="outlined"
+                color="warning"
+                sx={{ ...compactBtnSx, minWidth: buttonMode === 'text' ? 72 : 34, px: buttonMode === 'text' ? 1.1 : 0.75 }}
+                onClick={() => onHideItem(item)}
+                disabled={!connected}
+              >
+                {buttonMode === 'text' ? labels.hideNews : <HideIconComp sx={{ fontSize: 15 }} aria-hidden />}
+              </Button>
+            </Tooltip>
+          </Stack>
+        </Stack>
+
+        <MuiLink
+          href={item.link}
+          target="_blank"
+          rel="noreferrer"
+          underline="hover"
+          sx={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 0.6,
+            fontSize: `${1.03 * fontScale}rem`,
+            lineHeight: 1.32,
+            fontWeight: 800,
+            color: 'primary.light',
+            mb: 1
+          }}
+        >
+          <span>{item.title}</span>
+          <OpenInNewIcon sx={{ fontSize: 14 }} />
+        </MuiLink>
+
+        <Stack direction="row" spacing={1} sx={{ mb: item.summary ? 1 : 0 }} flexWrap="wrap">
+          <Button
+            size="small"
+            variant={summaryPending ? 'contained' : 'outlined'}
+            sx={{ ...compactBtnSx, minWidth: buttonMode === 'text' ? 84 : 34, px: buttonMode === 'text' ? 1.05 : 0.8 }}
+            onClick={() => onRequestSummary(item)}
+            disabled={!connected || summaryPending}
+          >
+            {buttonMode === 'text'
+              ? (summaryPending ? labels.generatingSummary : labels.summary)
+              : summaryPending
+                ? <AutoFixHighIcon sx={{ fontSize: 15 }} className="spinAnim" aria-hidden />
+                : <SummaryIconComp sx={{ fontSize: 15 }} aria-hidden />}
+          </Button>
+          <Button
+            size="small"
+            variant={researchPending ? 'contained' : 'outlined'}
+            sx={{ ...compactBtnSx, minWidth: buttonMode === 'text' ? 84 : 34, px: buttonMode === 'text' ? 1.05 : 0.8 }}
+            onClick={() => onRequestResearch(item)}
+            disabled={!connected || researchPending}
+          >
+            {buttonMode === 'text'
+              ? (researchPending ? labels.researching : labels.research)
+              : researchPending
+                ? <AutoFixHighIcon sx={{ fontSize: 15 }} className="spinAnim" aria-hidden />
+                : <ResearchIconComp sx={{ fontSize: 15 }} aria-hidden />}
+          </Button>
+          <Button
+            size="small"
+            variant={askState.open ? 'contained' : 'outlined'}
+            sx={{ ...compactBtnSx, minWidth: buttonMode === 'text' ? 84 : 34, px: buttonMode === 'text' ? 1.05 : 0.8 }}
+            onClick={() => onToggleAsk(item.id, item.feedUrl)}
+            disabled={!connected}
+          >
+            {buttonMode === 'text'
+              ? labels.askAgent
+              : askState.pending
+                ? <AutoFixHighIcon sx={{ fontSize: 15 }} className="spinAnim" aria-hidden />
+                : <AskIconComp sx={{ fontSize: 15 }} aria-hidden />}
+          </Button>
+        </Stack>
+
+        {item.summary ? (
+          <Box>
+            {summaryVisible ? (
+              <Typography variant="body2" sx={{ color: 'rgba(226,234,250,0.95)', whiteSpace: 'pre-wrap' }}>
+                {summaryText}
+              </Typography>
+            ) : null}
+            <Stack direction="row" spacing={1} sx={{ mt: 0.7 }} flexWrap="wrap">
+              {summaryMode === 'hidden' ? (
+                <Button size="small" variant="outlined" onClick={() => onSetSummaryMode(summaryLong ? 'collapsed' : 'expanded')}>
+                  {labels.showSummary}
+                </Button>
+              ) : (
+                <Button size="small" variant="outlined" color="warning" onClick={() => onSetSummaryMode('hidden')}>
+                  {labels.hideSummary}
+                </Button>
+              )}
+              {summaryVisible && summaryLong ? (
+                <Button
+                  size="small"
+                  variant="outlined"
+                  onClick={() => onSetSummaryMode(summaryMode === 'collapsed' ? 'expanded' : 'collapsed')}
+                >
+                  {summaryMode === 'collapsed' ? labels.showMore : labels.showLess}
+                </Button>
+              ) : null}
+            </Stack>
+          </Box>
+        ) : null}
+        {showAutoResearching ? (
+          <Chip
+            size="small"
+            label={labels.autoResearching}
+            icon={<CircularProgress size={11} color="inherit" />}
+            variant="outlined"
+            sx={{ mb: 0.9, color: 'rgba(152, 228, 255, 0.96)', borderColor: 'rgba(73,167,255,0.55)' }}
+          />
+        ) : null}
+        {item.research && !hideAllResearch ? (
+          <Box sx={{ mt: 1 }}>
+            {researchVisible ? (
+              <>
+                {researchConfidence ? (
+                  <Typography variant="caption" sx={{ color: 'rgba(212,220,236,0.75)', display: 'block', mb: 0.35 }}>
+                    {labels.confidence}: {researchConfidence}
+                  </Typography>
+                ) : null}
+                <Typography variant="body2" sx={{ color: 'rgba(205,218,238,0.92)', whiteSpace: 'pre-wrap' }}>
+                  {researchText}
+                </Typography>
+              </>
+            ) : null}
+            <Stack direction="row" spacing={1} sx={{ mt: 0.7 }} flexWrap="wrap">
+              {researchMode === 'hidden' ? (
+                <Button size="small" variant="outlined" onClick={() => onSetResearchMode(researchLong ? 'collapsed' : 'expanded')}>
+                  {labels.showResearch}
+                </Button>
+              ) : (
+                <Button size="small" variant="outlined" color="warning" onClick={() => onSetResearchMode('hidden')}>
+                  {labels.hideResearch}
+                </Button>
+              )}
+              {researchVisible && researchLong ? (
+                <Button
+                  size="small"
+                  variant="outlined"
+                  onClick={() => onSetResearchMode(researchMode === 'collapsed' ? 'expanded' : 'collapsed')}
+                >
+                  {researchMode === 'collapsed' ? labels.showMore : labels.showLess}
+                </Button>
+              ) : null}
+            </Stack>
+          </Box>
+        ) : null}
+        {askState.open ? (
+          <Box sx={{ mt: 1.1, p: 1, border: '1px solid rgba(106,128,162,0.4)', borderRadius: 1.5 }}>
+            <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 0.8 }}>
+              <Typography variant="caption" sx={{ color: 'rgba(210,219,235,0.74)' }}>
+                {labels.askAgent}
+              </Typography>
+              <Typography variant="caption" sx={{ color: 'rgba(188,203,229,0.75)' }}>
+                {labels.questionsLeft}: {askState.remaining}
+              </Typography>
+            </Stack>
+            <Stack spacing={0.8} sx={{ mb: 0.8, maxHeight: 180, overflow: 'auto' }}>
+              {askState.messages.map((m, idx) => (
+                <Box key={`${idx}-${m.q.slice(0, 18)}`}>
+                  <Typography variant="caption" sx={{ color: 'rgba(146,204,255,0.92)', display: 'block' }}>
+                    Q: {m.q}
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: m.error ? 'rgba(255,168,168,0.95)' : 'rgba(216,227,246,0.92)', display: 'block' }}>
+                    A: {m.error || m.a || '...'}
+                  </Typography>
+                </Box>
+              ))}
+            </Stack>
+            <Stack direction="row" spacing={1}>
+              <TextField
+                size="small"
+                fullWidth
+                placeholder={labels.askPlaceholder}
+                value={askState.draft}
+                onChange={e => onAskDraft(item.id, item.feedUrl, e.target.value.slice(0, 400))}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    onAskSubmit(item);
+                  }
+                }}
+              />
+              <Button
+                size="small"
+                variant="contained"
+                onClick={() => onAskSubmit(item)}
+                disabled={!connected || askState.pending || askState.remaining <= 0 || !String(askState.draft || '').trim()}
+              >
+                {askState.pending ? labels.thinking : labels.send}
+              </Button>
+            </Stack>
+          </Box>
+        ) : null}
+      </CardContent>
+    </Card>
+  );
+}, (prev, next) => {
+  return prev.item === next.item
+    && prev.askState === next.askState
+    && prev.labels === next.labels
+    && prev.vibeIcons === next.vibeIcons
+    && prev.compactBtnSx === next.compactBtnSx
+    && prev.buttonMode === next.buttonMode
+    && prev.fontScale === next.fontScale
+    && prev.connected === next.connected
+    && prev.hideAllResearch === next.hideAllResearch
+    && prev.summaryPending === next.summaryPending
+    && prev.researchPending === next.researchPending
+    && prev.isPinnedNews === next.isPinnedNews
+    && prev.accent === next.accent
+    && prev.soft === next.soft
+    && prev.matchAccent === next.matchAccent
+    && prev.showAutoResearching === next.showAutoResearching
+    && prev.summaryMode === next.summaryMode
+    && prev.summaryLong === next.summaryLong
+    && prev.summaryText === next.summaryText
+    && prev.researchMode === next.researchMode
+    && prev.researchLong === next.researchLong
+    && prev.researchText === next.researchText
+    && prev.researchConfidence === next.researchConfidence;
+});
 
 export default function ReactColumnsPreview({ wsUrl }: Props) {
   const dispatch = useAppDispatch();
@@ -810,14 +1195,14 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
   const resolvedScheme: SchemeValue = (SCHEME_LIST.includes(scheme as SchemeValue) ? scheme : 'classic') as SchemeValue;
   const palette = useMemo(() => buildColumnPalette(resolvedVibe, resolvedScheme), [resolvedVibe, resolvedScheme]);
   const vibeIcons = useMemo(() => getVibeIcons(resolvedVibe), [resolvedVibe]);
-  const compactBtnSx = {
+  const compactBtnSx = useMemo(() => ({
     minHeight: 30,
     px: 1.15,
     py: 0.15,
     fontSize: `${0.82 * fontScale}rem`,
     lineHeight: 1.12
-  };
-  const compactFormSx = {
+  }), [fontScale]);
+  const compactFormSx = useMemo(() => ({
     '& .MuiOutlinedInput-root': {
       height: 34,
       fontSize: `${0.82 * fontScale}rem`,
@@ -831,8 +1216,8 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
     '& .MuiSvgIcon-root': {
       color: 'rgba(203,217,243,0.9)'
     }
-  };
-  const labelSx = {
+  }), [fontScale]);
+  const labelSx = useMemo(() => ({
     m: 0,
     '& .MuiTypography-root': {
       fontSize: `${0.84 * fontScale}rem`,
@@ -841,7 +1226,31 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
     '& .MuiCheckbox-root': {
       color: 'rgba(157,187,237,0.88)'
     }
-  };
+  }), [fontScale]);
+  const cardLabels = useMemo<CardLabels>(() => ({
+    pinNews: l.pinNews,
+    unpinNews: l.unpinNews,
+    match: l.match,
+    shareLink: l.shareLink,
+    hideNews: l.hideNews,
+    generatingSummary: l.generatingSummary,
+    summary: l.summary,
+    researching: l.researching,
+    research: l.research,
+    askAgent: l.askAgent,
+    showSummary: l.showSummary,
+    hideSummary: l.hideSummary,
+    showMore: l.showMore,
+    showLess: l.showLess,
+    autoResearching: l.autoResearching,
+    confidence: l.confidence,
+    showResearch: l.showResearch,
+    hideResearch: l.hideResearch,
+    questionsLeft: l.questionsLeft,
+    askPlaceholder: l.askPlaceholder,
+    thinking: l.thinking,
+    send: l.send
+  }), [l]);
 
   return (
     <Box className="container" sx={{ pt: 1, pb: 0.5 }}>
@@ -1210,293 +1619,66 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
                     <Alert severity="info" variant="outlined">
                       {items.length === 0 ? (isMatchColumn ? l.waitingMatches : l.waiting) : l.noMatches}
                     </Alert>
-                  ) : shownItems.map(it => (
-                    <Card
-                      key={it.id}
-                      variant="outlined"
-                      sx={{
-                        background: `linear-gradient(155deg, rgba(5, 12, 25, 0.92), rgba(7, 14, 28, 0.86)), radial-gradient(550px 180px at 0% 0%, ${soft}, transparent 72%)`,
-                        borderColor: it.isMatch ? palette.m : `${accent}88`,
-                        color: 'rgba(234, 242, 255, 0.96)'
-                      }}
-                    >
-                      <CardContent sx={{ pb: '12px !important' }}>
-                        {(() => {
-                          const key = askKey(it);
-                          const askState = askByItem[key] || {
-                            open: false,
-                            draft: '',
-                            pending: false,
-                            used: 0,
-                            remaining: 5,
-                            messages: []
-                          };
-                          return (
-                            <>
-                        <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 0.8 }}>
-                          <Typography variant="caption" sx={{ color: 'rgba(210,219,235,0.74)' }}>
-                            {formatTime(it.publishedMs)}
-                          </Typography>
-                          <Stack direction="row" spacing={0.6} alignItems="center">
-                            <Tooltip title={pinnedNewsById[it.id] ? l.unpinNews : l.pinNews}>
-                              <Button
-                                size="small"
-                                variant={pinnedNewsById[it.id] ? 'contained' : 'outlined'}
-                                sx={{ ...compactBtnSx, minWidth: 34, px: 0.75 }}
-                                onClick={() => dispatch(togglePinnedNews(it.id))}
-                              >
-                                <PushPinIcon sx={{ fontSize: 15 }} aria-hidden />
-                              </Button>
-                            </Tooltip>
-                            {it.isMatch ? <Chip size="small" label={l.match} color="warning" variant="outlined" /> : null}
-                            <Tooltip title={l.shareLink}>
-                              <Button
-                                size="small"
-                                variant="outlined"
-                                sx={{ ...compactBtnSx, minWidth: buttonMode === 'text' ? 72 : 34, px: buttonMode === 'text' ? 1.1 : 0.75 }}
-                                onClick={() => copyLink(it.link)}
-                              >
-                                {buttonMode === 'text' ? l.shareLink : (() => {
-                                  const ShareIconComp = vibeIcons.share;
-                                  return <ShareIconComp sx={{ fontSize: 15 }} aria-hidden />;
-                                })()}
-                              </Button>
-                            </Tooltip>
-                            <Tooltip title={l.hideNews}>
-                              <Button
-                                size="small"
-                                variant="outlined"
-                                color="warning"
-                                sx={{ ...compactBtnSx, minWidth: buttonMode === 'text' ? 72 : 34, px: buttonMode === 'text' ? 1.1 : 0.75 }}
-                                onClick={() => hideItem(it)}
-                                disabled={!connected}
-                              >
-                                {buttonMode === 'text' ? l.hideNews : (() => {
-                                  const HideIconComp = vibeIcons.hide;
-                                  return <HideIconComp sx={{ fontSize: 15 }} aria-hidden />;
-                                })()}
-                              </Button>
-                            </Tooltip>
-                          </Stack>
-                        </Stack>
-
-                        <MuiLink
-                          href={it.link}
-                          target="_blank"
-                          rel="noreferrer"
-                          underline="hover"
-                          sx={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: 0.6,
-                            fontSize: `${1.03 * fontScale}rem`,
-                            lineHeight: 1.32,
-                            fontWeight: 800,
-                            color: 'primary.light',
-                            mb: 1
-                          }}
-                        >
-                          <span>{it.title}</span>
-                          <OpenInNewIcon sx={{ fontSize: 14 }} />
-                        </MuiLink>
-
-                        <Stack direction="row" spacing={1} sx={{ mb: it.summary ? 1 : 0 }} flexWrap="wrap">
-                          <Button
-                            size="small"
-                            variant={summaryPendingById[it.id] ? 'contained' : 'outlined'}
-                            sx={{ ...compactBtnSx, minWidth: buttonMode === 'text' ? 84 : 34, px: buttonMode === 'text' ? 1.05 : 0.8 }}
-                            onClick={() => requestSummary(it)}
-                            disabled={!connected || !!summaryPendingById[it.id]}
-                          >
-                            {buttonMode === 'text'
-                              ? (summaryPendingById[it.id] ? l.generatingSummary : l.summary)
-                              : summaryPendingById[it.id]
-                                ? <AutoFixHighIcon sx={{ fontSize: 15 }} className="spinAnim" aria-hidden />
-                                : (() => {
-                                  const SummaryIconComp = vibeIcons.summary;
-                                  return <SummaryIconComp sx={{ fontSize: 15 }} aria-hidden />;
-                                })()}
-                          </Button>
-                          <Button
-                            size="small"
-                            variant={researchPendingById[it.id] ? 'contained' : 'outlined'}
-                            sx={{ ...compactBtnSx, minWidth: buttonMode === 'text' ? 84 : 34, px: buttonMode === 'text' ? 1.05 : 0.8 }}
-                            onClick={() => requestResearch(it)}
-                            disabled={!connected || !!researchPendingById[it.id]}
-                          >
-                            {buttonMode === 'text'
-                              ? (researchPendingById[it.id] ? l.researching : l.research)
-                              : researchPendingById[it.id]
-                                ? <AutoFixHighIcon sx={{ fontSize: 15 }} className="spinAnim" aria-hidden />
-                                : (() => {
-                                  const ResearchIconComp = vibeIcons.research;
-                                  return <ResearchIconComp sx={{ fontSize: 15 }} aria-hidden />;
-                                })()}
-                          </Button>
-                          <Button
-                            size="small"
-                            variant={askState.open ? 'contained' : 'outlined'}
-                            sx={{ ...compactBtnSx, minWidth: buttonMode === 'text' ? 84 : 34, px: buttonMode === 'text' ? 1.05 : 0.8 }}
-                            onClick={() => dispatch(toggleAskOpen({ id: it.id, feedUrl: it.feedUrl }))}
-                            disabled={!connected}
-                          >
-                            {buttonMode === 'text'
-                              ? l.askAgent
-                              : askState.pending
-                                ? <AutoFixHighIcon sx={{ fontSize: 15 }} className="spinAnim" aria-hidden />
-                                : (() => {
-                                  const AskIconComp = vibeIcons.ask;
-                                  return <AskIconComp sx={{ fontSize: 15 }} aria-hidden />;
-                                })()}
-                          </Button>
-                        </Stack>
-
-                        {it.summary ? (() => {
-                          const key = bodyKey(it, 'summary');
-                          const researchKeyForSummary = bodyKey(it, 'research');
-                          const researchHiddenByChoice = hideAllResearch || bodyModes[researchKeyForSummary] === 'hidden';
-                          const savedSummaryMode = bodyModes[key];
-                          const mode = researchHiddenByChoice && savedSummaryMode === 'hidden'
-                            ? getDefaultBodyMode(it.summary, 260)
-                            : getBodyMode(key, it.summary, 260);
-                          const visible = mode !== 'hidden';
-                          const longText = String(it.summary).trim().length > 260;
-                          const text = mode === 'collapsed' ? collapseText(it.summary, 260) : it.summary;
-                          return (
-                            <Box>
-                              {visible ? (
-                                <Typography variant="body2" sx={{ color: 'rgba(226,234,250,0.95)', whiteSpace: 'pre-wrap' }}>
-                                  {text}
-                                </Typography>
-                              ) : null}
-                              <Stack direction="row" spacing={1} sx={{ mt: 0.7 }} flexWrap="wrap">
-                                {mode === 'hidden' ? (
-                                  <Button size="small" variant="outlined" onClick={() => setBodyMode(key, longText ? 'collapsed' : 'expanded')}>
-                                    {l.showSummary}
-                                  </Button>
-                                ) : (
-                                  <Button size="small" variant="outlined" color="warning" onClick={() => setBodyMode(key, 'hidden')}>
-                                    {l.hideSummary}
-                                  </Button>
-                                )}
-                                {visible && longText ? (
-                                  <Button
-                                    size="small"
-                                    variant="outlined"
-                                    onClick={() => setBodyMode(key, mode === 'collapsed' ? 'expanded' : 'collapsed')}
-                                  >
-                                    {mode === 'collapsed' ? l.showMore : l.showLess}
-                                  </Button>
-                                ) : null}
-                              </Stack>
-                            </Box>
-                          );
-                        })() : null}
-                        {feed.researchEnabled && aiEnabled && !it.research && !researchPendingById[it.id] && !hideAllResearch ? (
-                          <Chip
-                            size="small"
-                            label={l.autoResearching}
-                            icon={<CircularProgress size={11} color="inherit" />}
-                            variant="outlined"
-                            sx={{ mb: 0.9, color: 'rgba(152, 228, 255, 0.96)', borderColor: 'rgba(73,167,255,0.55)' }}
-                          />
-                        ) : null}
-                        {it.research && !hideAllResearch ? (() => {
-                          const key = bodyKey(it, 'research');
-                          const mode = getBodyMode(key, it.research, 340);
-                          const visible = mode !== 'hidden';
-                          const longText = String(it.research).trim().length > 340;
-                          const text = mode === 'collapsed' ? compactResearch(it.research) : it.research;
-                          return (
-                            <Box sx={{ mt: 1 }}>
-                              {visible ? (
-                                <>
-                                  {extractConfidence(it.research) ? (
-                                    <Typography variant="caption" sx={{ color: 'rgba(212,220,236,0.75)', display: 'block', mb: 0.35 }}>
-                                      {l.confidence}: {extractConfidence(it.research)}
-                                    </Typography>
-                                  ) : null}
-                                  <Typography variant="body2" sx={{ color: 'rgba(205,218,238,0.92)', whiteSpace: 'pre-wrap' }}>
-                                    {text}
-                                  </Typography>
-                                </>
-                              ) : null}
-                              <Stack direction="row" spacing={1} sx={{ mt: 0.7 }} flexWrap="wrap">
-                                {mode === 'hidden' ? (
-                                  <Button size="small" variant="outlined" onClick={() => setBodyMode(key, longText ? 'collapsed' : 'expanded')}>
-                                    {l.showResearch}
-                                  </Button>
-                                ) : (
-                                  <Button size="small" variant="outlined" color="warning" onClick={() => setBodyMode(key, 'hidden')}>
-                                    {l.hideResearch}
-                                  </Button>
-                                )}
-                                {visible && longText ? (
-                                  <Button
-                                    size="small"
-                                    variant="outlined"
-                                    onClick={() => setBodyMode(key, mode === 'collapsed' ? 'expanded' : 'collapsed')}
-                                  >
-                                    {mode === 'collapsed' ? l.showMore : l.showLess}
-                                  </Button>
-                                ) : null}
-                              </Stack>
-                            </Box>
-                          );
-                        })() : null}
-                        {askState.open ? (
-                          <Box sx={{ mt: 1.1, p: 1, border: '1px solid rgba(106,128,162,0.4)', borderRadius: 1.5 }}>
-                            <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 0.8 }}>
-                              <Typography variant="caption" sx={{ color: 'rgba(210,219,235,0.74)' }}>
-                                {l.askAgent}
-                              </Typography>
-                              <Typography variant="caption" sx={{ color: 'rgba(188,203,229,0.75)' }}>
-                                {l.questionsLeft}: {askState.remaining}
-                              </Typography>
-                            </Stack>
-                            <Stack spacing={0.8} sx={{ mb: 0.8, maxHeight: 180, overflow: 'auto' }}>
-                              {askState.messages.map((m, idx) => (
-                                <Box key={`${idx}-${m.q.slice(0, 18)}`}>
-                                  <Typography variant="caption" sx={{ color: 'rgba(146,204,255,0.92)', display: 'block' }}>
-                                    Q: {m.q}
-                                  </Typography>
-                                  <Typography variant="caption" sx={{ color: m.error ? 'rgba(255,168,168,0.95)' : 'rgba(216,227,246,0.92)', display: 'block' }}>
-                                    A: {m.error || m.a || '...'}
-                                  </Typography>
-                                </Box>
-                              ))}
-                            </Stack>
-                            <Stack direction="row" spacing={1}>
-                              <TextField
-                                size="small"
-                                fullWidth
-                                placeholder={l.askPlaceholder}
-                                value={askState.draft}
-                                onChange={e => dispatch(setAskDraft({ id: it.id, feedUrl: it.feedUrl, draft: e.target.value.slice(0, 400) }))}
-                                onKeyDown={e => {
-                                  if (e.key === 'Enter') {
-                                    e.preventDefault();
-                                    requestAsk(it);
-                                  }
-                                }}
-                              />
-                              <Button
-                                size="small"
-                                variant="contained"
-                                onClick={() => requestAsk(it)}
-                                disabled={!connected || askState.pending || askState.remaining <= 0 || !String(askState.draft || '').trim()}
-                              >
-                                {askState.pending ? l.thinking : l.send}
-                              </Button>
-                            </Stack>
-                          </Box>
-                        ) : null}
-                            </>
-                          );
-                        })()}
-                      </CardContent>
-                    </Card>
-                  ))}
+                  ) : shownItems.map(it => {
+                    const askState = askByItem[askKey(it)] || {
+                      open: false,
+                      draft: '',
+                      pending: false,
+                      remaining: 5,
+                      messages: []
+                    };
+                    const summaryKey = bodyKey(it, 'summary');
+                    const researchKey = bodyKey(it, 'research');
+                    const summaryResearchHidden = hideAllResearch || bodyModes[researchKey] === 'hidden';
+                    const savedSummaryMode = bodyModes[summaryKey];
+                    const summaryMode = summaryResearchHidden && savedSummaryMode === 'hidden'
+                      ? getDefaultBodyMode(it.summary || '', 260)
+                      : getBodyMode(summaryKey, it.summary || '', 260);
+                    const summaryLong = String(it.summary || '').trim().length > 260;
+                    const summaryText = summaryMode === 'collapsed' ? collapseText(it.summary || '', 260) : String(it.summary || '');
+                    const researchMode = getBodyMode(researchKey, it.research || '', 340);
+                    const researchLong = String(it.research || '').trim().length > 340;
+                    const researchText = researchMode === 'collapsed' ? compactResearch(it.research || '') : String(it.research || '');
+                    const researchConfidence = extractConfidence(it.research || '');
+                    return (
+                      <NewsCard
+                        key={it.id}
+                        item={it}
+                        askState={askState}
+                        labels={cardLabels}
+                        vibeIcons={vibeIcons}
+                        compactBtnSx={compactBtnSx}
+                        buttonMode={buttonMode}
+                        fontScale={fontScale}
+                        connected={connected}
+                        hideAllResearch={hideAllResearch}
+                        summaryPending={!!summaryPendingById[it.id]}
+                        researchPending={!!researchPendingById[it.id]}
+                        isPinnedNews={!!pinnedNewsById[it.id]}
+                        accent={accent}
+                        soft={soft}
+                        matchAccent={palette.m}
+                        showAutoResearching={feed.researchEnabled && aiEnabled && !it.research && !researchPendingById[it.id] && !hideAllResearch}
+                        summaryMode={summaryMode}
+                        summaryLong={summaryLong}
+                        summaryText={summaryText}
+                        researchMode={researchMode}
+                        researchLong={researchLong}
+                        researchText={researchText}
+                        researchConfidence={researchConfidence}
+                        onTogglePinnedNews={(id: string) => dispatch(togglePinnedNews(id))}
+                        onCopyLink={copyLink}
+                        onHideItem={hideItem}
+                        onRequestSummary={requestSummary}
+                        onRequestResearch={requestResearch}
+                        onToggleAsk={(id: string, feedUrl: string) => dispatch(toggleAskOpen({ id, feedUrl }))}
+                        onSetSummaryMode={(mode: BodyMode) => setBodyMode(summaryKey, mode)}
+                        onSetResearchMode={(mode: BodyMode) => setBodyMode(researchKey, mode)}
+                        onAskDraft={(id: string, feedUrl: string, draft: string) => dispatch(setAskDraft({ id, feedUrl, draft }))}
+                        onAskSubmit={requestAsk}
+                      />
+                    );
+                  })}
                   {itemsVisible.length > shownItems.length ? (
                     <Button
                       size="small"
