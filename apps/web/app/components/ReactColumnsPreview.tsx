@@ -433,6 +433,9 @@ const NewsCard = memo(function NewsCard({
 }: NewsCardProps) {
   const summaryVisible = !hideAllSummaries && summaryMode !== 'hidden';
   const researchVisible = researchMode !== 'hidden';
+  const hasSummaryBlock = !!item.summary && !hideAllSummaries;
+  const hasResearchBlock = !!item.research && !hideAllResearch;
+  const hasBodyBlock = hasSummaryBlock || hasResearchBlock;
   const SummaryIconComp = vibeIcons.summary;
   const ResearchIconComp = vibeIcons.research;
   const AskIconComp = vibeIcons.ask;
@@ -544,8 +547,8 @@ const NewsCard = memo(function NewsCard({
             display: 'inline-flex',
             alignItems: 'center',
             gap: 0.6,
-            fontSize: `${1.03 * fontScale}rem`,
-            lineHeight: 1.32,
+            fontSize: `${1.12 * fontScale}rem`,
+            lineHeight: 1.36,
             fontWeight: 800,
             color: 'primary.light',
             mb: 1.1,
@@ -556,16 +559,16 @@ const NewsCard = memo(function NewsCard({
           <OpenInNewIcon sx={{ fontSize: 14 }} />
         </MuiLink>
 
-        <Box sx={{ borderTop: '1px solid rgba(128, 154, 201, 0.34)', mb: 1.1 }} />
+        {hasBodyBlock ? <Box sx={{ borderTop: '1px solid rgba(128, 154, 201, 0.34)', mb: 1.1 }} /> : null}
 
-        {item.summary && !hideAllSummaries ? (
+        {hasSummaryBlock ? (
           <Box>
             {summaryVisible ? (
               <Typography
-                variant="body1"
+                variant="body2"
                 sx={{
-                  fontSize: `${1.08 * fontScale}rem`,
-                  lineHeight: 1.56,
+                  fontSize: `${0.96 * fontScale}rem`,
+                  lineHeight: 1.52,
                   color: 'rgba(226,234,250,0.96)',
                   whiteSpace: 'pre-wrap',
                   fontFamily: 'var(--news-body-font-family, var(--font-family))'
@@ -595,7 +598,7 @@ const NewsCard = memo(function NewsCard({
             sx={{ mb: 0.9, color: 'rgba(152, 228, 255, 0.96)', borderColor: 'rgba(73,167,255,0.55)' }}
           />
         ) : null}
-        {item.research && !hideAllResearch ? (
+        {hasResearchBlock ? (
           <Box sx={{ mt: 1 }}>
             {researchVisible ? (
               <>
@@ -633,7 +636,7 @@ const NewsCard = memo(function NewsCard({
         <Stack
           direction="row"
           spacing={0.8}
-          sx={{ mt: 1.2, pt: 0.95, borderTop: '1px dashed rgba(124, 150, 193, 0.3)' }}
+          sx={hasBodyBlock ? { mt: 1.2, pt: 0.95, borderTop: '1px dashed rgba(124, 150, 193, 0.3)' } : { mt: 0.5, pt: 0 }}
           flexWrap="wrap"
         >
           <Tooltip title={summaryPending ? labels.generatingSummary : labels.summary}>
@@ -681,7 +684,7 @@ const NewsCard = memo(function NewsCard({
                 : labels.askAgent}
             </Button>
           </Tooltip>
-          {item.summary && !hideAllSummaries ? (
+          {hasSummaryBlock ? (
             <Tooltip title={summaryVisible ? labels.hideSummary : labels.showSummary}>
               <Button
                 size="small"
@@ -693,7 +696,7 @@ const NewsCard = memo(function NewsCard({
               </Button>
             </Tooltip>
           ) : null}
-          {item.research && !hideAllResearch ? (
+          {hasResearchBlock ? (
             <Tooltip title={researchVisible ? labels.hideResearch : labels.showResearch}>
               <Button
                 size="small"
