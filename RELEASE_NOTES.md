@@ -54,6 +54,9 @@
   - reused legacy vibe-specific action icon mapping (Font Awesome glyphs)
   - enabled Font Awesome stylesheet in Next layout for icon parity
   - updated item/column styling to mirror legacy accent contrast behavior
+- Fixed feed rendering gate in React news slice:
+  - regular columns now accept incoming `news` items regardless of `filteredOk`
+  - resolves "Waiting for news..." across all columns when keyword matching is strict/empty
 
 ### Existing migration milestones already in `main`
 - Next.js web app and Node.js API monorepo with Prisma + SQLite + zod.

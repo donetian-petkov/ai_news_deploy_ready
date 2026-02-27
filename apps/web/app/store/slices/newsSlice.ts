@@ -85,7 +85,6 @@ const newsSlice = createSlice({
     },
     upsertNewsItem(state, action: PayloadAction<NewsItem>) {
       const item = action.payload;
-      if (item.filteredOk === false) return;
       if (state.hiddenIds.includes(item.id)) return;
 
       const list = Array.isArray(state.itemsByFeed[item.feedUrl])
