@@ -37,11 +37,9 @@ import {
   Button,
   Card,
   CardContent,
-  Checkbox,
   Chip,
   CircularProgress,
   FormControl,
-  FormControlLabel,
   Link as MuiLink,
   MenuItem,
   Select,
@@ -93,6 +91,15 @@ type Props = {
 type BodyMode = 'collapsed' | 'expanded' | 'hidden';
 type VibeValue = 'default' | 'anime' | 'arcade' | 'cinema' | 'newspaper' | 'cyberwitch' | 'fantasy' | 'scifi';
 type SchemeValue = 'classic' | 'vivid' | 'sunset' | 'neon' | 'ocean' | 'forest';
+type FeedFilterPreset =
+  | 'all'
+  | 'matches'
+  | 'researched'
+  | 'summaries'
+  | 'matches_researched'
+  | 'matches_summaries'
+  | 'researched_summaries'
+  | 'all_flags';
 
 const VIBE_LIST: VibeValue[] = ['default', 'anime', 'arcade', 'cinema', 'newspaper', 'cyberwitch', 'fantasy', 'scifi'];
 const SCHEME_LIST: SchemeValue[] = ['classic', 'vivid', 'sunset', 'neon', 'ocean', 'forest'];
@@ -204,6 +211,31 @@ function buildColumnPalette(vibe: VibeValue, scheme: SchemeValue): ColumnPalette
     bSoft: rgba(b, Math.max(0.16, tuning.softAlpha - 0.03)),
     mSoft: rgba(m, Math.min(0.36, tuning.softAlpha + 0.03))
   };
+}
+
+function getFeedFilterPreset(filters: FeedInfo['filters']): FeedFilterPreset {
+  const m = !!filters.onlyMatches;
+  const r = !!filters.onlyResearched;
+  const s = !!filters.onlySummaries;
+  if (!m && !r && !s) return 'all';
+  if (m && !r && !s) return 'matches';
+  if (!m && r && !s) return 'researched';
+  if (!m && !r && s) return 'summaries';
+  if (m && r && !s) return 'matches_researched';
+  if (m && !r && s) return 'matches_summaries';
+  if (!m && r && s) return 'researched_summaries';
+  return 'all_flags';
+}
+
+function presetToFeedFilters(preset: FeedFilterPreset): FeedInfo['filters'] {
+  if (preset === 'matches') return { onlyMatches: true, onlyResearched: false, onlySummaries: false };
+  if (preset === 'researched') return { onlyMatches: false, onlyResearched: true, onlySummaries: false };
+  if (preset === 'summaries') return { onlyMatches: false, onlyResearched: false, onlySummaries: true };
+  if (preset === 'matches_researched') return { onlyMatches: true, onlyResearched: true, onlySummaries: false };
+  if (preset === 'matches_summaries') return { onlyMatches: true, onlyResearched: false, onlySummaries: true };
+  if (preset === 'researched_summaries') return { onlyMatches: false, onlyResearched: true, onlySummaries: true };
+  if (preset === 'all_flags') return { onlyMatches: true, onlyResearched: true, onlySummaries: true };
+  return { onlyMatches: false, onlyResearched: false, onlySummaries: false };
 }
 
 function getVibeIcons(vibe: VibeValue): {
@@ -696,6 +728,7 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
   const [shareNoticeOpen, setShareNoticeOpen] = useState(false);
   const [dragFeedUrl, setDragFeedUrl] = useState<string | null>(null);
   const [dragOverFeedUrl, setDragOverFeedUrl] = useState<string | null>(null);
+  const [advancedControlsByUrl, setAdvancedControlsByUrl] = useState<Record<string, boolean>>({});
   const dragCommittedRef = useRef(false);
   const dragLastTargetRef = useRef<string | null>(null);
   const [visibleByFeed, setVisibleByFeed] = useState<Record<string, number>>({});
@@ -731,6 +764,16 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
     sortNewest: bg ? 'Сортиране: Най-нови' : 'Sort: Newest',
     sortOldest: bg ? 'Сортиране: Най-стари' : 'Sort: Oldest',
     sortMatched: bg ? 'Сортиране: Съвпадения' : 'Sort: Matched',
+    filterAll: bg ? 'Филтър: Всички' : 'Filter: All',
+    filterMatches: bg ? 'Филтър: Само съвпадения' : 'Filter: Matches',
+    filterResearched: bg ? 'Филтър: Само проучени' : 'Filter: Researched',
+    filterSummaries: bg ? 'Филтър: Само резюмета' : 'Filter: Summaries',
+    filterMatchesResearched: bg ? 'Филтър: Съвпадения + проучени' : 'Filter: Matches + Researched',
+    filterMatchesSummaries: bg ? 'Филтър: Съвпадения + резюмета' : 'Filter: Matches + Summaries',
+    filterResearchedSummaries: bg ? 'Филтър: Проучени + резюмета' : 'Filter: Researched + Summaries',
+    filterAllFlags: bg ? 'Филтър: Всички флагове' : 'Filter: All flags',
+    moreOptions: bg ? 'Още опции' : 'More options',
+    lessOptions: bg ? 'По-малко опции' : 'Less options',
     matches: bg ? 'Съвпадения' : 'Matches',
     researched: bg ? 'Проучени' : 'Researched',
     summaries: bg ? 'Резюмета' : 'Summaries',
@@ -814,6 +857,20 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
       }));
     } catch {}
   }, [controlsOpenByUrl, deleteAgeByUrl, feeds.length, orderByUrl, pinnedByUrl]);
+
+  useEffect(() => {
+    if (!feeds.length) return;
+    const feedUrlSet = new Set(feeds.map(f => f.url));
+    setAdvancedControlsByUrl(prev => {
+      let changed = false;
+      const next: Record<string, boolean> = {};
+      for (const [url, value] of Object.entries(prev)) {
+        if (feedUrlSet.has(url)) next[url] = !!value;
+        else changed = true;
+      }
+      return changed ? next : prev;
+    });
+  }, [feeds]);
 
   useEffect(() => {
     if (!notificationsPrimedRef.current) {
@@ -1167,19 +1224,19 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
     if (ok) dispatch(setFeedColumnSettings({ feedUrl: feed.url, sortMode }));
   };
 
-  const toggleFeedFilter = (feed: FeedInfo, key: keyof FeedInfo['filters']) => {
+  const setFeedFilters = (feed: FeedInfo, filters: FeedInfo['filters']) => {
     if (!connected) return;
-    const nextFilters = {
-      ...feed.filters,
-      [key]: !feed.filters[key]
-    };
     const ok = sendWsMessage({
       type: 'set_feed_column_settings',
       feedUrl: feed.url,
       sortMode: feed.sortMode,
-      filters: nextFilters
+      filters
     });
-    if (ok) dispatch(setFeedColumnSettings({ feedUrl: feed.url, filters: nextFilters }));
+    if (ok) dispatch(setFeedColumnSettings({ feedUrl: feed.url, filters }));
+  };
+
+  const setFeedFilterPreset = (feed: FeedInfo, preset: FeedFilterPreset) => {
+    setFeedFilters(feed, presetToFeedFilters(preset));
   };
 
   const removeOldInFeed = (feed: FeedInfo) => {
@@ -1196,11 +1253,13 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
   const palette = useMemo(() => buildColumnPalette(resolvedVibe, resolvedScheme), [resolvedVibe, resolvedScheme]);
   const vibeIcons = useMemo(() => getVibeIcons(resolvedVibe), [resolvedVibe]);
   const compactBtnSx = useMemo(() => ({
-    minHeight: 30,
-    px: 1.15,
-    py: 0.15,
+    minHeight: 34,
+    px: 1.2,
+    py: 0.18,
     fontSize: `${0.82 * fontScale}rem`,
-    lineHeight: 1.12
+    lineHeight: 1.15,
+    borderRadius: 999,
+    whiteSpace: 'nowrap'
   }), [fontScale]);
   const compactFormSx = useMemo(() => ({
     '& .MuiOutlinedInput-root': {
@@ -1215,16 +1274,6 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
     },
     '& .MuiSvgIcon-root': {
       color: 'rgba(203,217,243,0.9)'
-    }
-  }), [fontScale]);
-  const labelSx = useMemo(() => ({
-    m: 0,
-    '& .MuiTypography-root': {
-      fontSize: `${0.84 * fontScale}rem`,
-      color: 'rgba(216,229,251,0.92)'
-    },
-    '& .MuiCheckbox-root': {
-      color: 'rgba(157,187,237,0.88)'
     }
   }), [fontScale]);
   const cardLabels = useMemo<CardLabels>(() => ({
@@ -1482,129 +1531,126 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
                   </Button>
                 </Stack>
                 {isHydrated && controlsOpen ? (
-                  <Box sx={{ mb: 1.1, display: 'grid', gap: 0.9 }}>
-                    <Stack direction="row" spacing={1} flexWrap="wrap" alignItems="center">
-                      <Button
-                        size="small"
-                        variant={feed.summaryEnabled ? 'contained' : 'outlined'}
-                        onClick={() => toggleFeedSummary(feed)}
+                  <Box
+                    sx={{
+                      mb: 1.1,
+                      display: 'grid',
+                      gap: 0.8,
+                      gridTemplateColumns: {
+                        xs: '1fr',
+                        sm: 'repeat(2, minmax(0, 1fr))'
+                      }
+                    }}
+                  >
+                    <Button
+                      size="small"
+                      fullWidth
+                      variant={feed.summaryEnabled ? 'contained' : 'outlined'}
+                      onClick={() => toggleFeedSummary(feed)}
+                      disabled={!connected}
+                      sx={compactBtnSx}
+                    >
+                      {feed.summaryEnabled ? l.summariesOn : l.summariesOff}
+                    </Button>
+                    <Button
+                      size="small"
+                      fullWidth
+                      variant={feed.researchEnabled ? 'contained' : 'outlined'}
+                      onClick={() => toggleFeedResearch(feed)}
+                      disabled={!connected}
+                      sx={compactBtnSx}
+                    >
+                      {feed.researchEnabled ? l.researchOn : l.researchOff}
+                    </Button>
+                    <FormControl size="small" fullWidth sx={compactFormSx}>
+                      <Select
+                        value={feed.budget}
+                        onChange={e => setFeedBudget(feed, e.target.value as BudgetMode)}
                         disabled={!connected}
-                        sx={compactBtnSx}
                       >
-                        {feed.summaryEnabled ? l.summariesOn : l.summariesOff}
-                      </Button>
-                      <Button
-                        size="small"
-                        variant={feed.researchEnabled ? 'contained' : 'outlined'}
-                        onClick={() => toggleFeedResearch(feed)}
+                        <MenuItem value="low">{l.budgetLow}</MenuItem>
+                        <MenuItem value="standard">{l.budgetStandard}</MenuItem>
+                        <MenuItem value="high">{l.budgetHigh}</MenuItem>
+                      </Select>
+                    </FormControl>
+                    <FormControl size="small" fullWidth sx={compactFormSx}>
+                      <Select
+                        value={String(feed.intervalSec || 120)}
+                        onChange={e => setFeedInterval(feed, Number(e.target.value) || 120)}
                         disabled={!connected}
-                        sx={compactBtnSx}
                       >
-                        {feed.researchEnabled ? l.researchOn : l.researchOff}
-                      </Button>
-                    </Stack>
-                    <Stack direction="row" spacing={1} flexWrap="wrap" alignItems="center">
-                      <FormControl size="small" sx={{ minWidth: 130, ...compactFormSx }}>
-                        <Select
-                          value={feed.budget}
-                          onChange={e => setFeedBudget(feed, e.target.value as BudgetMode)}
-                          disabled={!connected}
-                        >
-                          <MenuItem value="low">{l.budgetLow}</MenuItem>
-                          <MenuItem value="standard">{l.budgetStandard}</MenuItem>
-                          <MenuItem value="high">{l.budgetHigh}</MenuItem>
-                        </Select>
-                      </FormControl>
-                      <FormControl size="small" sx={{ minWidth: 102, ...compactFormSx }}>
-                        <Select
-                          value={String(feed.intervalSec || 120)}
-                          onChange={e => setFeedInterval(feed, Number(e.target.value) || 120)}
-                          disabled={!connected}
-                        >
-                          <MenuItem value="45">{l.poll45}</MenuItem>
-                          <MenuItem value="60">{l.poll60}</MenuItem>
-                          <MenuItem value="90">{l.poll90}</MenuItem>
-                          <MenuItem value="120">{l.poll120}</MenuItem>
-                          <MenuItem value="180">{l.poll180}</MenuItem>
-                          <MenuItem value="300">{l.poll300}</MenuItem>
-                        </Select>
-                      </FormControl>
-                      <FormControl size="small" sx={{ minWidth: 122, ...compactFormSx }}>
-                        <Select
-                          value={feed.sortMode}
-                          onChange={e => setFeedSortMode(feed, e.target.value as SortMode)}
-                          disabled={!connected}
-                        >
-                          <MenuItem value="newest">{l.sortNewest}</MenuItem>
-                          <MenuItem value="oldest">{l.sortOldest}</MenuItem>
-                          <MenuItem value="matched">{l.sortMatched}</MenuItem>
-                        </Select>
-                      </FormControl>
-                    </Stack>
-                    <Stack direction="row" spacing={1.4} flexWrap="wrap" alignItems="center">
-                      <FormControlLabel
-                        control={
-                          <Checkbox
-                            size="small"
-                            checked={feed.filters.onlyMatches}
-                            onChange={() => toggleFeedFilter(feed, 'onlyMatches')}
-                            disabled={!connected}
-                          />
-                        }
-                        label={l.matches}
-                        sx={labelSx}
-                      />
-                      <FormControlLabel
-                        control={
-                          <Checkbox
-                            size="small"
-                            checked={feed.filters.onlyResearched}
-                            onChange={() => toggleFeedFilter(feed, 'onlyResearched')}
-                            disabled={!connected}
-                          />
-                        }
-                        label={l.researched}
-                        sx={labelSx}
-                      />
-                      <FormControlLabel
-                        control={
-                          <Checkbox
-                            size="small"
-                            checked={feed.filters.onlySummaries}
-                            onChange={() => toggleFeedFilter(feed, 'onlySummaries')}
-                            disabled={!connected}
-                          />
-                        }
-                        label={l.summaries}
-                        sx={labelSx}
-                      />
-                    </Stack>
-                    <Stack direction="row" spacing={1} flexWrap="wrap" alignItems="center">
-                      <FormControl size="small" sx={{ minWidth: 138, ...compactFormSx }}>
-                        <Select
-                          value={deleteAgeByUrl[feed.url] || 'week'}
-                          onChange={e => dispatch(setFeedDeleteAge({
-                            feedUrl: feed.url,
-                            age: e.target.value as 'yesterday' | 'week' | 'month' | 'year'
-                          }))}
-                        >
-                          <MenuItem value="yesterday">{l.deleteYesterday}</MenuItem>
-                          <MenuItem value="week">{l.deleteWeek}</MenuItem>
-                          <MenuItem value="month">{l.deleteMonth}</MenuItem>
-                          <MenuItem value="year">{l.deleteYear}</MenuItem>
-                        </Select>
-                      </FormControl>
-                      <Button
-                        size="small"
-                        variant="outlined"
-                        color="error"
-                        startIcon={<DeleteOutlineIcon />}
-                        onClick={() => removeOldInFeed(feed)}
-                        sx={compactBtnSx}
+                        <MenuItem value="45">{l.poll45}</MenuItem>
+                        <MenuItem value="60">{l.poll60}</MenuItem>
+                        <MenuItem value="90">{l.poll90}</MenuItem>
+                        <MenuItem value="120">{l.poll120}</MenuItem>
+                        <MenuItem value="180">{l.poll180}</MenuItem>
+                        <MenuItem value="300">{l.poll300}</MenuItem>
+                      </Select>
+                    </FormControl>
+                    <FormControl size="small" fullWidth sx={compactFormSx}>
+                      <Select
+                        value={feed.sortMode}
+                        onChange={e => setFeedSortMode(feed, e.target.value as SortMode)}
+                        disabled={!connected}
                       >
-                        {l.deleteOld}
-                      </Button>
-                    </Stack>
+                        <MenuItem value="newest">{l.sortNewest}</MenuItem>
+                        <MenuItem value="oldest">{l.sortOldest}</MenuItem>
+                        <MenuItem value="matched">{l.sortMatched}</MenuItem>
+                      </Select>
+                    </FormControl>
+                    <FormControl size="small" fullWidth sx={compactFormSx}>
+                      <Select
+                        value={getFeedFilterPreset(feed.filters)}
+                        onChange={e => setFeedFilterPreset(feed, e.target.value as FeedFilterPreset)}
+                        disabled={!connected}
+                      >
+                        <MenuItem value="all">{l.filterAll}</MenuItem>
+                        <MenuItem value="matches">{l.filterMatches}</MenuItem>
+                        <MenuItem value="researched">{l.filterResearched}</MenuItem>
+                        <MenuItem value="summaries">{l.filterSummaries}</MenuItem>
+                        <MenuItem value="matches_researched">{l.filterMatchesResearched}</MenuItem>
+                        <MenuItem value="matches_summaries">{l.filterMatchesSummaries}</MenuItem>
+                        <MenuItem value="researched_summaries">{l.filterResearchedSummaries}</MenuItem>
+                        <MenuItem value="all_flags">{l.filterAllFlags}</MenuItem>
+                      </Select>
+                    </FormControl>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      fullWidth
+                      onClick={() => setAdvancedControlsByUrl(prev => ({ ...prev, [feed.url]: !prev[feed.url] }))}
+                      sx={{ ...compactBtnSx, gridColumn: '1 / -1' }}
+                    >
+                      {advancedControlsByUrl[feed.url] ? l.lessOptions : l.moreOptions}
+                    </Button>
+                    {advancedControlsByUrl[feed.url] ? (
+                      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ gridColumn: '1 / -1' }}>
+                        <FormControl size="small" fullWidth sx={compactFormSx}>
+                          <Select
+                            value={deleteAgeByUrl[feed.url] || 'week'}
+                            onChange={e => dispatch(setFeedDeleteAge({
+                              feedUrl: feed.url,
+                              age: e.target.value as 'yesterday' | 'week' | 'month' | 'year'
+                            }))}
+                          >
+                            <MenuItem value="yesterday">{l.deleteYesterday}</MenuItem>
+                            <MenuItem value="week">{l.deleteWeek}</MenuItem>
+                            <MenuItem value="month">{l.deleteMonth}</MenuItem>
+                            <MenuItem value="year">{l.deleteYear}</MenuItem>
+                          </Select>
+                        </FormControl>
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          color="error"
+                          startIcon={<DeleteOutlineIcon />}
+                          onClick={() => removeOldInFeed(feed)}
+                          sx={{ ...compactBtnSx, minWidth: { sm: 136 } }}
+                        >
+                          {l.deleteOld}
+                        </Button>
+                      </Stack>
+                    ) : null}
                   </Box>
                 ) : null}
                 {!isHydrated ? (
