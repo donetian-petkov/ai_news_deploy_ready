@@ -801,8 +801,14 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
               onDrop={e => {
                 if (!canDrag) return;
                 e.preventDefault();
-                if (dragFeedUrl && dragFeedUrl !== feed.url) {
-                  dispatch(reorderFeeds({ fromUrl: dragFeedUrl, toUrl: feed.url }));
+                const fromUrl = String(
+                  e.dataTransfer.getData('application/x-ai-news-feed')
+                  || e.dataTransfer.getData('text/plain')
+                  || dragFeedUrl
+                  || ''
+                ).trim();
+                if (fromUrl && fromUrl !== feed.url) {
+                  dispatch(reorderFeeds({ fromUrl, toUrl: feed.url }));
                 }
                 setDragFeedUrl(null);
                 setDragOverFeedUrl(null);
@@ -837,6 +843,7 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
                             setDragOverFeedUrl(feed.url);
                             e.dataTransfer.effectAllowed = 'move';
                             e.dataTransfer.setData('text/plain', feed.url);
+                            e.dataTransfer.setData('application/x-ai-news-feed', feed.url);
                           }}
                           onDragEnd={() => {
                             setDragFeedUrl(null);
