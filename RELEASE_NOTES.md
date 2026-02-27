@@ -69,6 +69,9 @@
 - Restored always-visible item actions on news cards:
   - Summary / Research / Ask Agent buttons are no longer hidden behind column-control visibility
   - Ask Agent is available directly from every visible news item, matching expected UX
+- Reduced column density on wide screens:
+  - responsive grid now uses explicit `1/2/3/4` columns by breakpoint
+  - prevents cluttered 5-column rows on large displays
 
 ### Existing migration milestones already in `main`
 - Next.js web app and Node.js API monorepo with Prisma + SQLite + zod.

@@ -692,7 +692,12 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
         sx={{
           display: 'grid',
           gap: 1.5,
-          gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))'
+          gridTemplateColumns: {
+            xs: '1fr',
+            sm: 'repeat(2, minmax(320px, 1fr))',
+            lg: 'repeat(3, minmax(330px, 1fr))',
+            xl: 'repeat(4, minmax(330px, 1fr))'
+          }
         }}
       >
         {renderedFeeds.map((feed: FeedInfo) => {
