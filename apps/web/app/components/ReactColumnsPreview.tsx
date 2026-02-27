@@ -1,16 +1,11 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
-import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
-import ManageSearchIcon from '@mui/icons-material/ManageSearch';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import PushPinIcon from '@mui/icons-material/PushPin';
 import PushPinOutlinedIcon from '@mui/icons-material/PushPinOutlined';
-import SmartToyIcon from '@mui/icons-material/SmartToy';
 import TuneIcon from '@mui/icons-material/Tune';
-import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import {
   Alert,
   Box,
@@ -67,6 +62,184 @@ type Props = {
 };
 
 type BodyMode = 'collapsed' | 'expanded' | 'hidden';
+type VibeValue = 'default' | 'anime' | 'arcade' | 'cinema' | 'newspaper' | 'cyberwitch' | 'fantasy' | 'scifi';
+type SchemeValue = 'classic' | 'vivid' | 'sunset' | 'neon' | 'ocean' | 'forest';
+
+const VIBE_BASE_COLORS: Record<VibeValue, [string, string, string]> = {
+  default: ['#3d95ff', '#20cb7d', '#ffac1a'],
+  anime: ['#ff4da6', '#38bdf8', '#ffe15c'],
+  arcade: ['#39ff14', '#ff40ff', '#ffdd00'],
+  cinema: ['#d2a85f', '#b4253a', '#f4c870'],
+  newspaper: ['#4e627a', '#78808c', '#b27418'],
+  cyberwitch: ['#b34cff', '#00ddff', '#ff74e6'],
+  fantasy: ['#56a86e', '#886a4a', '#d9b054'],
+  scifi: ['#00c9ff', '#707cff', '#74ffcf']
+};
+
+const SCHEME_TUNING: Record<SchemeValue, { hueShift: number; satMul: number; lightMul: number; softAlpha: number }> = {
+  classic: { hueShift: 0, satMul: 1.0, lightMul: 1.0, softAlpha: 0.26 },
+  vivid: { hueShift: 10, satMul: 1.16, lightMul: 1.02, softAlpha: 0.30 },
+  sunset: { hueShift: -22, satMul: 1.08, lightMul: 0.96, softAlpha: 0.29 },
+  neon: { hueShift: 32, satMul: 1.28, lightMul: 1.04, softAlpha: 0.27 },
+  ocean: { hueShift: -52, satMul: 1.03, lightMul: 0.94, softAlpha: 0.30 },
+  forest: { hueShift: -105, satMul: 0.82, lightMul: 0.86, softAlpha: 0.28 }
+};
+
+function clamp(v: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, v));
+}
+
+function hexToRgb(hex: string): { r: number; g: number; b: number } {
+  const s = String(hex || '').trim().replace(/^#/, '');
+  if (!/^[0-9a-fA-F]{6}$/.test(s)) return { r: 127, g: 127, b: 127 };
+  return {
+    r: parseInt(s.slice(0, 2), 16),
+    g: parseInt(s.slice(2, 4), 16),
+    b: parseInt(s.slice(4, 6), 16)
+  };
+}
+
+function rgbToHsl(r: number, g: number, b: number): { h: number; s: number; l: number } {
+  const rn = r / 255;
+  const gn = g / 255;
+  const bn = b / 255;
+  const max = Math.max(rn, gn, bn);
+  const min = Math.min(rn, gn, bn);
+  const d = max - min;
+  let h = 0;
+  let s = 0;
+  const l = (max + min) / 2;
+
+  if (d !== 0) {
+    s = d / (1 - Math.abs(2 * l - 1));
+    if (max === rn) h = 60 * (((gn - bn) / d) % 6);
+    else if (max === gn) h = 60 * (((bn - rn) / d) + 2);
+    else h = 60 * (((rn - gn) / d) + 4);
+  }
+
+  if (h < 0) h += 360;
+  return { h, s, l };
+}
+
+function hslToRgb(h: number, s: number, l: number): { r: number; g: number; b: number } {
+  const c = (1 - Math.abs(2 * l - 1)) * s;
+  const hh = h / 60;
+  const x = c * (1 - Math.abs((hh % 2) - 1));
+  let r1 = 0;
+  let g1 = 0;
+  let b1 = 0;
+
+  if (hh >= 0 && hh < 1) { r1 = c; g1 = x; b1 = 0; }
+  else if (hh < 2) { r1 = x; g1 = c; b1 = 0; }
+  else if (hh < 3) { r1 = 0; g1 = c; b1 = x; }
+  else if (hh < 4) { r1 = 0; g1 = x; b1 = c; }
+  else if (hh < 5) { r1 = x; g1 = 0; b1 = c; }
+  else { r1 = c; g1 = 0; b1 = x; }
+
+  const m = l - c / 2;
+  return {
+    r: Math.round((r1 + m) * 255),
+    g: Math.round((g1 + m) * 255),
+    b: Math.round((b1 + m) * 255)
+  };
+}
+
+function transformHex(hex: string, tuning: { hueShift: number; satMul: number; lightMul: number }): { r: number; g: number; b: number } {
+  const rgb = hexToRgb(hex);
+  const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
+  const h = ((hsl.h + tuning.hueShift) % 360 + 360) % 360;
+  const s = clamp(hsl.s * tuning.satMul, 0.12, 1);
+  const l = clamp(hsl.l * tuning.lightMul, 0.10, 0.86);
+  return hslToRgb(h, s, l);
+}
+
+function rgba(rgb: { r: number; g: number; b: number }, alpha = 1): string {
+  return `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`;
+}
+
+function getPalette(vibe: VibeValue, scheme: SchemeValue): { a: string; b: string; m: string; aSoft: string; bSoft: string; mSoft: string } {
+  const base = VIBE_BASE_COLORS[vibe] || VIBE_BASE_COLORS.default;
+  const tuning = SCHEME_TUNING[scheme] || SCHEME_TUNING.classic;
+  const a = transformHex(base[0], tuning);
+  const b = transformHex(base[1], tuning);
+  const m = transformHex(base[2], tuning);
+  return {
+    a: rgba(a, 1),
+    b: rgba(b, 1),
+    m: rgba(m, 1),
+    aSoft: rgba(a, tuning.softAlpha),
+    bSoft: rgba(b, Math.max(0.16, tuning.softAlpha - 0.03)),
+    mSoft: rgba(m, Math.min(0.36, tuning.softAlpha + 0.03))
+  };
+}
+
+function getVibeIcons(vibe: VibeValue): { summary: string; research: string; ask: string; share: string; hide: string } {
+  const summary = vibe === 'anime'
+    ? 'fa-wand-magic-sparkles'
+    : vibe === 'arcade'
+      ? 'fa-trophy'
+      : vibe === 'cinema'
+        ? 'fa-film'
+        : vibe === 'newspaper'
+          ? 'fa-newspaper'
+          : vibe === 'cyberwitch'
+            ? 'fa-hat-wizard'
+            : vibe === 'fantasy'
+              ? 'fa-book-open'
+              : vibe === 'scifi'
+                ? 'fa-robot'
+                : 'fa-file-lines';
+  const research = vibe === 'anime'
+    ? 'fa-dragon'
+    : vibe === 'arcade'
+      ? 'fa-crosshairs'
+      : vibe === 'cinema'
+        ? 'fa-clapperboard'
+        : vibe === 'newspaper'
+          ? 'fa-magnifying-glass'
+          : vibe === 'cyberwitch'
+            ? 'fa-bolt'
+            : vibe === 'fantasy'
+              ? 'fa-dragon'
+              : vibe === 'scifi'
+                ? 'fa-microchip'
+                : 'fa-magnifying-glass';
+  const share = vibe === 'anime'
+    ? 'fa-paper-plane'
+    : vibe === 'arcade'
+      ? 'fa-share-nodes'
+      : vibe === 'scifi'
+        ? 'fa-shuttle-space'
+        : vibe === 'cyberwitch'
+          ? 'fa-satellite-dish'
+          : 'fa-arrow-up-right-from-square';
+  const hide = vibe === 'arcade'
+    ? 'fa-skull-crossbones'
+    : vibe === 'cinema'
+      ? 'fa-masks-theater'
+      : vibe === 'newspaper'
+        ? 'fa-ban'
+        : vibe === 'cyberwitch'
+          ? 'fa-user-secret'
+          : 'fa-eye-slash';
+  const ask = vibe === 'anime'
+    ? 'fa-comment-dots'
+    : vibe === 'arcade'
+      ? 'fa-headset'
+      : vibe === 'cinema'
+        ? 'fa-microphone-lines'
+        : vibe === 'newspaper'
+          ? 'fa-circle-question'
+          : vibe === 'cyberwitch'
+            ? 'fa-hand-sparkles'
+            : vibe === 'fantasy'
+              ? 'fa-scroll'
+              : vibe === 'scifi'
+                ? 'fa-user-astronaut'
+                : 'fa-comments';
+
+  return { summary, research, ask, share, hide };
+}
 
 function formatTime(ms: number): string {
   if (!Number.isFinite(ms)) return '';
@@ -517,19 +690,43 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
     }));
   };
 
-  const schemeOpacity = scheme === 'neon' ? 0.32 : scheme === 'vivid' ? 0.28 : scheme === 'sunset' ? 0.30 : scheme === 'ocean' ? 0.27 : scheme === 'forest' ? 0.25 : 0.23;
   const fontScale = fontSize === 'xl' ? 1.17 : fontSize === 'lg' ? 1.09 : fontSize === 'sm' ? 0.93 : 1;
-  const vibeColors: Record<string, [string, string, string]> = {
-    default: ['#3d95ff', '#20cb7d', '#ffac1a'],
-    anime: ['#ff4da6', '#38bdf8', '#ffe15c'],
-    arcade: ['#39ff14', '#ff40ff', '#ffdd00'],
-    cinema: ['#d2a85f', '#b4253a', '#f4c870'],
-    newspaper: ['#4e627a', '#78808c', '#b27418'],
-    cyberwitch: ['#b34cff', '#00ddff', '#ff74e6'],
-    fantasy: ['#56a86e', '#886a4a', '#d9b054'],
-    scifi: ['#00c9ff', '#707cff', '#74ffcf']
+  const resolvedVibe: VibeValue = (Object.prototype.hasOwnProperty.call(VIBE_BASE_COLORS, vibe) ? vibe : 'default') as VibeValue;
+  const resolvedScheme: SchemeValue = (Object.prototype.hasOwnProperty.call(SCHEME_TUNING, scheme) ? scheme : 'classic') as SchemeValue;
+  const palette = useMemo(() => getPalette(resolvedVibe, resolvedScheme), [resolvedVibe, resolvedScheme]);
+  const vibeIcons = useMemo(() => getVibeIcons(resolvedVibe), [resolvedVibe]);
+  const compactBtnSx = {
+    minHeight: 30,
+    px: 1.15,
+    py: 0.15,
+    fontSize: `${0.82 * fontScale}rem`,
+    lineHeight: 1.12
   };
-  const palette = vibeColors[vibe] || vibeColors.default;
+  const compactFormSx = {
+    '& .MuiOutlinedInput-root': {
+      height: 34,
+      fontSize: `${0.82 * fontScale}rem`,
+      background: 'rgba(12,20,38,0.92)',
+      color: 'rgba(231,240,255,0.96)',
+      borderRadius: 999
+    },
+    '& .MuiOutlinedInput-notchedOutline': {
+      borderColor: 'rgba(122,149,194,0.44)'
+    },
+    '& .MuiSvgIcon-root': {
+      color: 'rgba(203,217,243,0.9)'
+    }
+  };
+  const labelSx = {
+    m: 0,
+    '& .MuiTypography-root': {
+      fontSize: `${0.84 * fontScale}rem`,
+      color: 'rgba(216,229,251,0.92)'
+    },
+    '& .MuiCheckbox-root': {
+      color: 'rgba(157,187,237,0.88)'
+    }
+  };
 
   return (
     <Box className="container" sx={{ pt: 1, pb: 0.5 }}>
@@ -554,7 +751,10 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
       >
         {renderedFeeds.map((feed: FeedInfo) => {
           const columnIdx = Math.max(0, renderedFeeds.findIndex(f => f.url === feed.url));
-          const accent = palette[columnIdx % palette.length];
+          const isMatchColumn = feed.url === '__filtered__' || String(feed.label || '').toLowerCase().startsWith('filtered');
+          const colTheme: 'a' | 'b' | 'match' = isMatchColumn ? 'match' : (columnIdx % 2 === 0 ? 'a' : 'b');
+          const accent = colTheme === 'a' ? palette.a : colTheme === 'b' ? palette.b : palette.m;
+          const soft = colTheme === 'a' ? palette.aSoft : colTheme === 'b' ? palette.bSoft : palette.mSoft;
           const items = itemsByFeed[feed.url] || [];
           const normalizedQuery = String(searchQuery || '').trim().toLowerCase();
           const itemsVisible = normalizedQuery
@@ -600,10 +800,12 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
                 setDragOverFeedUrl(null);
               }}
               sx={{
-                background: `linear-gradient(160deg, rgba(15,22,38,0.92), rgba(7,14,28,0.95)), radial-gradient(600px 220px at 4% 5%, ${accent}${Math.round(schemeOpacity * 255).toString(16).padStart(2, '0')}, transparent 70%)`,
+                background: `linear-gradient(180deg, ${soft}, rgba(9, 15, 30, 0.96) 78%)`,
                 borderColor: isDropTarget ? accent : (isDragging ? accent : 'rgba(97, 123, 161, 0.42)'),
+                borderTop: `4px solid ${accent}`,
                 boxShadow: isDropTarget ? `0 0 0 2px ${accent}66, 0 18px 34px rgba(0,0,0,0.30)` : '0 10px 22px rgba(0,0,0,0.22)',
-                color: 'var(--text-main)',
+                borderRadius: 16,
+                color: 'rgba(234, 242, 255, 0.96)',
                 opacity: isDragging ? 0.45 : 1,
                 transform: isDragging ? 'scale(0.985)' : (isDropTarget ? 'translateY(-4px)' : 'translateY(0)'),
                 transition: 'transform 130ms ease, box-shadow 130ms ease, opacity 130ms ease, border-color 130ms ease',
@@ -612,12 +814,12 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
             >
               <CardContent sx={{ pb: '12px !important' }}>
                 <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.25 }}>
-                  <Typography variant="h6" sx={{ fontSize: `${18 * fontScale}px`, fontWeight: 800, lineHeight: 1.2, pr: 1 }}>
+                  <Typography variant="h6" sx={{ fontSize: `${18 * fontScale}px`, fontWeight: 800, lineHeight: 1.2, pr: 1, color: 'rgba(232,243,255,0.97)' }}>
                     {feed.label}
                   </Typography>
                   <Stack direction="row" spacing={1} alignItems="center">
-                    <Chip size="small" label={itemsVisible.length} />
-                    <Chip size="small" variant="outlined" label={feed.kind} />
+                    <Chip size="small" label={itemsVisible.length} sx={{ color: 'rgba(231,242,255,0.96)', bgcolor: 'rgba(79, 114, 168, 0.24)', borderColor: accent }} />
+                    <Chip size="small" variant="outlined" label={feed.kind} sx={{ color: 'rgba(231,242,255,0.96)', borderColor: accent }} />
                   </Stack>
                 </Stack>
                 <Stack direction="row" spacing={1} sx={{ mb: 1.1 }} flexWrap="wrap">
@@ -626,6 +828,7 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
                     variant={pinned ? 'contained' : 'outlined'}
                     startIcon={pinned ? <PushPinIcon /> : <PushPinOutlinedIcon />}
                     onClick={() => dispatch(togglePinned(feed.url))}
+                    sx={compactBtnSx}
                   >
                     {pinned ? l.pinned : l.pin}
                   </Button>
@@ -636,6 +839,7 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
                     startIcon={<DeleteOutlineIcon />}
                     onClick={() => removeFeed(feed.url)}
                     disabled={!connected}
+                    sx={compactBtnSx}
                   >
                     {l.remove}
                   </Button>
@@ -644,6 +848,7 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
                     variant="outlined"
                     startIcon={<TuneIcon />}
                     onClick={() => dispatch(toggleFeedControls(feed.url))}
+                    sx={compactBtnSx}
                   >
                     {controlsOpen ? l.hideControls : l.showControls}
                   </Button>
@@ -655,6 +860,7 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
                       variant={feed.summaryEnabled ? 'contained' : 'outlined'}
                       onClick={() => toggleFeedSummary(feed)}
                       disabled={!connected}
+                      sx={compactBtnSx}
                     >
                       {feed.summaryEnabled ? l.summariesOn : l.summariesOff}
                     </Button>
@@ -663,10 +869,11 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
                       variant={feed.researchEnabled ? 'contained' : 'outlined'}
                       onClick={() => toggleFeedResearch(feed)}
                       disabled={!connected}
+                      sx={compactBtnSx}
                     >
                       {feed.researchEnabled ? l.researchOn : l.researchOff}
                     </Button>
-                    <FormControl size="small" sx={{ minWidth: 140 }}>
+                    <FormControl size="small" sx={{ minWidth: 130, ...compactFormSx }}>
                       <Select
                         value={feed.budget}
                         onChange={e => setFeedBudget(feed, e.target.value as BudgetMode)}
@@ -677,7 +884,7 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
                         <MenuItem value="high">{l.budgetHigh}</MenuItem>
                       </Select>
                     </FormControl>
-                    <FormControl size="small" sx={{ minWidth: 110 }}>
+                    <FormControl size="small" sx={{ minWidth: 102, ...compactFormSx }}>
                       <Select
                         value={String(feed.intervalSec || 120)}
                         onChange={e => setFeedInterval(feed, Number(e.target.value) || 120)}
@@ -691,7 +898,7 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
                         <MenuItem value="300">{l.poll300}</MenuItem>
                       </Select>
                     </FormControl>
-                    <FormControl size="small" sx={{ minWidth: 132 }}>
+                    <FormControl size="small" sx={{ minWidth: 122, ...compactFormSx }}>
                       <Select
                         value={feed.sortMode}
                         onChange={e => setFeedSortMode(feed, e.target.value as SortMode)}
@@ -712,6 +919,7 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
                         />
                       }
                       label={l.matches}
+                      sx={labelSx}
                     />
                     <FormControlLabel
                       control={
@@ -723,6 +931,7 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
                         />
                       }
                       label={l.researched}
+                      sx={labelSx}
                     />
                     <FormControlLabel
                       control={
@@ -734,8 +943,9 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
                         />
                       }
                       label={l.summaries}
+                      sx={labelSx}
                     />
-                    <FormControl size="small" sx={{ minWidth: 148 }}>
+                    <FormControl size="small" sx={{ minWidth: 138, ...compactFormSx }}>
                       <Select
                         value={deleteAgeByUrl[feed.url] || 'week'}
                         onChange={e => dispatch(setFeedDeleteAge({
@@ -755,6 +965,7 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
                       color="error"
                       startIcon={<DeleteOutlineIcon />}
                       onClick={() => removeOldInFeed(feed)}
+                      sx={compactBtnSx}
                     >
                       {l.deleteOld}
                     </Button>
@@ -771,9 +982,9 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
                       key={it.id}
                       variant="outlined"
                       sx={{
-                        background: 'rgba(5, 11, 24, 0.78)',
-                        borderColor: it.isMatch ? 'rgba(255, 198, 84, 0.68)' : 'rgba(100, 128, 170, 0.35)',
-                        color: 'var(--text-main)'
+                        background: `linear-gradient(155deg, rgba(5, 12, 25, 0.92), rgba(7, 14, 28, 0.86)), radial-gradient(550px 180px at 0% 0%, ${soft}, transparent 72%)`,
+                        borderColor: it.isMatch ? palette.m : `${accent}88`,
+                        color: 'rgba(234, 242, 255, 0.96)'
                       }}
                     >
                       <CardContent sx={{ pb: '12px !important' }}>
@@ -799,10 +1010,12 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
                               <Button
                                 size="small"
                                 variant="outlined"
-                                sx={{ minWidth: buttonMode === 'text' ? 72 : 34, px: buttonMode === 'text' ? 1.1 : 0.75 }}
+                                sx={{ ...compactBtnSx, minWidth: buttonMode === 'text' ? 72 : 34, px: buttonMode === 'text' ? 1.1 : 0.75 }}
                                 onClick={() => copyLink(it.link)}
                               >
-                                {buttonMode === 'text' ? l.shareLink : <ContentCopyIcon sx={{ fontSize: 15 }} />}
+                                {buttonMode === 'text'
+                                  ? l.shareLink
+                                  : <><i className={`fa-solid ${vibeIcons.share} iconGlyph`} aria-hidden="true" /><span className="srOnly">{l.shareLink}</span></>}
                               </Button>
                             </Tooltip>
                             <Tooltip title={l.hideNews}>
@@ -810,11 +1023,13 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
                                 size="small"
                                 variant="outlined"
                                 color="warning"
-                                sx={{ minWidth: buttonMode === 'text' ? 72 : 34, px: buttonMode === 'text' ? 1.1 : 0.75 }}
+                                sx={{ ...compactBtnSx, minWidth: buttonMode === 'text' ? 72 : 34, px: buttonMode === 'text' ? 1.1 : 0.75 }}
                                 onClick={() => hideItem(it)}
                                 disabled={!connected}
                               >
-                                {buttonMode === 'text' ? l.hideNews : <VisibilityOffIcon sx={{ fontSize: 15 }} />}
+                                {buttonMode === 'text'
+                                  ? l.hideNews
+                                  : <><i className={`fa-solid ${vibeIcons.hide} iconGlyph`} aria-hidden="true" /><span className="srOnly">{l.hideNews}</span></>}
                               </Button>
                             </Tooltip>
                           </Stack>
@@ -845,29 +1060,35 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
                             <Button
                               size="small"
                               variant={summaryPendingById[it.id] ? 'contained' : 'outlined'}
-                              startIcon={<AutoAwesomeIcon />}
+                              sx={{ ...compactBtnSx, minWidth: buttonMode === 'text' ? 84 : 34, px: buttonMode === 'text' ? 1.05 : 0.8 }}
                               onClick={() => requestSummary(it)}
                               disabled={!connected || !!summaryPendingById[it.id]}
                             >
-                              {buttonMode === 'text' ? (summaryPendingById[it.id] ? l.generatingSummary : l.summary) : ''}
+                              {buttonMode === 'text'
+                                ? (summaryPendingById[it.id] ? l.generatingSummary : l.summary)
+                                : <><i className={`fa-solid ${summaryPendingById[it.id] ? 'fa-spinner fa-spin' : vibeIcons.summary} iconGlyph`} aria-hidden="true" /><span className="srOnly">{l.summary}</span></>}
                             </Button>
                             <Button
                               size="small"
                               variant={researchPendingById[it.id] ? 'contained' : 'outlined'}
-                              startIcon={<ManageSearchIcon />}
+                              sx={{ ...compactBtnSx, minWidth: buttonMode === 'text' ? 84 : 34, px: buttonMode === 'text' ? 1.05 : 0.8 }}
                               onClick={() => requestResearch(it)}
                               disabled={!connected || !!researchPendingById[it.id]}
                             >
-                              {buttonMode === 'text' ? (researchPendingById[it.id] ? l.researching : l.research) : ''}
+                              {buttonMode === 'text'
+                                ? (researchPendingById[it.id] ? l.researching : l.research)
+                                : <><i className={`fa-solid ${researchPendingById[it.id] ? 'fa-spinner fa-spin' : vibeIcons.research} iconGlyph`} aria-hidden="true" /><span className="srOnly">{l.research}</span></>}
                             </Button>
                             <Button
                               size="small"
                               variant={askState.open ? 'contained' : 'outlined'}
-                              startIcon={<SmartToyIcon />}
+                              sx={{ ...compactBtnSx, minWidth: buttonMode === 'text' ? 84 : 34, px: buttonMode === 'text' ? 1.05 : 0.8 }}
                               onClick={() => dispatch(toggleAskOpen({ id: it.id, feedUrl: it.feedUrl }))}
                               disabled={!connected}
                             >
-                              {buttonMode === 'text' ? l.askAgent : ''}
+                              {buttonMode === 'text'
+                                ? l.askAgent
+                                : <><i className={`fa-solid ${askState.pending ? 'fa-spinner fa-spin' : vibeIcons.ask} iconGlyph`} aria-hidden="true" /><span className="srOnly">{l.askAgent}</span></>}
                             </Button>
                           </Stack>
                         ) : null}

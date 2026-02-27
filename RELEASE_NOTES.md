@@ -44,6 +44,16 @@
   - dragged column now becomes semi-transparent during move
   - live hover target reorders columns visually before drop
   - stronger drop-target highlight and smoother movement transitions
+- Improved column UI readability and density:
+  - feed controls default to collapsed for newly seen streams
+  - compact button/select/checkbox control styling to reduce clutter
+  - enforced high-contrast text/icon colors inside column cards
+  - stronger per-vibe visual differentiation across column and topbar surfaces
+- Aligned Next.js appearance tokens with legacy `ai_news_node`:
+  - reused legacy vibe base-color + scheme tuning logic for A/B/MATCH column accents
+  - reused legacy vibe-specific action icon mapping (Font Awesome glyphs)
+  - enabled Font Awesome stylesheet in Next layout for icon parity
+  - updated item/column styling to mirror legacy accent contrast behavior
 
 ### Existing migration milestones already in `main`
 - Next.js web app and Node.js API monorepo with Prisma + SQLite + zod.

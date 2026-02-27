@@ -43,7 +43,7 @@ const feedsSlice = createSlice({
 
       nextFeeds.forEach(f => {
         if (typeof state.controlsOpenByUrl[f.url] !== 'boolean') {
-          state.controlsOpenByUrl[f.url] = true;
+          state.controlsOpenByUrl[f.url] = false;
         }
         if (!state.deleteAgeByUrl[f.url]) {
           state.deleteAgeByUrl[f.url] = 'week';

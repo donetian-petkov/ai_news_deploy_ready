@@ -82,6 +82,13 @@ body[data-vibe='newspaper'] { --bg-main: radial-gradient(1200px 500px at 0% 0%, 
 body[data-vibe='cyberwitch'] { --bg-main: radial-gradient(1200px 500px at 0% 0%, rgba(179, 76, 255, 0.2), transparent 60%), #050919; }
 body[data-vibe='fantasy'] { --bg-main: radial-gradient(1200px 500px at 0% 0%, rgba(86, 168, 110, 0.2), transparent 60%), #07110d; }
 body[data-vibe='scifi'] { --bg-main: radial-gradient(1200px 500px at 0% 0%, rgba(0, 201, 255, 0.2), transparent 60%), #050d1b; }
+body[data-vibe='anime'] { --topbar-start: rgba(27, 15, 52, 0.95); --topbar-end: rgba(12, 22, 50, 0.84); --panel-border: rgba(219, 119, 201, 0.5); }
+body[data-vibe='arcade'] { --topbar-start: rgba(10, 26, 36, 0.95); --topbar-end: rgba(18, 14, 41, 0.84); --panel-border: rgba(99, 238, 165, 0.48); }
+body[data-vibe='cinema'] { --topbar-start: rgba(31, 20, 18, 0.95); --topbar-end: rgba(22, 14, 28, 0.84); --panel-border: rgba(214, 170, 94, 0.48); }
+body[data-vibe='newspaper'] { --topbar-start: rgba(26, 34, 44, 0.95); --topbar-end: rgba(22, 29, 38, 0.84); --panel-border: rgba(141, 164, 187, 0.44); }
+body[data-vibe='cyberwitch'] { --topbar-start: rgba(28, 16, 52, 0.95); --topbar-end: rgba(10, 28, 55, 0.84); --panel-border: rgba(176, 112, 255, 0.52); }
+body[data-vibe='fantasy'] { --topbar-start: rgba(19, 34, 29, 0.95); --topbar-end: rgba(20, 20, 40, 0.84); --panel-border: rgba(133, 199, 134, 0.46); }
+body[data-vibe='scifi'] { --topbar-start: rgba(12, 26, 49, 0.95); --topbar-end: rgba(10, 18, 38, 0.84); --panel-border: rgba(120, 206, 255, 0.5); }
 
 body[data-scheme='vivid'] { --panel-border: rgba(118, 165, 255, 0.48); --card-border: rgba(118, 165, 255, 0.44); }
 body[data-scheme='sunset'] { --panel-border: rgba(255, 157, 102, 0.45); --card-border: rgba(255, 157, 102, 0.4); }
@@ -216,6 +223,23 @@ body[data-scheme='forest'] { --panel-border: rgba(91, 173, 117, 0.46); --card-bo
 
 .statusPill {
   border-color: var(--panel-border) !important;
+}
+
+.iconGlyph {
+  font-size: 13px;
+  line-height: 1;
+  font-weight: 900;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
 }
 
 @media (max-width: 900px) {
