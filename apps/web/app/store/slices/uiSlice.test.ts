@@ -30,6 +30,7 @@ describe('uiSlice', () => {
       font: 'system',
       fontSize: 'md',
       scheme: 'classic',
+      performanceMode: false,
       buttonMode: 'icons',
       vibe: 'default',
       toasts: []

@@ -363,6 +363,7 @@ type NewsCardProps = {
   vibeIcons: VibeIcons;
   compactBtnSx: Record<string, unknown>;
   buttonMode: 'icons' | 'text';
+  performanceMode: boolean;
   fontScale: number;
   connected: boolean;
   hideAllResearch: boolean;
@@ -401,6 +402,7 @@ const NewsCard = memo(function NewsCard({
   vibeIcons,
   compactBtnSx,
   buttonMode,
+  performanceMode,
   fontScale,
   connected,
   hideAllResearch,
@@ -447,6 +449,7 @@ const NewsCard = memo(function NewsCard({
     ...compactBtnSx,
     minWidth: iconOnly ? 36 : 86,
     px: iconOnly ? 0.85 : 1.2,
+    borderRadius: performanceMode ? 1.2 : 999,
     color: accent,
     borderColor: accent,
     '&:hover': {
@@ -478,13 +481,15 @@ const NewsCard = memo(function NewsCard({
     <Card
       variant="outlined"
       sx={{
-        background: `linear-gradient(155deg, rgba(5, 12, 25, 0.92), rgba(7, 14, 28, 0.86)), radial-gradient(550px 180px at 0% 0%, ${soft}, transparent 72%), var(--news-card-overlay)`,
+        background: performanceMode
+          ? 'rgba(8, 14, 29, 0.98)'
+          : `linear-gradient(155deg, rgba(5, 12, 25, 0.92), rgba(7, 14, 28, 0.86)), radial-gradient(550px 180px at 0% 0%, ${soft}, transparent 72%), var(--news-card-overlay)`,
         borderColor: item.isMatch ? matchAccent : `${accent}88`,
         color: 'rgba(234, 242, 255, 0.96)',
         contentVisibility: 'auto',
         containIntrinsicSize: '360px',
         borderRadius: 'var(--news-card-radius, 14px)',
-        boxShadow: '0 10px 20px rgba(0,0,0,0.24), inset 0 1px 0 rgba(255,255,255,0.03)'
+        boxShadow: performanceMode ? 'none' : '0 10px 20px rgba(0,0,0,0.24), inset 0 1px 0 rgba(255,255,255,0.03)'
       }}
     >
       <CardContent sx={{ pb: '12px !important' }}>
@@ -559,7 +564,7 @@ const NewsCard = memo(function NewsCard({
           <OpenInNewIcon sx={{ fontSize: 14 }} />
         </MuiLink>
 
-        {hasBodyBlock ? <Box sx={{ borderTop: '1px solid rgba(128, 154, 201, 0.34)', mb: 1.1 }} /> : null}
+        {hasBodyBlock ? <Box sx={{ borderTop: performanceMode ? '1px solid rgba(128, 154, 201, 0.22)' : '1px solid rgba(128, 154, 201, 0.34)', mb: 1.1 }} /> : null}
 
         {hasSummaryBlock ? (
           <Box>
@@ -636,7 +641,9 @@ const NewsCard = memo(function NewsCard({
         <Stack
           direction="row"
           spacing={0.8}
-          sx={hasBodyBlock ? { mt: 1.2, pt: 0.95, borderTop: '1px dashed rgba(124, 150, 193, 0.3)' } : { mt: 0.5, pt: 0 }}
+          sx={hasBodyBlock
+            ? { mt: 1.2, pt: 0.95, borderTop: performanceMode ? '1px solid rgba(124, 150, 193, 0.22)' : '1px dashed rgba(124, 150, 193, 0.3)' }
+            : { mt: 0.5, pt: 0 }}
           flexWrap="wrap"
         >
           <Tooltip title={summaryPending ? labels.generatingSummary : labels.summary}>
@@ -710,7 +717,7 @@ const NewsCard = memo(function NewsCard({
           ) : null}
         </Stack>
         {askState.open ? (
-          <Box sx={{ mt: 1.1, p: 1, border: '1px solid rgba(106,128,162,0.4)', borderRadius: 1.5 }}>
+          <Box sx={{ mt: 1.1, p: 1, border: '1px solid rgba(106,128,162,0.4)', borderRadius: performanceMode ? 1 : 1.5 }}>
             <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 0.8 }}>
               <Typography variant="caption" sx={{ color: 'rgba(210,219,235,0.74)' }}>
                 {labels.askAgent}
@@ -766,6 +773,7 @@ const NewsCard = memo(function NewsCard({
     && prev.vibeIcons === next.vibeIcons
     && prev.compactBtnSx === next.compactBtnSx
     && prev.buttonMode === next.buttonMode
+    && prev.performanceMode === next.performanceMode
     && prev.fontScale === next.fontScale
     && prev.connected === next.connected
     && prev.hideAllResearch === next.hideAllResearch
@@ -794,6 +802,7 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
   const vibe = useAppSelector(s => s.ui.vibe);
   const scheme = useAppSelector(s => s.ui.scheme);
   const buttonMode = useAppSelector(s => s.ui.buttonMode);
+  const performanceMode = useAppSelector(s => s.ui.performanceMode);
   const fontSize = useAppSelector(s => s.ui.fontSize);
   const notifyEnabled = useAppSelector(s => s.ui.notifyEnabled);
   const notifyMode = useAppSelector(s => s.ui.notifyMode);
@@ -1380,16 +1389,16 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
     py: 0.18,
     fontSize: `${0.82 * fontScale}rem`,
     lineHeight: 1.15,
-    borderRadius: 999,
+    borderRadius: performanceMode ? 1.2 : 999,
     whiteSpace: 'nowrap'
-  }), [fontScale]);
+  }), [fontScale, performanceMode]);
   const compactFormSx = useMemo(() => ({
     '& .MuiOutlinedInput-root': {
       height: 34,
       fontSize: `${0.82 * fontScale}rem`,
-      background: 'rgba(12,20,38,0.92)',
+      background: performanceMode ? 'rgba(10,16,29,0.98)' : 'rgba(12,20,38,0.92)',
       color: 'rgba(231,240,255,0.96)',
-      borderRadius: 999
+      borderRadius: performanceMode ? 1.2 : 999
     },
     '& .MuiOutlinedInput-notchedOutline': {
       borderColor: 'rgba(122,149,194,0.44)'
@@ -1397,7 +1406,7 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
     '& .MuiSvgIcon-root': {
       color: 'rgba(203,217,243,0.9)'
     }
-  }), [fontScale]);
+  }), [fontScale, performanceMode]);
   const cardLabels = useMemo<CardLabels>(() => ({
     pinNews: l.pinNews,
     unpinNews: l.unpinNews,
@@ -1582,23 +1591,27 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
             <Card
               variant="outlined"
               sx={{
-                background: isMatchColumn
-                  ? `linear-gradient(180deg, ${palette.mSoft}, rgba(34, 20, 7, 0.95) 74%, rgba(10, 14, 28, 0.98) 100%), var(--column-shell-overlay)`
-                  : `linear-gradient(180deg, ${soft}, rgba(9, 15, 30, 0.96) 78%), var(--column-shell-overlay)`,
+                background: performanceMode
+                  ? (isMatchColumn ? 'rgba(28, 20, 7, 0.98)' : 'rgba(8, 14, 29, 0.98)')
+                  : (isMatchColumn
+                    ? `linear-gradient(180deg, ${palette.mSoft}, rgba(34, 20, 7, 0.95) 74%, rgba(10, 14, 28, 0.98) 100%), var(--column-shell-overlay)`
+                    : `linear-gradient(180deg, ${soft}, rgba(9, 15, 30, 0.96) 78%), var(--column-shell-overlay)`),
                 borderColor: isDropTarget
                   ? accent
                   : (isDragging ? accent : (isMatchColumn ? `${palette.m}` : 'rgba(97, 123, 161, 0.42)')),
                 borderTop: `4px solid ${isMatchColumn ? palette.m : accent}`,
-                boxShadow: isDropTarget
-                  ? `0 0 0 2px ${accent}66, 0 18px 34px rgba(0,0,0,0.30)`
-                  : (isMatchColumn
-                    ? '0 12px 26px rgba(0,0,0,0.30), inset 0 0 0 1px rgba(255,180,62,0.12)'
-                    : '0 10px 22px rgba(0,0,0,0.22)'),
+                boxShadow: performanceMode
+                  ? (isDropTarget ? `0 0 0 1px ${accent}` : 'none')
+                  : (isDropTarget
+                    ? `0 0 0 2px ${accent}66, 0 18px 34px rgba(0,0,0,0.30)`
+                    : (isMatchColumn
+                      ? '0 12px 26px rgba(0,0,0,0.30), inset 0 0 0 1px rgba(255,180,62,0.12)'
+                      : '0 10px 22px rgba(0,0,0,0.22)')),
                 borderRadius: 'var(--column-radius, 16px)',
                 color: 'rgba(234, 242, 255, 0.96)',
                 opacity: isDragging ? 0.45 : 1,
                 transform: isDragging ? 'scale(0.985)' : (isDropTarget ? 'translateY(-4px)' : 'translateY(0)'),
-                transition: 'transform 130ms ease, box-shadow 130ms ease, opacity 130ms ease, border-color 130ms ease',
+                transition: performanceMode ? 'none' : 'transform 130ms ease, box-shadow 130ms ease, opacity 130ms ease, border-color 130ms ease',
                 cursor: canDrag ? (isDragging ? 'grabbing' : 'grab') : 'default'
               }}
             >
@@ -1834,6 +1847,7 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
                         vibeIcons={vibeIcons}
                         compactBtnSx={compactBtnSx}
                         buttonMode={buttonMode}
+                        performanceMode={performanceMode}
                         fontScale={fontScale}
                         connected={connected}
                         hideAllResearch={hideAllResearch}

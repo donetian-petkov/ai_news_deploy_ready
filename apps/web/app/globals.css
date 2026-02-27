@@ -55,6 +55,10 @@ html, body {
   --column-radius: 16px;
   --news-card-radius: 14px;
   --topbar-blur: 12px;
+  --topbar-shadow: 0 18px 28px rgba(0, 0, 0, 0.28), inset 0 -1px 0 rgba(255, 255, 255, 0.04);
+  --panel-shadow: inset 0 1px 0 rgba(255,255,255,0.04), 0 14px 28px rgba(0,0,0,0.24);
+  --button-hover-shadow: 0 0 0 1px var(--panel-border), 0 8px 16px rgba(0, 0, 0, 0.24);
+  --button-hover-lift: -1px;
   --news-card-overlay: radial-gradient(520px 220px at 100% 0%, rgba(61,149,255,0.16), transparent 70%);
   --column-shell-overlay: radial-gradient(700px 260px at 0% 0%, rgba(61,149,255,0.12), transparent 70%);
 }
@@ -257,6 +261,40 @@ body[data-scheme='sunset'] { --panel-border: rgba(255, 157, 102, 0.45); --card-b
 body[data-scheme='neon'] { --panel-border: rgba(0, 221, 255, 0.52); --card-border: rgba(0, 221, 255, 0.48); }
 body[data-scheme='ocean'] { --panel-border: rgba(79, 169, 242, 0.5); --card-border: rgba(79, 169, 242, 0.44); }
 body[data-scheme='forest'] { --panel-border: rgba(91, 173, 117, 0.46); --card-border: rgba(91, 173, 117, 0.42); }
+body[data-performance='on'] {
+  --bg-main: #060d1c;
+  --bg-glow-1: none;
+  --bg-glow-2: none;
+  --bg-noise: none;
+  --panel-bg: rgba(10, 18, 34, 0.96);
+  --section-bg: rgba(11, 19, 36, 0.96);
+  --field-bg: rgba(14, 24, 43, 0.96);
+  --card-bg: rgba(10, 18, 34, 0.98);
+  --news-card-overlay: none;
+  --column-shell-overlay: none;
+  --column-radius: 12px;
+  --news-card-radius: 11px;
+  --topbar-blur: 0px;
+  --topbar-shadow: none;
+  --panel-shadow: none;
+  --button-hover-shadow: none;
+  --button-hover-lift: 0px;
+}
+body[data-performance='on']::before,
+body[data-performance='on']::after {
+  display: none;
+}
+body[data-performance='on'] .mobileTopActions .MuiChip-root,
+body[data-performance='on'] .mobileDrawerPaper {
+  backdrop-filter: none;
+}
+body[data-performance='on'] *,
+body[data-performance='on'] *::before,
+body[data-performance='on'] *::after {
+  animation-duration: 0s !important;
+  animation-iteration-count: 1 !important;
+  transition: none !important;
+}
 
 .topbar {
   position: sticky;
@@ -266,7 +304,7 @@ body[data-scheme='forest'] { --panel-border: rgba(91, 173, 117, 0.46); --card-bo
   border-bottom: 1px solid var(--panel-border);
   color: var(--text-main);
   backdrop-filter: blur(var(--topbar-blur));
-  box-shadow: 0 18px 28px rgba(0, 0, 0, 0.28), inset 0 -1px 0 rgba(255, 255, 255, 0.04);
+  box-shadow: var(--topbar-shadow);
 }
 
 body {
@@ -340,7 +378,7 @@ body::after {
   border-radius: var(--column-radius);
   background: var(--panel-bg);
   padding: 12px;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.04), 0 14px 28px rgba(0,0,0,0.24);
+  box-shadow: var(--panel-shadow);
 }
 
 .controlsRow {
@@ -427,8 +465,8 @@ body::after {
 }
 
 .topbar .MuiButton-root.btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 0 0 1px var(--panel-border), 0 8px 16px rgba(0, 0, 0, 0.24);
+  transform: translateY(var(--button-hover-lift));
+  box-shadow: var(--button-hover-shadow);
 }
 
 .topbar .MuiOutlinedInput-root,

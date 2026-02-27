@@ -95,7 +95,10 @@ export default function TopMenu() {
     aiProvider: bg ? 'AI доставчик:' : 'AI provider:',
     openai: 'OpenAI',
     claude: 'Claude',
-    openrouter: 'OpenRouter'
+    openrouter: 'OpenRouter',
+    perfMode: bg ? 'Режим производителност' : 'Performance mode',
+    perfOn: bg ? 'ВКЛ' : 'ON',
+    perfOff: bg ? 'ИЗКЛ' : 'OFF'
   } as const;
 
   useEffect(() => {
@@ -118,6 +121,7 @@ export default function TopMenu() {
           font: 'system' | 'manrope' | 'grotesk' | 'sora' | 'plex' | 'serif' | 'mono';
           fontSize: 'sm' | 'md' | 'lg' | 'xl';
           scheme: 'classic' | 'vivid' | 'sunset' | 'neon' | 'ocean' | 'forest';
+          performanceMode: boolean;
           buttonMode: 'icons' | 'text';
           vibe: VibeValue;
         }>;
@@ -133,13 +137,14 @@ export default function TopMenu() {
     document.body.dataset.font = ui.font;
     document.body.dataset.fontSize = ui.fontSize;
     document.body.dataset.scheme = ui.scheme;
+    document.body.dataset.performance = ui.performanceMode ? 'on' : 'off';
     document.body.dataset.itemButtons = ui.buttonMode;
     document.body.dataset.theme = resolvedColorMode;
     document.documentElement.dataset.theme = resolvedColorMode;
     document.body.dataset.themeSource = ui.colorMode;
     document.documentElement.dataset.themeSource = ui.colorMode;
     document.documentElement.lang = ui.language;
-  }, [resolvedColorMode, ui.buttonMode, ui.colorMode, ui.controlsCollapsed, ui.font, ui.fontSize, ui.language, ui.menuCollapsed, ui.scheme, ui.vibe]);
+  }, [resolvedColorMode, ui.buttonMode, ui.colorMode, ui.controlsCollapsed, ui.font, ui.fontSize, ui.language, ui.menuCollapsed, ui.performanceMode, ui.scheme, ui.vibe]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -159,11 +164,12 @@ export default function TopMenu() {
         font: ui.font,
         fontSize: ui.fontSize,
         scheme: ui.scheme,
+        performanceMode: ui.performanceMode,
         buttonMode: ui.buttonMode,
         vibe: ui.vibe
       }));
     } catch {}
-  }, [ui.addStreamVisible, ui.allColumnControlsHidden, ui.hideAllResearch, ui.hideAllSummaries, ui.buttonMode, ui.colorMode, ui.controlsCollapsed, ui.font, ui.fontSize, ui.language, ui.menuCollapsed, ui.notifyEnabled, ui.notifyMode, ui.scheme, ui.searchVisible, ui.vibe]);
+  }, [ui.addStreamVisible, ui.allColumnControlsHidden, ui.hideAllResearch, ui.hideAllSummaries, ui.buttonMode, ui.colorMode, ui.controlsCollapsed, ui.font, ui.fontSize, ui.language, ui.menuCollapsed, ui.notifyEnabled, ui.notifyMode, ui.performanceMode, ui.scheme, ui.searchVisible, ui.vibe]);
 
   useEffect(() => {
     if (!isMobile) setMobileDrawerOpen(false);
@@ -788,6 +794,13 @@ export default function TopMenu() {
             </label>
             <button className="btn" type="button" onClick={cycleTheme}>
               {labels.colorMode}: {ui.colorMode}
+            </button>
+            <button
+              className="btn"
+              type="button"
+              onClick={() => dispatch(setAppearanceSettings({ performanceMode: !ui.performanceMode }))}
+            >
+              {labels.perfMode}: {ui.performanceMode ? labels.perfOn : labels.perfOff}
             </button>
           </div>
         </details>

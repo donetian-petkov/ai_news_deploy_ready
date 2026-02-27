@@ -36,6 +36,7 @@ type UiState = {
   font: 'system' | 'manrope' | 'grotesk' | 'sora' | 'plex' | 'serif' | 'mono';
   fontSize: 'sm' | 'md' | 'lg' | 'xl';
   scheme: 'classic' | 'vivid' | 'sunset' | 'neon' | 'ocean' | 'forest';
+  performanceMode: boolean;
   buttonMode: 'icons' | 'text';
   vibe: 'default' | 'anime' | 'arcade' | 'cinema' | 'newspaper' | 'cyberwitch' | 'fantasy' | 'scifi';
   toasts: Array<{ id: string; kind: 'info' | 'success' | 'error'; message: string }>;
@@ -67,6 +68,7 @@ const initialState: UiState = {
   font: 'system',
   fontSize: 'md',
   scheme: 'classic',
+  performanceMode: false,
   buttonMode: 'icons',
   vibe: 'default',
   toasts: []
@@ -130,7 +132,7 @@ const uiSlice = createSlice({
       if (next.researchLang === 'bg' || next.researchLang === 'en') state.researchLang = next.researchLang;
       if (next.allBudget === 'mixed' || next.allBudget === 'low' || next.allBudget === 'standard' || next.allBudget === 'high') state.allBudget = next.allBudget;
     },
-    setAppearanceSettings(state, action: PayloadAction<Partial<Pick<UiState, 'font' | 'fontSize' | 'scheme' | 'buttonMode' | 'vibe' | 'colorMode'>>>) {
+    setAppearanceSettings(state, action: PayloadAction<Partial<Pick<UiState, 'font' | 'fontSize' | 'scheme' | 'performanceMode' | 'buttonMode' | 'vibe' | 'colorMode'>>>) {
       const next = action.payload;
       if (next.font === 'system' || next.font === 'manrope' || next.font === 'grotesk' || next.font === 'sora' || next.font === 'plex' || next.font === 'serif' || next.font === 'mono') {
         state.font = next.font;
@@ -141,6 +143,9 @@ const uiSlice = createSlice({
       if (next.scheme === 'classic' || next.scheme === 'vivid' || next.scheme === 'sunset' || next.scheme === 'neon' || next.scheme === 'ocean' || next.scheme === 'forest') {
         state.scheme = next.scheme;
       }
+      if (typeof next.performanceMode === 'boolean') {
+        state.performanceMode = next.performanceMode;
+      }
       if (next.buttonMode === 'icons' || next.buttonMode === 'text') {
         state.buttonMode = next.buttonMode;
       }
@@ -149,7 +154,7 @@ const uiSlice = createSlice({
       }
       if (typeof next.vibe === 'string' && isVibe(next.vibe)) state.vibe = next.vibe;
     },
-    hydrateUiSettings(state, action: PayloadAction<Partial<Pick<UiState, 'language' | 'colorMode' | 'menuCollapsed' | 'controlsCollapsed' | 'searchVisible' | 'addStreamVisible' | 'allColumnControlsHidden' | 'hideAllResearch' | 'hideAllSummaries' | 'notifyEnabled' | 'notifyMode' | 'font' | 'fontSize' | 'scheme' | 'buttonMode' | 'vibe'>>>) {
+    hydrateUiSettings(state, action: PayloadAction<Partial<Pick<UiState, 'language' | 'colorMode' | 'menuCollapsed' | 'controlsCollapsed' | 'searchVisible' | 'addStreamVisible' | 'allColumnControlsHidden' | 'hideAllResearch' | 'hideAllSummaries' | 'notifyEnabled' | 'notifyMode' | 'font' | 'fontSize' | 'scheme' | 'performanceMode' | 'buttonMode' | 'vibe'>>>) {
       const next = action.payload;
       if (next.language === 'en' || next.language === 'bg') state.language = next.language;
       if (next.colorMode === 'system' || next.colorMode === 'dark' || next.colorMode === 'light') state.colorMode = next.colorMode;
@@ -165,6 +170,7 @@ const uiSlice = createSlice({
       if (next.font === 'system' || next.font === 'manrope' || next.font === 'grotesk' || next.font === 'sora' || next.font === 'plex' || next.font === 'serif' || next.font === 'mono') state.font = next.font;
       if (next.fontSize === 'sm' || next.fontSize === 'md' || next.fontSize === 'lg' || next.fontSize === 'xl') state.fontSize = next.fontSize;
       if (next.scheme === 'classic' || next.scheme === 'vivid' || next.scheme === 'sunset' || next.scheme === 'neon' || next.scheme === 'ocean' || next.scheme === 'forest') state.scheme = next.scheme;
+      if (typeof next.performanceMode === 'boolean') state.performanceMode = next.performanceMode;
       if (next.buttonMode === 'icons' || next.buttonMode === 'text') state.buttonMode = next.buttonMode;
       if (typeof next.vibe === 'string' && isVibe(next.vibe)) state.vibe = next.vibe;
     },
