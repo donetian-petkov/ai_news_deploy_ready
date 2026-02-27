@@ -426,6 +426,37 @@ const NewsCard = memo(function NewsCard({
   const AskIconComp = vibeIcons.ask;
   const ShareIconComp = vibeIcons.share;
   const HideIconComp = vibeIcons.hide;
+  const iconOnly = buttonMode === 'icons';
+  const actionSx = {
+    ...compactBtnSx,
+    minWidth: iconOnly ? 36 : 86,
+    px: iconOnly ? 0.85 : 1.2,
+    color: accent,
+    borderColor: accent,
+    '&:hover': {
+      borderColor: accent,
+      backgroundColor: soft
+    },
+    '&.MuiButton-contained': {
+      color: 'rgba(230, 239, 255, 0.98)',
+      border: `1px solid ${accent}`,
+      backgroundColor: soft
+    }
+  };
+  const matchActionSx = {
+    ...actionSx,
+    color: matchAccent,
+    borderColor: matchAccent,
+    '&:hover': {
+      borderColor: matchAccent,
+      backgroundColor: 'rgba(255, 168, 42, 0.16)'
+    },
+    '&.MuiButton-contained': {
+      color: 'rgba(255, 226, 179, 0.98)',
+      border: `1px solid ${matchAccent}`,
+      backgroundColor: 'rgba(255, 168, 42, 0.2)'
+    }
+  };
 
   return (
     <Card
@@ -439,7 +470,7 @@ const NewsCard = memo(function NewsCard({
       }}
     >
       <CardContent sx={{ pb: '12px !important' }}>
-        <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 0.8 }}>
+        <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 0.9 }}>
           <Typography variant="caption" sx={{ color: 'rgba(210,219,235,0.74)' }}>
             {formatTime(item.publishedMs)}
           </Typography>
@@ -448,33 +479,32 @@ const NewsCard = memo(function NewsCard({
               <Button
                 size="small"
                 variant={isPinnedNews ? 'contained' : 'outlined'}
-                sx={{ ...compactBtnSx, minWidth: 34, px: 0.75 }}
+                sx={{ ...actionSx, minWidth: 36, px: iconOnly ? 0.8 : 1.05 }}
                 onClick={() => onTogglePinnedNews(item.id)}
               >
                 <PushPinIcon sx={{ fontSize: 15 }} aria-hidden />
               </Button>
             </Tooltip>
-            {item.isMatch ? <Chip size="small" label={labels.match} color="warning" variant="outlined" /> : null}
+            {item.isMatch ? <Chip size="small" label={labels.match} variant="outlined" sx={{ color: matchAccent, borderColor: matchAccent, fontWeight: 800 }} /> : null}
             <Tooltip title={labels.shareLink}>
               <Button
                 size="small"
                 variant="outlined"
-                sx={{ ...compactBtnSx, minWidth: buttonMode === 'text' ? 72 : 34, px: buttonMode === 'text' ? 1.1 : 0.75 }}
+                sx={actionSx}
                 onClick={() => onCopyLink(item.link)}
               >
-                {buttonMode === 'text' ? labels.shareLink : <ShareIconComp sx={{ fontSize: 15 }} aria-hidden />}
+                {iconOnly ? <ShareIconComp sx={{ fontSize: 15 }} aria-hidden /> : labels.shareLink}
               </Button>
             </Tooltip>
             <Tooltip title={labels.hideNews}>
               <Button
                 size="small"
                 variant="outlined"
-                color="warning"
-                sx={{ ...compactBtnSx, minWidth: buttonMode === 'text' ? 72 : 34, px: buttonMode === 'text' ? 1.1 : 0.75 }}
+                sx={matchActionSx}
                 onClick={() => onHideItem(item)}
                 disabled={!connected}
               >
-                {buttonMode === 'text' ? labels.hideNews : <HideIconComp sx={{ fontSize: 15 }} aria-hidden />}
+                {iconOnly ? <HideIconComp sx={{ fontSize: 15 }} aria-hidden /> : labels.hideNews}
               </Button>
             </Tooltip>
           </Stack>
@@ -493,82 +523,40 @@ const NewsCard = memo(function NewsCard({
             lineHeight: 1.32,
             fontWeight: 800,
             color: 'primary.light',
-            mb: 1
+            mb: 1.1
           }}
         >
           <span>{item.title}</span>
           <OpenInNewIcon sx={{ fontSize: 14 }} />
         </MuiLink>
 
-        <Stack direction="row" spacing={1} sx={{ mb: item.summary ? 1 : 0 }} flexWrap="wrap">
-          <Button
-            size="small"
-            variant={summaryPending ? 'contained' : 'outlined'}
-            sx={{ ...compactBtnSx, minWidth: buttonMode === 'text' ? 84 : 34, px: buttonMode === 'text' ? 1.05 : 0.8 }}
-            onClick={() => onRequestSummary(item)}
-            disabled={!connected || summaryPending}
-          >
-            {buttonMode === 'text'
-              ? (summaryPending ? labels.generatingSummary : labels.summary)
-              : summaryPending
-                ? <AutoFixHighIcon sx={{ fontSize: 15 }} className="spinAnim" aria-hidden />
-                : <SummaryIconComp sx={{ fontSize: 15 }} aria-hidden />}
-          </Button>
-          <Button
-            size="small"
-            variant={researchPending ? 'contained' : 'outlined'}
-            sx={{ ...compactBtnSx, minWidth: buttonMode === 'text' ? 84 : 34, px: buttonMode === 'text' ? 1.05 : 0.8 }}
-            onClick={() => onRequestResearch(item)}
-            disabled={!connected || researchPending}
-          >
-            {buttonMode === 'text'
-              ? (researchPending ? labels.researching : labels.research)
-              : researchPending
-                ? <AutoFixHighIcon sx={{ fontSize: 15 }} className="spinAnim" aria-hidden />
-                : <ResearchIconComp sx={{ fontSize: 15 }} aria-hidden />}
-          </Button>
-          <Button
-            size="small"
-            variant={askState.open ? 'contained' : 'outlined'}
-            sx={{ ...compactBtnSx, minWidth: buttonMode === 'text' ? 84 : 34, px: buttonMode === 'text' ? 1.05 : 0.8 }}
-            onClick={() => onToggleAsk(item.id, item.feedUrl)}
-            disabled={!connected}
-          >
-            {buttonMode === 'text'
-              ? labels.askAgent
-              : askState.pending
-                ? <AutoFixHighIcon sx={{ fontSize: 15 }} className="spinAnim" aria-hidden />
-                : <AskIconComp sx={{ fontSize: 15 }} aria-hidden />}
-          </Button>
-        </Stack>
+        <Box sx={{ borderTop: '1px solid rgba(128, 154, 201, 0.34)', mb: 1.1 }} />
 
         {item.summary ? (
           <Box>
             {summaryVisible ? (
-              <Typography variant="body2" sx={{ color: 'rgba(226,234,250,0.95)', whiteSpace: 'pre-wrap' }}>
+              <Typography
+                variant="body1"
+                sx={{
+                  fontSize: `${1.08 * fontScale}rem`,
+                  lineHeight: 1.56,
+                  color: 'rgba(226,234,250,0.96)',
+                  whiteSpace: 'pre-wrap'
+                }}
+              >
                 {summaryText}
               </Typography>
             ) : null}
-            <Stack direction="row" spacing={1} sx={{ mt: 0.7 }} flexWrap="wrap">
-              {summaryMode === 'hidden' ? (
-                <Button size="small" variant="outlined" onClick={() => onSetSummaryMode(summaryLong ? 'collapsed' : 'expanded')}>
-                  {labels.showSummary}
-                </Button>
-              ) : (
-                <Button size="small" variant="outlined" color="warning" onClick={() => onSetSummaryMode('hidden')}>
-                  {labels.hideSummary}
-                </Button>
-              )}
-              {summaryVisible && summaryLong ? (
-                <Button
-                  size="small"
-                  variant="outlined"
-                  onClick={() => onSetSummaryMode(summaryMode === 'collapsed' ? 'expanded' : 'collapsed')}
-                >
-                  {summaryMode === 'collapsed' ? labels.showMore : labels.showLess}
-                </Button>
-              ) : null}
-            </Stack>
+            {summaryVisible && summaryLong ? (
+              <Button
+                size="small"
+                variant="text"
+                onClick={() => onSetSummaryMode(summaryMode === 'collapsed' ? 'expanded' : 'collapsed')}
+                sx={{ mt: 0.35, color: accent, textTransform: 'none', fontWeight: 700 }}
+              >
+                {summaryMode === 'collapsed' ? labels.showMore : labels.showLess}
+              </Button>
+            ) : null}
           </Box>
         ) : null}
         {showAutoResearching ? (
@@ -589,33 +577,107 @@ const NewsCard = memo(function NewsCard({
                     {labels.confidence}: {researchConfidence}
                   </Typography>
                 ) : null}
-                <Typography variant="body2" sx={{ color: 'rgba(205,218,238,0.92)', whiteSpace: 'pre-wrap' }}>
+                <Typography
+                  variant="body2"
+                  sx={{
+                    fontSize: `${0.98 * fontScale}rem`,
+                    lineHeight: 1.52,
+                    color: 'rgba(205,218,238,0.93)',
+                    whiteSpace: 'pre-wrap'
+                  }}
+                >
                   {researchText}
                 </Typography>
               </>
             ) : null}
-            <Stack direction="row" spacing={1} sx={{ mt: 0.7 }} flexWrap="wrap">
-              {researchMode === 'hidden' ? (
-                <Button size="small" variant="outlined" onClick={() => onSetResearchMode(researchLong ? 'collapsed' : 'expanded')}>
-                  {labels.showResearch}
-                </Button>
-              ) : (
-                <Button size="small" variant="outlined" color="warning" onClick={() => onSetResearchMode('hidden')}>
-                  {labels.hideResearch}
-                </Button>
-              )}
-              {researchVisible && researchLong ? (
-                <Button
-                  size="small"
-                  variant="outlined"
-                  onClick={() => onSetResearchMode(researchMode === 'collapsed' ? 'expanded' : 'collapsed')}
-                >
-                  {researchMode === 'collapsed' ? labels.showMore : labels.showLess}
-                </Button>
-              ) : null}
-            </Stack>
+            {researchVisible && researchLong ? (
+              <Button
+                size="small"
+                variant="text"
+                onClick={() => onSetResearchMode(researchMode === 'collapsed' ? 'expanded' : 'collapsed')}
+                sx={{ mt: 0.35, color: accent, textTransform: 'none', fontWeight: 700 }}
+              >
+                {researchMode === 'collapsed' ? labels.showMore : labels.showLess}
+              </Button>
+            ) : null}
           </Box>
         ) : null}
+        <Stack
+          direction="row"
+          spacing={0.8}
+          sx={{ mt: 1.2, pt: 0.95, borderTop: '1px dashed rgba(124, 150, 193, 0.3)' }}
+          flexWrap="wrap"
+        >
+          <Tooltip title={summaryPending ? labels.generatingSummary : labels.summary}>
+            <Button
+              size="small"
+              variant={summaryPending ? 'contained' : 'outlined'}
+              sx={actionSx}
+              onClick={() => onRequestSummary(item)}
+              disabled={!connected || summaryPending}
+            >
+              {iconOnly
+                ? (summaryPending
+                  ? <AutoFixHighIcon sx={{ fontSize: 15 }} className="spinAnim" aria-hidden />
+                  : <SummaryIconComp sx={{ fontSize: 15 }} aria-hidden />)
+                : (summaryPending ? labels.generatingSummary : labels.summary)}
+            </Button>
+          </Tooltip>
+          <Tooltip title={researchPending ? labels.researching : labels.research}>
+            <Button
+              size="small"
+              variant={researchPending ? 'contained' : 'outlined'}
+              sx={actionSx}
+              onClick={() => onRequestResearch(item)}
+              disabled={!connected || researchPending}
+            >
+              {iconOnly
+                ? (researchPending
+                  ? <AutoFixHighIcon sx={{ fontSize: 15 }} className="spinAnim" aria-hidden />
+                  : <ResearchIconComp sx={{ fontSize: 15 }} aria-hidden />)
+                : (researchPending ? labels.researching : labels.research)}
+            </Button>
+          </Tooltip>
+          <Tooltip title={labels.askAgent}>
+            <Button
+              size="small"
+              variant={askState.open ? 'contained' : 'outlined'}
+              sx={actionSx}
+              onClick={() => onToggleAsk(item.id, item.feedUrl)}
+              disabled={!connected}
+            >
+              {iconOnly
+                ? (askState.pending
+                  ? <AutoFixHighIcon sx={{ fontSize: 15 }} className="spinAnim" aria-hidden />
+                  : <AskIconComp sx={{ fontSize: 15 }} aria-hidden />)
+                : labels.askAgent}
+            </Button>
+          </Tooltip>
+          {item.summary ? (
+            <Tooltip title={summaryVisible ? labels.hideSummary : labels.showSummary}>
+              <Button
+                size="small"
+                variant={summaryVisible ? 'contained' : 'outlined'}
+                sx={summaryVisible ? matchActionSx : actionSx}
+                onClick={() => onSetSummaryMode(summaryVisible ? 'hidden' : (summaryLong ? 'collapsed' : 'expanded'))}
+              >
+                {iconOnly ? <SummaryIconComp sx={{ fontSize: 15 }} aria-hidden /> : (summaryVisible ? labels.hideSummary : labels.showSummary)}
+              </Button>
+            </Tooltip>
+          ) : null}
+          {item.research && !hideAllResearch ? (
+            <Tooltip title={researchVisible ? labels.hideResearch : labels.showResearch}>
+              <Button
+                size="small"
+                variant={researchVisible ? 'contained' : 'outlined'}
+                sx={researchVisible ? matchActionSx : actionSx}
+                onClick={() => onSetResearchMode(researchVisible ? 'hidden' : (researchLong ? 'collapsed' : 'expanded'))}
+              >
+                {iconOnly ? <ResearchIconComp sx={{ fontSize: 15 }} aria-hidden /> : (researchVisible ? labels.hideResearch : labels.showResearch)}
+              </Button>
+            </Tooltip>
+          ) : null}
+        </Stack>
         {askState.open ? (
           <Box sx={{ mt: 1.1, p: 1, border: '1px solid rgba(106,128,162,0.4)', borderRadius: 1.5 }}>
             <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 0.8 }}>
@@ -1459,10 +1521,18 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
             <Card
               variant="outlined"
               sx={{
-                background: `linear-gradient(180deg, ${soft}, rgba(9, 15, 30, 0.96) 78%)`,
-                borderColor: isDropTarget ? accent : (isDragging ? accent : 'rgba(97, 123, 161, 0.42)'),
-                borderTop: `4px solid ${accent}`,
-                boxShadow: isDropTarget ? `0 0 0 2px ${accent}66, 0 18px 34px rgba(0,0,0,0.30)` : '0 10px 22px rgba(0,0,0,0.22)',
+                background: isMatchColumn
+                  ? `linear-gradient(180deg, ${palette.mSoft}, rgba(34, 20, 7, 0.95) 74%, rgba(10, 14, 28, 0.98) 100%)`
+                  : `linear-gradient(180deg, ${soft}, rgba(9, 15, 30, 0.96) 78%)`,
+                borderColor: isDropTarget
+                  ? accent
+                  : (isDragging ? accent : (isMatchColumn ? `${palette.m}` : 'rgba(97, 123, 161, 0.42)')),
+                borderTop: `4px solid ${isMatchColumn ? palette.m : accent}`,
+                boxShadow: isDropTarget
+                  ? `0 0 0 2px ${accent}66, 0 18px 34px rgba(0,0,0,0.30)`
+                  : (isMatchColumn
+                    ? '0 12px 26px rgba(0,0,0,0.30), inset 0 0 0 1px rgba(255,180,62,0.12)'
+                    : '0 10px 22px rgba(0,0,0,0.22)'),
                 borderRadius: '16px',
                 color: 'rgba(234, 242, 255, 0.96)',
                 opacity: isDragging ? 0.45 : 1,
