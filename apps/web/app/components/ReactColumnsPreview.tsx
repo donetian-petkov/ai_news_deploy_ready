@@ -366,6 +366,7 @@ type NewsCardProps = {
   fontScale: number;
   connected: boolean;
   hideAllResearch: boolean;
+  hideAllSummaries: boolean;
   summaryPending: boolean;
   researchPending: boolean;
   isPinnedNews: boolean;
@@ -403,6 +404,7 @@ const NewsCard = memo(function NewsCard({
   fontScale,
   connected,
   hideAllResearch,
+  hideAllSummaries,
   summaryPending,
   researchPending,
   isPinnedNews,
@@ -429,7 +431,7 @@ const NewsCard = memo(function NewsCard({
   onAskDraft,
   onAskSubmit
 }: NewsCardProps) {
-  const summaryVisible = summaryMode !== 'hidden';
+  const summaryVisible = !hideAllSummaries && summaryMode !== 'hidden';
   const researchVisible = researchMode !== 'hidden';
   const SummaryIconComp = vibeIcons.summary;
   const ResearchIconComp = vibeIcons.research;
@@ -556,7 +558,7 @@ const NewsCard = memo(function NewsCard({
 
         <Box sx={{ borderTop: '1px solid rgba(128, 154, 201, 0.34)', mb: 1.1 }} />
 
-        {item.summary ? (
+        {item.summary && !hideAllSummaries ? (
           <Box>
             {summaryVisible ? (
               <Typography
@@ -679,7 +681,7 @@ const NewsCard = memo(function NewsCard({
                 : labels.askAgent}
             </Button>
           </Tooltip>
-          {item.summary ? (
+          {item.summary && !hideAllSummaries ? (
             <Tooltip title={summaryVisible ? labels.hideSummary : labels.showSummary}>
               <Button
                 size="small"
@@ -764,6 +766,7 @@ const NewsCard = memo(function NewsCard({
     && prev.fontScale === next.fontScale
     && prev.connected === next.connected
     && prev.hideAllResearch === next.hideAllResearch
+    && prev.hideAllSummaries === next.hideAllSummaries
     && prev.summaryPending === next.summaryPending
     && prev.researchPending === next.researchPending
     && prev.isPinnedNews === next.isPinnedNews
@@ -792,6 +795,7 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
   const notifyEnabled = useAppSelector(s => s.ui.notifyEnabled);
   const notifyMode = useAppSelector(s => s.ui.notifyMode);
   const hideAllResearch = useAppSelector(s => s.ui.hideAllResearch);
+  const hideAllSummaries = useAppSelector(s => s.ui.hideAllSummaries);
   const showMoreNewsAllSeq = useAppSelector(s => s.ui.showMoreNewsAllSeq);
   const resetNewsShownAllSeq = useAppSelector(s => s.ui.resetNewsShownAllSeq);
   const aiEnabled = useAppSelector(s => s.ui.aiEnabled);
@@ -1830,6 +1834,7 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
                         fontScale={fontScale}
                         connected={connected}
                         hideAllResearch={hideAllResearch}
+                        hideAllSummaries={hideAllSummaries}
                         summaryPending={!!summaryPendingById[it.id]}
                         researchPending={!!researchPendingById[it.id]}
                         isPinnedNews={!!pinnedNewsById[it.id]}

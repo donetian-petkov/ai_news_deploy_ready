@@ -21,6 +21,7 @@ type UiState = {
   allColumnControlsHidden: boolean;
   hideAllResearchSeq: number;
   hideAllResearch: boolean;
+  hideAllSummaries: boolean;
   showMoreNewsAllSeq: number;
   resetNewsShownAllSeq: number;
   helpOpen: boolean;
@@ -50,6 +51,7 @@ const initialState: UiState = {
   allColumnControlsHidden: false,
   hideAllResearchSeq: 0,
   hideAllResearch: false,
+  hideAllSummaries: false,
   showMoreNewsAllSeq: 0,
   resetNewsShownAllSeq: 0,
   helpOpen: false,
@@ -98,6 +100,9 @@ const uiSlice = createSlice({
       state.hideAllResearch = !!action.payload;
       if (state.hideAllResearch) state.hideAllResearchSeq += 1;
     },
+    setHideAllSummaries(state, action: PayloadAction<boolean>) {
+      state.hideAllSummaries = !!action.payload;
+    },
     triggerShowMoreNewsAll(state) {
       state.showMoreNewsAllSeq += 1;
     },
@@ -141,7 +146,7 @@ const uiSlice = createSlice({
       }
       if (typeof next.vibe === 'string' && isVibe(next.vibe)) state.vibe = next.vibe;
     },
-    hydrateUiSettings(state, action: PayloadAction<Partial<Pick<UiState, 'language' | 'colorMode' | 'menuCollapsed' | 'controlsCollapsed' | 'searchVisible' | 'addStreamVisible' | 'allColumnControlsHidden' | 'hideAllResearch' | 'notifyEnabled' | 'notifyMode' | 'font' | 'fontSize' | 'scheme' | 'buttonMode' | 'vibe'>>>) {
+    hydrateUiSettings(state, action: PayloadAction<Partial<Pick<UiState, 'language' | 'colorMode' | 'menuCollapsed' | 'controlsCollapsed' | 'searchVisible' | 'addStreamVisible' | 'allColumnControlsHidden' | 'hideAllResearch' | 'hideAllSummaries' | 'notifyEnabled' | 'notifyMode' | 'font' | 'fontSize' | 'scheme' | 'buttonMode' | 'vibe'>>>) {
       const next = action.payload;
       if (next.language === 'en' || next.language === 'bg') state.language = next.language;
       if (next.colorMode === 'system' || next.colorMode === 'dark' || next.colorMode === 'light') state.colorMode = next.colorMode;
@@ -151,6 +156,7 @@ const uiSlice = createSlice({
       if (typeof next.addStreamVisible === 'boolean') state.addStreamVisible = next.addStreamVisible;
       if (typeof next.allColumnControlsHidden === 'boolean') state.allColumnControlsHidden = next.allColumnControlsHidden;
       if (typeof next.hideAllResearch === 'boolean') state.hideAllResearch = next.hideAllResearch;
+      if (typeof next.hideAllSummaries === 'boolean') state.hideAllSummaries = next.hideAllSummaries;
       if (typeof next.notifyEnabled === 'boolean') state.notifyEnabled = next.notifyEnabled;
       if (next.notifyMode === 'matched' || next.notifyMode === 'matched_pinned' || next.notifyMode === 'pinned' || next.notifyMode === 'all') state.notifyMode = next.notifyMode;
       if (next.font === 'system' || next.font === 'manrope' || next.font === 'grotesk' || next.font === 'sora' || next.font === 'plex' || next.font === 'serif' || next.font === 'mono') state.font = next.font;
@@ -183,6 +189,7 @@ export const {
   setTopUiState,
   triggerHideAllResearch,
   setHideAllResearch,
+  setHideAllSummaries,
   triggerShowMoreNewsAll,
   triggerResetNewsShownAll,
   setHelpOpen,

@@ -8,7 +8,7 @@ import MenuIcon from '@mui/icons-material/Menu';
 import SearchIcon from '@mui/icons-material/Search';
 import TuneIcon from '@mui/icons-material/Tune';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
-import { setLanguage, setSearchQuery, setTopUiState, setHideAllResearch, setNotifySettings, setAiSettings, setAppearanceSettings, hydrateUiSettings, setHelpOpen, dismissToast, triggerShowMoreNewsAll, triggerResetNewsShownAll } from '../store/slices/uiSlice';
+import { setLanguage, setSearchQuery, setTopUiState, setHideAllResearch, setHideAllSummaries, setNotifySettings, setAiSettings, setAppearanceSettings, hydrateUiSettings, setHelpOpen, dismissToast, triggerShowMoreNewsAll, triggerResetNewsShownAll } from '../store/slices/uiSlice';
 import { sendWsMessage } from '../store/wsClient';
 import { setFeedBudgetSetting } from '../store/slices/feedsSlice';
 import { removeOldItemsInFeed, resetAllToNewestLimit } from '../store/slices/newsSlice';
@@ -67,6 +67,8 @@ export default function TopMenu() {
     showAllColumnControls: bg ? 'Покажи всички контроли на колони' : 'Show all column controls',
     hideAllResearch: bg ? 'Скрий всички проучвания' : 'Hide all research',
     showAllResearch: bg ? 'Покажи всички проучвания' : 'Show all research',
+    hideAllSummaries: bg ? 'Скрий всички резюмета' : 'Hide all summaries',
+    showAllSummaries: bg ? 'Покажи всички резюмета' : 'Show all summaries',
     showMoreNewsAll: bg ? 'Покажи +5 (всички колони)' : 'Show +5 (all columns)',
     resetNewsShownAll: bg ? 'Нулирай показани до 10' : 'Reset shown to 10',
     hideMenu: bg ? 'Скрий меню' : 'Hide menu',
@@ -106,6 +108,7 @@ export default function TopMenu() {
           addStreamVisible: boolean;
           allColumnControlsHidden: boolean;
           hideAllResearch: boolean;
+          hideAllSummaries: boolean;
           notifyEnabled: boolean;
           notifyMode: 'matched' | 'matched_pinned' | 'pinned' | 'all';
           font: 'system' | 'manrope' | 'grotesk' | 'sora' | 'plex' | 'serif' | 'mono';
@@ -146,6 +149,7 @@ export default function TopMenu() {
         addStreamVisible: ui.addStreamVisible,
         allColumnControlsHidden: ui.allColumnControlsHidden,
         hideAllResearch: ui.hideAllResearch,
+        hideAllSummaries: ui.hideAllSummaries,
         notifyEnabled: ui.notifyEnabled,
         notifyMode: ui.notifyMode,
         font: ui.font,
@@ -155,7 +159,7 @@ export default function TopMenu() {
         vibe: ui.vibe
       }));
     } catch {}
-  }, [ui.addStreamVisible, ui.allColumnControlsHidden, ui.hideAllResearch, ui.buttonMode, ui.colorMode, ui.controlsCollapsed, ui.font, ui.fontSize, ui.language, ui.menuCollapsed, ui.notifyEnabled, ui.notifyMode, ui.scheme, ui.searchVisible, ui.vibe]);
+  }, [ui.addStreamVisible, ui.allColumnControlsHidden, ui.hideAllResearch, ui.hideAllSummaries, ui.buttonMode, ui.colorMode, ui.controlsCollapsed, ui.font, ui.fontSize, ui.language, ui.menuCollapsed, ui.notifyEnabled, ui.notifyMode, ui.scheme, ui.searchVisible, ui.vibe]);
 
   useEffect(() => {
     if (!isMobile) setMobileDrawerOpen(false);
@@ -843,6 +847,16 @@ export default function TopMenu() {
               >
                 {ui.hideAllResearch ? labels.showAllResearch : labels.hideAllResearch}
               </Button>
+              <Button
+                id="hideAllSummariesBtn"
+                className="btn ghost"
+                size="small"
+                variant="outlined"
+                type="button"
+                onClick={() => dispatch(setHideAllSummaries(!ui.hideAllSummaries))}
+              >
+                {ui.hideAllSummaries ? labels.showAllSummaries : labels.hideAllSummaries}
+              </Button>
               <Button id="menuToggle" className="btn ghost" size="small" variant="outlined" type="button" onClick={toggleMenu}>{menuLabel}</Button>
             </Stack>
           )}
@@ -886,6 +900,12 @@ export default function TopMenu() {
                 onClick={() => dispatch(setHideAllResearch(!ui.hideAllResearch))}
               >
                 {ui.hideAllResearch ? labels.showAllResearch : labels.hideAllResearch}
+              </Button>
+              <Button
+                variant="outlined"
+                onClick={() => dispatch(setHideAllSummaries(!ui.hideAllSummaries))}
+              >
+                {ui.hideAllSummaries ? labels.showAllSummaries : labels.hideAllSummaries}
               </Button>
             </Stack>
             {ui.searchVisible ? searchSection : null}
