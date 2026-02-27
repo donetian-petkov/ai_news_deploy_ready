@@ -138,6 +138,7 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
   const [bodyModes, setBodyModes] = useState<Record<string, BodyMode>>({});
   const [shareNoticeOpen, setShareNoticeOpen] = useState(false);
   const [dragFeedUrl, setDragFeedUrl] = useState<string | null>(null);
+  const [dragOverFeedUrl, setDragOverFeedUrl] = useState<string | null>(null);
   const prevAllControlsHiddenRef = useRef<boolean | null>(null);
   const bg = language === 'bg';
   const l = useMemo(() => ({
@@ -334,6 +335,17 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
     }));
     return fallback;
   }, [feeds, itemsByFeed, orderByUrl, pinnedByUrl]);
+
+  const renderedFeeds = useMemo(() => {
+    if (!dragFeedUrl || !dragOverFeedUrl || dragFeedUrl === dragOverFeedUrl) return previewFeeds;
+    const fromIdx = previewFeeds.findIndex(f => f.url === dragFeedUrl);
+    const toIdx = previewFeeds.findIndex(f => f.url === dragOverFeedUrl);
+    if (fromIdx < 0 || toIdx < 0) return previewFeeds;
+    const next = [...previewFeeds];
+    const [moved] = next.splice(fromIdx, 1);
+    next.splice(toIdx, 0, moved);
+    return next;
+  }, [dragFeedUrl, dragOverFeedUrl, previewFeeds]);
 
   const requestSummary = (it: NewsItem) => {
     if (!connected) return;
@@ -540,8 +552,8 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
           gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))'
         }}
       >
-        {previewFeeds.map((feed: FeedInfo) => {
-          const columnIdx = Math.max(0, previewFeeds.findIndex(f => f.url === feed.url));
+        {renderedFeeds.map((feed: FeedInfo) => {
+          const columnIdx = Math.max(0, renderedFeeds.findIndex(f => f.url === feed.url));
           const accent = palette[columnIdx % palette.length];
           const items = itemsByFeed[feed.url] || [];
           const normalizedQuery = String(searchQuery || '').trim().toLowerCase();
@@ -553,24 +565,49 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
             : items;
           const pinned = !!pinnedByUrl[feed.url];
           const controlsOpen = typeof controlsOpenByUrl[feed.url] === 'boolean' ? !!controlsOpenByUrl[feed.url] : true;
+          const isDragging = dragFeedUrl === feed.url;
+          const isDropTarget = !!dragFeedUrl && dragFeedUrl !== feed.url && dragOverFeedUrl === feed.url;
           return (
             <Card
               key={feed.url}
               variant="outlined"
               draggable
-              onDragStart={() => setDragFeedUrl(feed.url)}
-              onDragEnd={() => setDragFeedUrl(null)}
-              onDragOver={e => e.preventDefault()}
+              onDragStart={e => {
+                setDragFeedUrl(feed.url);
+                setDragOverFeedUrl(feed.url);
+                e.dataTransfer.effectAllowed = 'move';
+                e.dataTransfer.setData('text/plain', feed.url);
+              }}
+              onDragEnd={() => {
+                setDragFeedUrl(null);
+                setDragOverFeedUrl(null);
+              }}
+              onDragEnter={() => {
+                if (dragFeedUrl && dragFeedUrl !== feed.url) setDragOverFeedUrl(feed.url);
+              }}
+              onDragOver={e => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+                if (dragFeedUrl && dragFeedUrl !== feed.url && dragOverFeedUrl !== feed.url) {
+                  setDragOverFeedUrl(feed.url);
+                }
+              }}
               onDrop={() => {
                 if (dragFeedUrl && dragFeedUrl !== feed.url) {
                   dispatch(reorderFeeds({ fromUrl: dragFeedUrl, toUrl: feed.url }));
                 }
                 setDragFeedUrl(null);
+                setDragOverFeedUrl(null);
               }}
               sx={{
                 background: `linear-gradient(160deg, rgba(15,22,38,0.92), rgba(7,14,28,0.95)), radial-gradient(600px 220px at 4% 5%, ${accent}${Math.round(schemeOpacity * 255).toString(16).padStart(2, '0')}, transparent 70%)`,
-                borderColor: dragFeedUrl === feed.url ? accent : 'rgba(97, 123, 161, 0.42)',
-                color: 'var(--text-main)'
+                borderColor: isDropTarget ? accent : (isDragging ? accent : 'rgba(97, 123, 161, 0.42)'),
+                boxShadow: isDropTarget ? `0 0 0 2px ${accent}66, 0 18px 34px rgba(0,0,0,0.30)` : '0 10px 22px rgba(0,0,0,0.22)',
+                color: 'var(--text-main)',
+                opacity: isDragging ? 0.45 : 1,
+                transform: isDragging ? 'scale(0.985)' : (isDropTarget ? 'translateY(-4px)' : 'translateY(0)'),
+                transition: 'transform 130ms ease, box-shadow 130ms ease, opacity 130ms ease, border-color 130ms ease',
+                cursor: isDragging ? 'grabbing' : 'grab'
               }}
             >
               <CardContent sx={{ pb: '12px !important' }}>

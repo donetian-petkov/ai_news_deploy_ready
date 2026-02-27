@@ -40,6 +40,10 @@
 - Fixed WebSocket item handling in Next frontend:
   - regular feed columns no longer discard items with `filteredOk=false`
   - resolves empty “Waiting for news...” columns when keywords are empty or strict matching is enabled
+- Improved column drag-and-drop UX in React grid:
+  - dragged column now becomes semi-transparent during move
+  - live hover target reorders columns visually before drop
+  - stronger drop-target highlight and smoother movement transitions
 
 ### Existing migration milestones already in `main`
 - Next.js web app and Node.js API monorepo with Prisma + SQLite + zod.
