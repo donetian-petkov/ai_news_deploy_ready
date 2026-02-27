@@ -829,6 +829,7 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
   const deleteAgeByUrl = useAppSelector(s => s.feeds.deleteAgeByUrl);
   const orderByUrl = useAppSelector(s => s.feeds.orderByUrl);
   const searchQuery = useAppSelector(s => s.ui.searchQuery);
+  const moodFilter = useAppSelector(s => s.ui.moodFilter);
   const allColumnControlsHidden = useAppSelector(s => s.ui.allColumnControlsHidden);
   const itemsByFeed = useAppSelector(s => s.news.itemsByFeed);
   const summaryPendingById = useAppSelector(s => s.news.summaryPendingById);
@@ -1520,13 +1521,16 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
           const accent = colTheme === 'a' ? palette.a : colTheme === 'b' ? palette.b : palette.m;
           const soft = colTheme === 'a' ? palette.aSoft : colTheme === 'b' ? palette.bSoft : palette.mSoft;
           const items = isMatchColumn ? filteredColumnItems : (itemsByFeed[feed.url] || []);
+          const moodFilteredItems = moodFilter === 'all'
+            ? items
+            : items.filter(it => it.mood === moodFilter);
           const normalizedQuery = String(searchQuery || '').trim().toLowerCase();
           const itemsVisible = normalizedQuery
-            ? items.filter(it => {
+            ? moodFilteredItems.filter(it => {
               const hay = `${it.title}\n${it.summary || ''}\n${it.research || ''}`.toLowerCase();
               return hay.includes(normalizedQuery);
             })
-            : items;
+            : moodFilteredItems;
           const visibleLimit = Math.max(10, visibleByFeed[feed.url] || 10);
           const shownItems = itemsVisible.slice(0, visibleLimit);
           const isHydrated = !!hydratedColumns[feed.url];

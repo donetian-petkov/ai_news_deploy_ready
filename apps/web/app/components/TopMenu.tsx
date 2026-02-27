@@ -8,7 +8,7 @@ import MenuIcon from '@mui/icons-material/Menu';
 import SearchIcon from '@mui/icons-material/Search';
 import TuneIcon from '@mui/icons-material/Tune';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
-import { setLanguage, setSearchQuery, setTopUiState, setHideAllResearch, setHideAllSummaries, setNotifySettings, setAiSettings, setAppearanceSettings, hydrateUiSettings, setHelpOpen, dismissToast, enqueueToast, triggerShowMoreNewsAll, triggerResetNewsShownAll } from '../store/slices/uiSlice';
+import { setLanguage, setSearchQuery, setTopUiState, setHideAllResearch, setHideAllSummaries, setNotifySettings, setAiSettings, setMoodFilter, setAppearanceSettings, hydrateUiSettings, setHelpOpen, dismissToast, enqueueToast, triggerShowMoreNewsAll, triggerResetNewsShownAll } from '../store/slices/uiSlice';
 import { sendWsMessage } from '../store/wsClient';
 import { setFeedBudgetSetting } from '../store/slices/feedsSlice';
 import { removeOldItemsInFeed, resetAllToNewestLimit } from '../store/slices/newsSlice';
@@ -93,9 +93,21 @@ export default function TopMenu() {
     close: bg ? 'Затвори' : 'Close',
     colorMode: bg ? 'Цветове' : 'Color mode',
     aiProvider: bg ? 'AI доставчик:' : 'AI provider:',
+    moodFilter: bg ? 'Филтър настроение:' : 'Mood filter:',
     openai: 'OpenAI',
     claude: 'Claude',
     openrouter: 'OpenRouter',
+    moodAll: bg ? 'Всички' : 'All',
+    moodPesimistic: bg ? 'Песимистично' : 'Pesimistic',
+    moodOptimistic: bg ? 'Оптимистично' : 'Optimistic',
+    moodRealistic: bg ? 'Реалистично' : 'Realistic',
+    moodMelancholy: bg ? 'Меланхолия' : 'Melancholy',
+    moodHappiness: bg ? 'Щастие' : 'Happiness',
+    moodSadness: bg ? 'Тъга' : 'Sadness',
+    moodRage: bg ? 'Ярост' : 'Rage',
+    moodUncertainty: bg ? 'Несигурност' : 'Uncertainty',
+    moodNeutral: bg ? 'Неутрално' : 'Neutral',
+    moodCurios: bg ? 'Любопитство' : 'Curios',
     aiUnavailable: bg ? 'AI не е наличен за избрания доставчик. Добави валиден API ключ от AI Settings.' : 'AI is unavailable for the selected provider. Add a valid API key in AI Settings.',
     perfMode: bg ? 'Режим производителност' : 'Performance mode',
     perfOn: bg ? 'ВКЛ' : 'ON',
@@ -119,6 +131,7 @@ export default function TopMenu() {
           hideAllSummaries: boolean;
           notifyEnabled: boolean;
           notifyMode: 'matched' | 'matched_pinned' | 'pinned' | 'all';
+          moodFilter: 'all' | 'pesimistic' | 'optimistic' | 'realistic' | 'melancholy' | 'happiness' | 'sadness' | 'rage' | 'uncertainty' | 'neutral' | 'curios';
           font: 'system' | 'manrope' | 'grotesk' | 'sora' | 'plex' | 'serif' | 'mono';
           fontSize: 'sm' | 'md' | 'lg' | 'xl';
           scheme: 'classic' | 'vivid' | 'sunset' | 'neon' | 'ocean' | 'forest';
@@ -162,6 +175,7 @@ export default function TopMenu() {
         hideAllSummaries: ui.hideAllSummaries,
         notifyEnabled: ui.notifyEnabled,
         notifyMode: ui.notifyMode,
+        moodFilter: ui.moodFilter,
         font: ui.font,
         fontSize: ui.fontSize,
         scheme: ui.scheme,
@@ -170,7 +184,7 @@ export default function TopMenu() {
         vibe: ui.vibe
       }));
     } catch {}
-  }, [ui.addStreamVisible, ui.allColumnControlsHidden, ui.hideAllResearch, ui.hideAllSummaries, ui.buttonMode, ui.colorMode, ui.controlsCollapsed, ui.font, ui.fontSize, ui.language, ui.menuCollapsed, ui.notifyEnabled, ui.notifyMode, ui.performanceMode, ui.scheme, ui.searchVisible, ui.vibe]);
+  }, [ui.addStreamVisible, ui.allColumnControlsHidden, ui.hideAllResearch, ui.hideAllSummaries, ui.buttonMode, ui.colorMode, ui.controlsCollapsed, ui.font, ui.fontSize, ui.language, ui.menuCollapsed, ui.notifyEnabled, ui.notifyMode, ui.moodFilter, ui.performanceMode, ui.scheme, ui.searchVisible, ui.vibe]);
 
   useEffect(() => {
     if (!isMobile) setMobileDrawerOpen(false);
@@ -682,6 +696,28 @@ export default function TopMenu() {
               >
                 <option value="bg">BG</option>
                 <option value="en">EN</option>
+              </select>
+            </label>
+            <label className="checkbox">
+              <span id="moodFilterPrefix">{labels.moodFilter}</span>
+              <select
+                id="moodFilter"
+                className="select"
+                value={ui.moodFilter}
+                disabled={!ui.aiAvailable}
+                onChange={e => dispatch(setMoodFilter(e.target.value as 'all' | 'pesimistic' | 'optimistic' | 'realistic' | 'melancholy' | 'happiness' | 'sadness' | 'rage' | 'uncertainty' | 'neutral' | 'curios'))}
+              >
+                <option value="all">{labels.moodAll}</option>
+                <option value="pesimistic">{labels.moodPesimistic}</option>
+                <option value="optimistic">{labels.moodOptimistic}</option>
+                <option value="realistic">{labels.moodRealistic}</option>
+                <option value="melancholy">{labels.moodMelancholy}</option>
+                <option value="happiness">{labels.moodHappiness}</option>
+                <option value="sadness">{labels.moodSadness}</option>
+                <option value="rage">{labels.moodRage}</option>
+                <option value="uncertainty">{labels.moodUncertainty}</option>
+                <option value="neutral">{labels.moodNeutral}</option>
+                <option value="curios">{labels.moodCurios}</option>
               </select>
             </label>
             <label className="checkbox" title="Apply one budget to all columns">

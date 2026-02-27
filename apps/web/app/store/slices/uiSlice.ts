@@ -30,6 +30,7 @@ type UiState = {
   aiAvailable: boolean;
   aiEnabled: boolean;
   aiProvider: 'openai' | 'claude' | 'openrouter';
+  moodFilter: 'all' | 'pesimistic' | 'optimistic' | 'realistic' | 'melancholy' | 'happiness' | 'sadness' | 'rage' | 'uncertainty' | 'neutral' | 'curios';
   summaryLang: 'bilingual' | 'bg' | 'en';
   researchLang: 'bg' | 'en';
   allBudget: 'mixed' | 'low' | 'standard' | 'high';
@@ -62,6 +63,7 @@ const initialState: UiState = {
   aiAvailable: false,
   aiEnabled: false,
   aiProvider: 'openai',
+  moodFilter: 'all',
   summaryLang: 'bilingual',
   researchLang: 'bg',
   allBudget: 'standard',
@@ -132,6 +134,24 @@ const uiSlice = createSlice({
       if (next.researchLang === 'bg' || next.researchLang === 'en') state.researchLang = next.researchLang;
       if (next.allBudget === 'mixed' || next.allBudget === 'low' || next.allBudget === 'standard' || next.allBudget === 'high') state.allBudget = next.allBudget;
     },
+    setMoodFilter(state, action: PayloadAction<UiState['moodFilter']>) {
+      const next = action.payload;
+      if (
+        next === 'all'
+        || next === 'pesimistic'
+        || next === 'optimistic'
+        || next === 'realistic'
+        || next === 'melancholy'
+        || next === 'happiness'
+        || next === 'sadness'
+        || next === 'rage'
+        || next === 'uncertainty'
+        || next === 'neutral'
+        || next === 'curios'
+      ) {
+        state.moodFilter = next;
+      }
+    },
     setAppearanceSettings(state, action: PayloadAction<Partial<Pick<UiState, 'font' | 'fontSize' | 'scheme' | 'performanceMode' | 'buttonMode' | 'vibe' | 'colorMode'>>>) {
       const next = action.payload;
       if (next.font === 'system' || next.font === 'manrope' || next.font === 'grotesk' || next.font === 'sora' || next.font === 'plex' || next.font === 'serif' || next.font === 'mono') {
@@ -154,7 +174,7 @@ const uiSlice = createSlice({
       }
       if (typeof next.vibe === 'string' && isVibe(next.vibe)) state.vibe = next.vibe;
     },
-    hydrateUiSettings(state, action: PayloadAction<Partial<Pick<UiState, 'language' | 'colorMode' | 'menuCollapsed' | 'controlsCollapsed' | 'searchVisible' | 'addStreamVisible' | 'allColumnControlsHidden' | 'hideAllResearch' | 'hideAllSummaries' | 'notifyEnabled' | 'notifyMode' | 'font' | 'fontSize' | 'scheme' | 'performanceMode' | 'buttonMode' | 'vibe'>>>) {
+    hydrateUiSettings(state, action: PayloadAction<Partial<Pick<UiState, 'language' | 'colorMode' | 'menuCollapsed' | 'controlsCollapsed' | 'searchVisible' | 'addStreamVisible' | 'allColumnControlsHidden' | 'hideAllResearch' | 'hideAllSummaries' | 'notifyEnabled' | 'notifyMode' | 'moodFilter' | 'font' | 'fontSize' | 'scheme' | 'performanceMode' | 'buttonMode' | 'vibe'>>>) {
       const next = action.payload;
       if (next.language === 'en' || next.language === 'bg') state.language = next.language;
       if (next.colorMode === 'system' || next.colorMode === 'dark' || next.colorMode === 'light') state.colorMode = next.colorMode;
@@ -167,6 +187,19 @@ const uiSlice = createSlice({
       if (typeof next.hideAllSummaries === 'boolean') state.hideAllSummaries = next.hideAllSummaries;
       if (typeof next.notifyEnabled === 'boolean') state.notifyEnabled = next.notifyEnabled;
       if (next.notifyMode === 'matched' || next.notifyMode === 'matched_pinned' || next.notifyMode === 'pinned' || next.notifyMode === 'all') state.notifyMode = next.notifyMode;
+      if (
+        next.moodFilter === 'all'
+        || next.moodFilter === 'pesimistic'
+        || next.moodFilter === 'optimistic'
+        || next.moodFilter === 'realistic'
+        || next.moodFilter === 'melancholy'
+        || next.moodFilter === 'happiness'
+        || next.moodFilter === 'sadness'
+        || next.moodFilter === 'rage'
+        || next.moodFilter === 'uncertainty'
+        || next.moodFilter === 'neutral'
+        || next.moodFilter === 'curios'
+      ) state.moodFilter = next.moodFilter;
       if (next.font === 'system' || next.font === 'manrope' || next.font === 'grotesk' || next.font === 'sora' || next.font === 'plex' || next.font === 'serif' || next.font === 'mono') state.font = next.font;
       if (next.fontSize === 'sm' || next.fontSize === 'md' || next.fontSize === 'lg' || next.fontSize === 'xl') state.fontSize = next.fontSize;
       if (next.scheme === 'classic' || next.scheme === 'vivid' || next.scheme === 'sunset' || next.scheme === 'neon' || next.scheme === 'ocean' || next.scheme === 'forest') state.scheme = next.scheme;
@@ -204,6 +237,7 @@ export const {
   setHelpOpen,
   setNotifySettings,
   setAiSettings,
+  setMoodFilter,
   setAppearanceSettings,
   hydrateUiSettings,
   enqueueToast,

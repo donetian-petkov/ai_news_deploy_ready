@@ -118,6 +118,21 @@ function parseNews(v: unknown): NewsItem | null {
   const title = typeof m.title === 'string' ? m.title : '';
   const feedUrl = typeof m.feedUrl === 'string' ? m.feedUrl : '';
   if (!id || !title || !feedUrl) return null;
+  const mood = typeof m.mood === 'string'
+    && (
+      m.mood === 'pesimistic'
+      || m.mood === 'optimistic'
+      || m.mood === 'realistic'
+      || m.mood === 'melancholy'
+      || m.mood === 'happiness'
+      || m.mood === 'sadness'
+      || m.mood === 'rage'
+      || m.mood === 'uncertainty'
+      || m.mood === 'neutral'
+      || m.mood === 'curios'
+    )
+    ? m.mood
+    : undefined;
   return {
     id,
     title,
@@ -127,6 +142,7 @@ function parseNews(v: unknown): NewsItem | null {
     isMatch: !!m.isMatch,
     summary: typeof m.summary === 'string' ? m.summary : '',
     research: typeof m.research === 'string' ? m.research : '',
+    mood,
     filteredOk: typeof m.filteredOk === 'boolean' ? m.filteredOk : true
   };
 }

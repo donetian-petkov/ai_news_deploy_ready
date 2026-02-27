@@ -217,7 +217,8 @@ describe('wsClient', () => {
       title: 'Visible title',
       feedUrl: 'https://a',
       publishedMs: 2,
-      isMatch: true
+      isMatch: true,
+      mood: 'uncertainty'
     });
     await new Promise(resolve => setTimeout(resolve, 70));
     const batchAction = actions.find(a => a.type === 'news/upsertNewsBatch');
@@ -226,7 +227,8 @@ describe('wsClient', () => {
     expect((batchAction?.payload as Array<{ id: string; title: string; feedUrl: string }>)[0]).toMatchObject({
       id: 'n-2',
       title: 'Visible title',
-      feedUrl: 'https://a'
+      feedUrl: 'https://a',
+      mood: 'uncertainty'
     });
   });
 

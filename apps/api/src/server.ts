@@ -56,6 +56,17 @@ const prisma = new PrismaClient({
 type SummaryLang = 'bg' | 'en' | 'bilingual';
 type ResearchLang = 'bg' | 'en';
 type AIProvider = z.infer<typeof aiProviderSchema>;
+type Mood =
+  | 'pesimistic'
+  | 'optimistic'
+  | 'realistic'
+  | 'melancholy'
+  | 'happiness'
+  | 'sadness'
+  | 'rage'
+  | 'uncertainty'
+  | 'neutral'
+  | 'curios';
 
 type FeedKind = 'rss' | 'reddit' | 'youtube';
 
@@ -120,6 +131,7 @@ type News = {
 
   summary?: string;
   research?: string;
+  mood?: Mood;
 };
 
 type NewsInternal = News & {
@@ -802,6 +814,48 @@ function researchInstruction(lang: ResearchLang): string {
   return common + ' Write in English.';
 }
 
+function normalizeMood(raw: string): Mood | undefined {
+  const s = String(raw || '')
+    .trim()
+    .toLowerCase()
+    .replace(/["'`]/g, '')
+    .replace(/[^\p{L}\p{N}\s_-]+/gu, ' ')
+    .replace(/\s+/g, ' ');
+  const direct = s.replace(/[\s_-]/g, '');
+
+  if (direct === 'pesimistic' || direct === 'pessimistic') return 'pesimistic';
+  if (direct === 'optimistic') return 'optimistic';
+  if (direct === 'realistic') return 'realistic';
+  if (direct === 'melancholy' || direct === 'melancholic') return 'melancholy';
+  if (direct === 'happiness' || direct === 'happy' || direct === 'joy' || direct === 'joyful') return 'happiness';
+  if (direct === 'sadness' || direct === 'sad') return 'sadness';
+  if (direct === 'rage' || direct === 'angry' || direct === 'anger' || direct === 'furious') return 'rage';
+  if (direct === 'uncertainty' || direct === 'uncertain' || direct === 'anxiety' || direct === 'anxious') return 'uncertainty';
+  if (direct === 'neutral') return 'neutral';
+  if (direct === 'curios' || direct === 'curious' || direct === 'curiosity') return 'curios';
+
+  if (s.includes('pesimistic') || s.includes('pessimistic')) return 'pesimistic';
+  if (s.includes('optimistic')) return 'optimistic';
+  if (s.includes('realistic')) return 'realistic';
+  if (s.includes('melancholy') || s.includes('melancholic')) return 'melancholy';
+  if (s.includes('happiness') || s.includes('joy')) return 'happiness';
+  if (s.includes('sadness') || s.includes(' sad')) return 'sadness';
+  if (s.includes('rage') || s.includes('anger') || s.includes('angry')) return 'rage';
+  if (s.includes('uncertainty') || s.includes('uncertain') || s.includes('anxiety')) return 'uncertainty';
+  if (s.includes('neutral')) return 'neutral';
+  if (s.includes('curios') || s.includes('curious') || s.includes('curiosity')) return 'curios';
+  return undefined;
+}
+
+function moodInstruction(): string {
+  return [
+    'Classify the overall mood of this news into exactly one label.',
+    'Allowed labels only:',
+    'pesimistic, optimistic, realistic, melancholy, happiness, sadness, rage, uncertainty, neutral, curios.',
+    'Return exactly one label with no extra words or punctuation.'
+  ].join(' ');
+}
+
 function budgetToTokensSummary(b: BudgetMode) {
   if (b === 'low') return 55;
   if (b === 'high') return 95;
@@ -989,6 +1043,26 @@ async function oneItemResearch(
   return generateAiText('research', input, budgetToTokensResearch(budget), 0.25);
 }
 
+async function classifyMoodForItem(
+  title: string,
+  source: string,
+  context: string,
+  summary: string,
+  research: string,
+  budget: BudgetMode
+): Promise<Mood | undefined> {
+  const input =
+    `${moodInstruction()}\n` +
+    `Source: ${source}\n` +
+    `Headline: ${title}\n` +
+    (context ? `Context: ${context}\n` : '') +
+    (summary ? `Summary: ${summary}\n` : '') +
+    (research ? `Research: ${research}\n` : '');
+  const text = await generateAiText('research', input, Math.max(12, Math.min(28, budgetToTokensSummary(budget))), 0);
+  if (!text) return undefined;
+  return normalizeMood(text);
+}
+
 function askAgentInstruction(lang: ResearchLang): string {
   const langText = lang === 'bg' ? 'Reply in Bulgarian.' : 'Reply in English.';
   return [
@@ -1073,7 +1147,8 @@ function broadcastNewsUpdate(it: NewsInternal) {
     matchScore: it.matchScore,
     filteredOk: it.filteredOk,
     summary: it.summary,
-    research: it.research
+    research: it.research,
+    mood: it.mood
   } satisfies News);
 
   wss.clients.forEach((c: WebSocket) => {
@@ -1117,7 +1192,7 @@ function shouldHaveSummary(it: NewsInternal): boolean {
 }
 
 // ---------------- AI JOB QUEUE (non-blocking) ----------------
-type AiJobKind = 'summary' | 'research';
+type AiJobKind = 'summary' | 'research' | 'mood';
 type AiJob = { kind: AiJobKind; id: string; feedUrl: string; manual?: boolean };
 
 const aiQueue: AiJob[] = [];
@@ -1166,6 +1241,25 @@ async function runOneJob(job: AiJob) {
       const text = await oneLineSummary(it.title, it.source, ctx, budget);
       if (text) {
         it.summary = text;
+        broadcastNewsUpdate(it);
+        markDirty();
+      }
+      return;
+    }
+
+    if (job.kind === 'mood') {
+      if (it.mood) return;
+      if (activeModel('research') === 'none') return;
+      const mood = await classifyMoodForItem(
+        it.title,
+        it.source,
+        it.__ctx || '',
+        it.summary || '',
+        it.research || '',
+        budget
+      );
+      if (mood) {
+        it.mood = mood;
         broadcastNewsUpdate(it);
         markDirty();
       }
@@ -1408,6 +1502,7 @@ async function processFeed(fi: FeedInfo) {
         filteredOk,
         summary: undefined,
         research: undefined,
+        mood: undefined,
         __ctx: ctx
       };
 
@@ -1432,6 +1527,7 @@ async function processFeed(fi: FeedInfo) {
           feedSettings.get(FILTERED_FEED_URL)?.researchEnabled && filteredOk;
 
         if (wantFeedSummary || wantFilteredSummary) enqueueJob({ kind: 'summary', id, feedUrl: fi.url });
+        enqueueJob({ kind: 'mood', id, feedUrl: fi.url });
         if (wantFeedResearch || wantFilteredResearch) enqueueJob({ kind: 'research', id, feedUrl: fi.url });
       }
     }

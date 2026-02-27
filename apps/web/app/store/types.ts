@@ -1,6 +1,17 @@
 export type FeedKind = 'rss' | 'reddit' | 'youtube';
 export type BudgetMode = 'low' | 'standard' | 'high';
 export type SortMode = 'newest' | 'oldest' | 'matched';
+export type NewsMood =
+  | 'pesimistic'
+  | 'optimistic'
+  | 'realistic'
+  | 'melancholy'
+  | 'happiness'
+  | 'sadness'
+  | 'rage'
+  | 'uncertainty'
+  | 'neutral'
+  | 'curios';
 
 export type ColumnFilters = {
   onlyMatches: boolean;
@@ -29,6 +40,7 @@ export type NewsItem = {
   isMatch: boolean;
   summary?: string;
   research?: string;
+  mood?: NewsMood;
   filteredOk?: boolean;
 };
 
