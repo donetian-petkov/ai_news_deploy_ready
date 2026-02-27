@@ -7,7 +7,7 @@ import { setStatus } from './slices/connectionSlice';
 import { setFeeds } from './slices/feedsSlice';
 import { receiveAskReply, setHiddenIds, upsertNewsBatch } from './slices/newsSlice';
 import { setUsage } from './slices/aiUsageSlice';
-import { setAiSettings } from './slices/uiSlice';
+import { enqueueToast, setAiSettings } from './slices/uiSlice';
 
 let ws: WebSocket | null = null;
 let wsUrlCurrent = '';
@@ -256,6 +256,36 @@ export function startWsConnection(dispatch: AppDispatch, explicitUrl: string) {
         error: typeof msg.error === 'string' ? msg.error : undefined,
         used: typeof msg.used === 'number' ? msg.used : undefined,
         remaining: typeof msg.remaining === 'number' ? msg.remaining : undefined
+      }));
+      return;
+    }
+
+    if (msg.type === 'error') {
+      dispatch(enqueueToast({
+        kind: 'error',
+        message: typeof msg.message === 'string' ? msg.message : 'Server error'
+      }));
+      return;
+    }
+
+    if (msg.type === 'ok') {
+      dispatch(enqueueToast({
+        kind: 'success',
+        message: typeof msg.message === 'string' ? msg.message : 'Done'
+      }));
+      return;
+    }
+
+    if (msg.type === 'feed_error') {
+      const label = typeof msg.feedLabel === 'string' && msg.feedLabel.trim()
+        ? msg.feedLabel.trim()
+        : (typeof msg.feedUrl === 'string' ? msg.feedUrl : 'feed');
+      const reason = typeof msg.error === 'string' && msg.error.trim()
+        ? msg.error.trim()
+        : 'poll failed';
+      dispatch(enqueueToast({
+        kind: 'error',
+        message: `${label}: ${reason}`
       }));
       return;
     }

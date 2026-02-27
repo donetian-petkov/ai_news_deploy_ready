@@ -1,16 +1,56 @@
-import 'dotenv/config';
 import express from 'express';
 import Parser from 'rss-parser';
 import { WebSocketServer, WebSocket } from 'ws';
 import path from 'path';
 import fs from 'fs';
+import dotenv from 'dotenv';
 import OpenAI from 'openai';
 import { PrismaClient } from '@prisma/client';
 import { clientMsgSchema, type ClientMsg } from '@ai-news/shared';
 
+function bootstrapEnv() {
+  const envCandidates = [
+    path.resolve(process.cwd(), '.env'),
+    path.resolve(process.cwd(), '..', '.env'),
+    path.resolve(process.cwd(), '..', '..', '.env'),
+    path.resolve(__dirname, '..', '.env'),
+    path.resolve(__dirname, '..', '..', '.env'),
+    path.resolve(__dirname, '..', '..', '..', '.env')
+  ];
+  for (const envPath of envCandidates) {
+    if (fs.existsSync(envPath)) {
+      dotenv.config({ path: envPath, override: false });
+    }
+  }
+
+  if (!process.env.DATABASE_URL) {
+    const prismaDirCandidates = [
+      path.resolve(process.cwd(), 'prisma'),
+      path.resolve(process.cwd(), 'apps', 'api', 'prisma'),
+      path.resolve(__dirname, '..', 'prisma'),
+      path.resolve(__dirname, '..', '..', 'apps', 'api', 'prisma')
+    ];
+    const prismaDir = prismaDirCandidates.find(dir => fs.existsSync(path.join(dir, 'schema.prisma')))
+      || prismaDirCandidates[0];
+    try {
+      fs.mkdirSync(prismaDir, { recursive: true });
+    } catch {}
+    const sqlitePath = path.join(prismaDir, 'dev.db');
+    process.env.DATABASE_URL = `file:${sqlitePath}`;
+  }
+}
+
+bootstrapEnv();
+
 const app = express();
 const PORT = Number(process.env.PORT || 4000);
-const prisma = new PrismaClient();
+const prisma = new PrismaClient({
+  datasources: {
+    db: {
+      url: process.env.DATABASE_URL
+    }
+  }
+});
 
 type SummaryLang = 'bg' | 'en' | 'bilingual';
 type ResearchLang = 'bg' | 'en';
@@ -384,6 +424,7 @@ const feedSettings = new Map<string, FeedSettings>();
 
 // runtime-only fetch cache + breaker
 const feedRuntime = new Map<string, FeedRuntime>();
+const lastFeedErrorBroadcastMs = new Map<string, number>();
 
 // hidden items (persisted)
 const hiddenIds = new Set<string>();
@@ -915,6 +956,27 @@ function broadcastNewsUpdate(it: NewsInternal) {
   });
 }
 
+function broadcastFeedError(fi: FeedInfo, error: string) {
+  const now = Date.now();
+  const last = lastFeedErrorBroadcastMs.get(fi.url) || 0;
+  if (now - last < 15_000) return;
+  lastFeedErrorBroadcastMs.set(fi.url, now);
+
+  const rt = feedRuntime.get(fi.url);
+  const payload = JSON.stringify({
+    type: 'feed_error',
+    feedUrl: fi.url,
+    feedLabel: labelForFeed(fi),
+    error,
+    failCount: rt?.failCount ?? 0,
+    disabledUntilMs: rt?.disabledUntilMs ?? 0
+  });
+
+  wss.clients.forEach((c: WebSocket) => {
+    if (c.readyState === WebSocket.OPEN) c.send(payload);
+  });
+}
+
 function eligibleForFeed(it: NewsInternal, feedUrl: string): boolean {
   if (feedUrl === FILTERED_FEED_URL) return it.isMatch && it.filteredOk !== false;
   return it.feedUrl === feedUrl;
@@ -1243,6 +1305,7 @@ async function processFeed(fi: FeedInfo) {
     markDirty();
   } catch (err) {
     console.error(`✗ ${fi.url}`, (err as Error).message);
+    broadcastFeedError(fi, (err as Error).message);
     markDirty();
   }
 }

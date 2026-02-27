@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Alert, Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, MenuItem, Select, Stack, TextField, Typography, useMediaQuery } from '@mui/material';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
-import { setLanguage, setSearchQuery, setTopUiState, triggerHideAllResearch, setNotifySettings, setAiSettings, setAppearanceSettings, hydrateUiSettings, setHelpOpen } from '../store/slices/uiSlice';
+import { setLanguage, setSearchQuery, setTopUiState, setHideAllResearch, setNotifySettings, setAiSettings, setAppearanceSettings, hydrateUiSettings, setHelpOpen, dismissToast } from '../store/slices/uiSlice';
 import { sendWsMessage } from '../store/wsClient';
 import { setFeedBudgetSetting } from '../store/slices/feedsSlice';
 import { removeOldItemsInFeed, resetAllToNewestLimit } from '../store/slices/newsSlice';
@@ -43,6 +43,8 @@ export default function TopMenu() {
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const addStreamInputRef = useRef<HTMLInputElement | null>(null);
   const topbarInnerRef = useRef<HTMLDivElement | null>(null);
+  const toastTimersRef = useRef<Record<string, number>>({});
+  const toasts = useAppSelector(s => s.ui.toasts);
 
   const labels = {
     title: bg ? 'Поток Новини На Живо' : 'Live News Stream',
@@ -57,6 +59,7 @@ export default function TopMenu() {
     hideAllColumnControls: bg ? 'Скрий всички контроли на колони' : 'Hide all column controls',
     showAllColumnControls: bg ? 'Покажи всички контроли на колони' : 'Show all column controls',
     hideAllResearch: bg ? 'Скрий всички проучвания' : 'Hide all research',
+    showAllResearch: bg ? 'Покажи всички проучвания' : 'Show all research',
     hideMenu: bg ? 'Скрий меню' : 'Hide menu',
     showMenu: bg ? 'Покажи меню' : 'Show menu',
     anime: bg ? 'Аниме Поп' : 'Anime Pop',
@@ -93,6 +96,7 @@ export default function TopMenu() {
           searchVisible: boolean;
           addStreamVisible: boolean;
           allColumnControlsHidden: boolean;
+          hideAllResearch: boolean;
           notifyEnabled: boolean;
           notifyMode: 'matched' | 'matched_pinned' | 'pinned' | 'all';
           font: 'system' | 'manrope' | 'grotesk' | 'sora' | 'plex' | 'serif' | 'mono';
@@ -132,6 +136,7 @@ export default function TopMenu() {
         searchVisible: ui.searchVisible,
         addStreamVisible: ui.addStreamVisible,
         allColumnControlsHidden: ui.allColumnControlsHidden,
+        hideAllResearch: ui.hideAllResearch,
         notifyEnabled: ui.notifyEnabled,
         notifyMode: ui.notifyMode,
         font: ui.font,
@@ -141,7 +146,7 @@ export default function TopMenu() {
         vibe: ui.vibe
       }));
     } catch {}
-  }, [ui.addStreamVisible, ui.allColumnControlsHidden, ui.buttonMode, ui.colorMode, ui.controlsCollapsed, ui.font, ui.fontSize, ui.language, ui.menuCollapsed, ui.notifyEnabled, ui.notifyMode, ui.scheme, ui.searchVisible, ui.vibe]);
+  }, [ui.addStreamVisible, ui.allColumnControlsHidden, ui.hideAllResearch, ui.buttonMode, ui.colorMode, ui.controlsCollapsed, ui.font, ui.fontSize, ui.language, ui.menuCollapsed, ui.notifyEnabled, ui.notifyMode, ui.scheme, ui.searchVisible, ui.vibe]);
 
   useEffect(() => {
     const onPointerDown = (event: PointerEvent) => {
@@ -149,6 +154,10 @@ export default function TopMenu() {
       const root = topbarInnerRef.current;
       const target = event.target;
       if (!root || !target || !(target instanceof Node)) return;
+      const elementTarget = target as HTMLElement;
+      if (elementTarget.closest('.MuiMenu-root, .MuiPopover-root, .MuiModal-root, [role="listbox"], [role="option"], .MuiMenuItem-root')) {
+        return;
+      }
       if (!root.contains(target)) {
         dispatch(setTopUiState({ controlsCollapsed: true }));
       }
@@ -158,6 +167,22 @@ export default function TopMenu() {
       document.removeEventListener('pointerdown', onPointerDown);
     };
   }, [dispatch, ui.controlsCollapsed, ui.menuCollapsed]);
+
+  useEffect(() => {
+    toasts.forEach(t => {
+      if (toastTimersRef.current[t.id]) return;
+      toastTimersRef.current[t.id] = window.setTimeout(() => {
+        dispatch(dismissToast(t.id));
+        delete toastTimersRef.current[t.id];
+      }, 5000);
+    });
+    const known = new Set(toasts.map(t => t.id));
+    Object.keys(toastTimersRef.current).forEach(id => {
+      if (known.has(id)) return;
+      window.clearTimeout(toastTimersRef.current[id]);
+      delete toastTimersRef.current[id];
+    });
+  }, [dispatch, toasts]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -425,9 +450,9 @@ export default function TopMenu() {
               size="small"
               variant="outlined"
               type="button"
-              onClick={() => dispatch(triggerHideAllResearch())}
+              onClick={() => dispatch(setHideAllResearch(!ui.hideAllResearch))}
             >
-              {labels.hideAllResearch}
+              {ui.hideAllResearch ? labels.showAllResearch : labels.hideAllResearch}
             </Button>
             <Button id="menuToggle" className="btn ghost" size="small" variant="outlined" type="button" onClick={toggleMenu}>{menuLabel}</Button>
           </Stack>
@@ -750,6 +775,32 @@ export default function TopMenu() {
           <Button onClick={() => dispatch(setHelpOpen(false))}>{labels.close}</Button>
         </DialogActions>
       </Dialog>
+      {toasts.length ? (
+        <Box
+          sx={{
+            position: 'fixed',
+            right: 14,
+            bottom: 14,
+            zIndex: 2200,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 1,
+            width: { xs: 'calc(100vw - 28px)', sm: 420 }
+          }}
+        >
+          {toasts.map(t => (
+            <Alert
+              key={t.id}
+              severity={t.kind}
+              onClose={() => dispatch(dismissToast(t.id))}
+              variant="filled"
+              sx={{ boxShadow: '0 8px 22px rgba(0,0,0,0.34)' }}
+            >
+              {t.message}
+            </Alert>
+          ))}
+        </Box>
+      ) : null}
     </div>
   );
 }

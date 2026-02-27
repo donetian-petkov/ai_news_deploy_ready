@@ -19,11 +19,14 @@ import PersonOffIcon from '@mui/icons-material/PersonOff';
 import PrecisionManufacturingIcon from '@mui/icons-material/PrecisionManufacturing';
 import PushPinIcon from '@mui/icons-material/PushPin';
 import PushPinOutlinedIcon from '@mui/icons-material/PushPinOutlined';
+import RedditIcon from '@mui/icons-material/Reddit';
 import RocketLaunchIcon from '@mui/icons-material/RocketLaunch';
+import RssFeedIcon from '@mui/icons-material/RssFeed';
 import SendIcon from '@mui/icons-material/Send';
 import ShareIcon from '@mui/icons-material/Share';
 import ShieldMoonIcon from '@mui/icons-material/ShieldMoon';
 import SmartToyIcon from '@mui/icons-material/SmartToy';
+import SmartDisplayIcon from '@mui/icons-material/SmartDisplay';
 import SupportAgentIcon from '@mui/icons-material/SupportAgent';
 import TuneIcon from '@mui/icons-material/Tune';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
@@ -36,6 +39,7 @@ import {
   CardContent,
   Checkbox,
   Chip,
+  CircularProgress,
   FormControl,
   FormControlLabel,
   Link as MuiLink,
@@ -74,6 +78,7 @@ import {
   clearSummaryPending,
   setAskDraft,
   toggleAskOpen,
+  togglePinnedNews,
   setResearchPending,
   setSummaryPending
 } from '../store/slices/newsSlice';
@@ -140,6 +145,65 @@ const SCHEME_PALETTES: Record<SchemeValue, { a: string; b: string; m: string; aS
     aSoft: 'rgba(75, 168, 96, 0.30)',
     bSoft: 'rgba(121, 85, 72, 0.22)',
     mSoft: 'rgba(214, 153, 64, 0.28)'
+  }
+};
+
+const VIBE_PALETTE_OVERRIDES: Partial<Record<VibeValue, Partial<{ a: string; b: string; m: string; aSoft: string; bSoft: string; mSoft: string }>>> = {
+  anime: {
+    a: 'rgba(255, 92, 174, 0.98)',
+    b: 'rgba(112, 176, 255, 0.98)',
+    m: 'rgba(255, 206, 92, 0.98)',
+    aSoft: 'rgba(255, 92, 174, 0.25)',
+    bSoft: 'rgba(112, 176, 255, 0.23)',
+    mSoft: 'rgba(255, 206, 92, 0.24)'
+  },
+  arcade: {
+    a: 'rgba(87, 255, 142, 0.98)',
+    b: 'rgba(48, 210, 255, 0.98)',
+    m: 'rgba(255, 92, 92, 0.98)',
+    aSoft: 'rgba(87, 255, 142, 0.24)',
+    bSoft: 'rgba(48, 210, 255, 0.22)',
+    mSoft: 'rgba(255, 92, 92, 0.22)'
+  },
+  cinema: {
+    a: 'rgba(220, 177, 92, 0.98)',
+    b: 'rgba(93, 145, 255, 0.98)',
+    m: 'rgba(255, 122, 86, 0.98)',
+    aSoft: 'rgba(220, 177, 92, 0.24)',
+    bSoft: 'rgba(93, 145, 255, 0.21)',
+    mSoft: 'rgba(255, 122, 86, 0.22)'
+  },
+  newspaper: {
+    a: 'rgba(157, 185, 220, 0.98)',
+    b: 'rgba(111, 165, 145, 0.98)',
+    m: 'rgba(216, 179, 120, 0.98)',
+    aSoft: 'rgba(157, 185, 220, 0.22)',
+    bSoft: 'rgba(111, 165, 145, 0.22)',
+    mSoft: 'rgba(216, 179, 120, 0.22)'
+  },
+  cyberwitch: {
+    a: 'rgba(199, 103, 255, 0.99)',
+    b: 'rgba(34, 219, 255, 0.99)',
+    m: 'rgba(255, 104, 210, 0.99)',
+    aSoft: 'rgba(199, 103, 255, 0.24)',
+    bSoft: 'rgba(34, 219, 255, 0.22)',
+    mSoft: 'rgba(255, 104, 210, 0.20)'
+  },
+  fantasy: {
+    a: 'rgba(111, 193, 106, 0.98)',
+    b: 'rgba(110, 142, 230, 0.98)',
+    m: 'rgba(230, 172, 91, 0.98)',
+    aSoft: 'rgba(111, 193, 106, 0.23)',
+    bSoft: 'rgba(110, 142, 230, 0.22)',
+    mSoft: 'rgba(230, 172, 91, 0.24)'
+  },
+  scifi: {
+    a: 'rgba(57, 210, 255, 0.99)',
+    b: 'rgba(129, 136, 255, 0.99)',
+    m: 'rgba(255, 141, 70, 0.99)',
+    aSoft: 'rgba(57, 210, 255, 0.22)',
+    bSoft: 'rgba(129, 136, 255, 0.22)',
+    mSoft: 'rgba(255, 141, 70, 0.22)'
   }
 };
 
@@ -223,7 +287,8 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
   const fontSize = useAppSelector(s => s.ui.fontSize);
   const notifyEnabled = useAppSelector(s => s.ui.notifyEnabled);
   const notifyMode = useAppSelector(s => s.ui.notifyMode);
-  const hideAllResearchSeq = useAppSelector(s => s.ui.hideAllResearchSeq);
+  const hideAllResearch = useAppSelector(s => s.ui.hideAllResearch);
+  const aiEnabled = useAppSelector(s => s.ui.aiEnabled);
   const feeds = useAppSelector(s => s.feeds.feeds);
   const pinnedByUrl = useAppSelector(s => s.feeds.pinnedByUrl);
   const controlsOpenByUrl = useAppSelector(s => s.feeds.controlsOpenByUrl);
@@ -234,19 +299,20 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
   const itemsByFeed = useAppSelector(s => s.news.itemsByFeed);
   const summaryPendingById = useAppSelector(s => s.news.summaryPendingById);
   const researchPendingById = useAppSelector(s => s.news.researchPendingById);
+  const pinnedNewsById = useAppSelector(s => s.news.pinnedNewsById);
   const askByItem = useAppSelector(s => s.news.askByItem);
   const pendingTimeoutsRef = useRef<Record<string, number>>({});
   const researchTimeoutsRef = useRef<Record<string, number>>({});
   const hydratedFeedUiRef = useRef(false);
   const seenNewsIdsRef = useRef<Set<string>>(new Set());
   const notificationsPrimedRef = useRef(false);
-  const [hideAllResearch, setHideAllResearch] = useState(false);
   const [bodyModes, setBodyModes] = useState<Record<string, BodyMode>>({});
   const [shareNoticeOpen, setShareNoticeOpen] = useState(false);
   const [dragFeedUrl, setDragFeedUrl] = useState<string | null>(null);
   const [dragOverFeedUrl, setDragOverFeedUrl] = useState<string | null>(null);
   const dragCommittedRef = useRef(false);
   const dragLastTargetRef = useRef<string | null>(null);
+  const [visibleByFeed, setVisibleByFeed] = useState<Record<string, number>>({});
   const [hydratedColumns, setHydratedColumns] = useState<Record<string, true>>({});
   const columnNodesRef = useRef<Record<string, HTMLDivElement | null>>({});
   const prevAllControlsHiddenRef = useRef<boolean | null>(null);
@@ -297,6 +363,11 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
     hideResearch: bg ? 'Скрий проучване' : 'Hide Research',
     showMore: bg ? 'Покажи още' : 'Show More',
     showLess: bg ? 'Покажи по-малко' : 'Show Less',
+    showFiveMore: bg ? 'Покажи още 5' : 'Show 5 more',
+    showLessItems: bg ? 'Покажи по-малко новини' : 'Show fewer',
+    autoResearching: bg ? 'Авто проучване...' : 'Auto researching...',
+    pinNews: bg ? 'Закачи новина' : 'Pin news',
+    unpinNews: bg ? 'Откачи новина' : 'Unpin news',
     questionsLeft: bg ? 'Оставащи въпроси' : 'Questions left',
     askPlaceholder: bg ? 'Питай за тази конкретна новина...' : 'Ask about this specific news...',
     thinking: bg ? 'Мисля...' : 'Thinking...',
@@ -393,12 +464,6 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
   }, [itemsByFeed, notifyEnabled, notifyMode, pinnedByUrl]);
 
   useEffect(() => {
-    if (hideAllResearchSeq > 0) {
-      setHideAllResearch(true);
-    }
-  }, [hideAllResearchSeq]);
-
-  useEffect(() => {
     if (!feeds.length) return;
     if (prevAllControlsHiddenRef.current === null) {
       prevAllControlsHiddenRef.current = allColumnControlsHidden;
@@ -447,16 +512,7 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
     return fallback;
   }, [feeds, itemsByFeed, orderByUrl, pinnedByUrl]);
 
-  const renderedFeeds = useMemo(() => {
-    if (!dragFeedUrl || !dragOverFeedUrl || dragFeedUrl === dragOverFeedUrl) return previewFeeds;
-    const fromIdx = previewFeeds.findIndex(f => f.url === dragFeedUrl);
-    const toIdx = previewFeeds.findIndex(f => f.url === dragOverFeedUrl);
-    if (fromIdx < 0 || toIdx < 0) return previewFeeds;
-    const next = [...previewFeeds];
-    const [moved] = next.splice(fromIdx, 1);
-    next.splice(toIdx, 0, moved);
-    return next;
-  }, [dragFeedUrl, dragOverFeedUrl, previewFeeds]);
+  const renderedFeeds = previewFeeds;
 
   const filteredColumnItems = useMemo(() => {
     const all = Object.values(itemsByFeed).flatMap(items => Array.isArray(items) ? items : []);
@@ -471,6 +527,17 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
     });
     return Array.from(map.values()).sort((a, b) => b.publishedMs - a.publishedMs);
   }, [itemsByFeed]);
+
+  useEffect(() => {
+    if (!renderedFeeds.length) return;
+    setVisibleByFeed(prev => {
+      const next: Record<string, number> = {};
+      renderedFeeds.forEach(feed => {
+        next[feed.url] = Math.max(10, prev[feed.url] || 10);
+      });
+      return next;
+    });
+  }, [renderedFeeds]);
 
   useEffect(() => {
     setHydratedColumns(prev => {
@@ -695,7 +762,10 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
   const fontScale = fontSize === 'xl' ? 1.17 : fontSize === 'lg' ? 1.09 : fontSize === 'sm' ? 0.93 : 1;
   const resolvedVibe: VibeValue = (VIBE_LIST.includes(vibe as VibeValue) ? vibe : 'default') as VibeValue;
   const resolvedScheme: SchemeValue = (SCHEME_LIST.includes(scheme as SchemeValue) ? scheme : 'classic') as SchemeValue;
-  const palette = SCHEME_PALETTES[resolvedScheme];
+  const palette = {
+    ...SCHEME_PALETTES[resolvedScheme],
+    ...(VIBE_PALETTE_OVERRIDES[resolvedVibe] || {})
+  };
   const vibeIcons = useMemo(() => getVibeIcons(resolvedVibe), [resolvedVibe]);
   const compactBtnSx = {
     minHeight: 30,
@@ -755,6 +825,47 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
             xl: 'repeat(4, minmax(330px, 1fr))'
           }
         }}
+        onDragOver={e => {
+          if (!dragFeedUrl) return;
+          e.preventDefault();
+          e.dataTransfer.dropEffect = 'move';
+        }}
+        onDrop={e => {
+          if (!dragFeedUrl) return;
+          if (dragCommittedRef.current) return;
+          e.preventDefault();
+          const fromUrl = String(
+            e.dataTransfer.getData('application/x-ai-news-feed')
+            || e.dataTransfer.getData('text/plain')
+            || dragFeedUrl
+            || ''
+          ).trim();
+          if (!fromUrl) return;
+
+          const nodes = renderedFeeds
+            .map(feed => ({ url: feed.url, node: columnNodesRef.current[feed.url] }))
+            .filter((x): x is { url: string; node: HTMLDivElement } => !!x.node);
+          if (!nodes.length) return;
+
+          let bestUrl = nodes[0].url;
+          let bestDist = Number.POSITIVE_INFINITY;
+          for (const n of nodes) {
+            const rect = n.node.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const d = Math.abs(e.clientX - centerX);
+            if (d < bestDist) {
+              bestDist = d;
+              bestUrl = n.url;
+            }
+          }
+          if (bestUrl && bestUrl !== fromUrl) {
+            dispatch(reorderFeeds({ fromUrl, toUrl: bestUrl }));
+          }
+          dragCommittedRef.current = true;
+          setDragFeedUrl(null);
+          setDragOverFeedUrl(null);
+          dragLastTargetRef.current = null;
+        }}
       >
         {renderedFeeds.map((feed: FeedInfo) => {
           const columnIdx = Math.max(0, renderedFeeds.findIndex(f => f.url === feed.url));
@@ -762,7 +873,13 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
           const colTheme: 'a' | 'b' | 'match' = isMatchColumn ? 'match' : (columnIdx % 2 === 0 ? 'a' : 'b');
           const accent = colTheme === 'a' ? palette.a : colTheme === 'b' ? palette.b : palette.m;
           const soft = colTheme === 'a' ? palette.aSoft : colTheme === 'b' ? palette.bSoft : palette.mSoft;
-          const items = isMatchColumn ? filteredColumnItems : (itemsByFeed[feed.url] || []);
+          const itemsRaw = isMatchColumn ? filteredColumnItems : (itemsByFeed[feed.url] || []);
+          const items = [...itemsRaw].sort((a, b) => {
+            const aPinned = !!pinnedNewsById[a.id];
+            const bPinned = !!pinnedNewsById[b.id];
+            if (aPinned !== bPinned) return aPinned ? -1 : 1;
+            return Number(b.publishedMs || 0) - Number(a.publishedMs || 0);
+          });
           const normalizedQuery = String(searchQuery || '').trim().toLowerCase();
           const itemsVisible = normalizedQuery
             ? items.filter(it => {
@@ -770,6 +887,8 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
               return hay.includes(normalizedQuery);
             })
             : items;
+          const visibleLimit = Math.max(10, visibleByFeed[feed.url] || 10);
+          const shownItems = itemsVisible.slice(0, visibleLimit);
           const isHydrated = !!hydratedColumns[feed.url];
           const pinned = !!pinnedByUrl[feed.url];
           const controlsOpen = typeof controlsOpenByUrl[feed.url] === 'boolean' ? !!controlsOpenByUrl[feed.url] : true;
@@ -797,8 +916,9 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
                 e.dataTransfer.setData('application/x-ai-news-feed', feed.url);
               }}
               onDragEnd={() => {
-                if (!dragCommittedRef.current && dragFeedUrl && dragOverFeedUrl && dragFeedUrl !== dragOverFeedUrl) {
-                  dispatch(reorderFeeds({ fromUrl: dragFeedUrl, toUrl: dragOverFeedUrl }));
+                const fallbackTarget = dragLastTargetRef.current || dragOverFeedUrl;
+                if (!dragCommittedRef.current && dragFeedUrl && fallbackTarget && dragFeedUrl !== fallbackTarget) {
+                  dispatch(reorderFeeds({ fromUrl: dragFeedUrl, toUrl: fallbackTarget }));
                 }
                 setDragFeedUrl(null);
                 setDragOverFeedUrl(null);
@@ -835,16 +955,9 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
               onDrop={e => {
                 if (!canDrag) return;
                 e.preventDefault();
-                const fromUrl = String(
-                  e.dataTransfer.getData('application/x-ai-news-feed')
-                  || e.dataTransfer.getData('text/plain')
-                  || dragFeedUrl
-                  || ''
-                ).trim();
-                if (fromUrl && fromUrl !== feed.url) {
-                  dragCommittedRef.current = true;
-                  dispatch(reorderFeeds({ fromUrl, toUrl: feed.url }));
-                }
+                e.stopPropagation();
+                dragCommittedRef.current = true;
+                dragLastTargetRef.current = feed.url;
                 setDragFeedUrl(null);
                 setDragOverFeedUrl(null);
               }}
@@ -874,7 +987,18 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
                   </Typography>
                   <Stack direction="row" spacing={1} alignItems="center">
                     <Chip size="small" label={itemsVisible.length} sx={{ color: 'rgba(231,242,255,0.96)', bgcolor: 'rgba(79, 114, 168, 0.24)', borderColor: accent }} />
-                    <Chip size="small" variant="outlined" label={feed.kind} sx={{ color: 'rgba(231,242,255,0.96)', borderColor: accent }} />
+                    <Chip
+                      size="small"
+                      variant="outlined"
+                      icon={feed.kind === 'youtube' ? <SmartDisplayIcon /> : feed.kind === 'reddit' ? <RedditIcon /> : <RssFeedIcon />}
+                      label=""
+                      sx={{
+                        color: 'rgba(231,242,255,0.96)',
+                        borderColor: accent,
+                        '& .MuiChip-label': { px: 0.2 },
+                        '& .MuiChip-icon': { color: 'rgba(231,242,255,0.96)', ml: 0.5, mr: 0.1, fontSize: 16 }
+                      }}
+                    />
                   </Stack>
                 </Stack>
                 <Stack direction="row" spacing={1} sx={{ mb: 1.1 }} flexWrap="wrap">
@@ -913,122 +1037,130 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
                   </Button>
                 </Stack>
                 {isHydrated && controlsOpen ? (
-                  <Stack direction="row" spacing={1} sx={{ mb: 1.1 }} flexWrap="wrap" alignItems="center">
-                    <Button
-                      size="small"
-                      variant={feed.summaryEnabled ? 'contained' : 'outlined'}
-                      onClick={() => toggleFeedSummary(feed)}
-                      disabled={!connected}
-                      sx={compactBtnSx}
-                    >
-                      {feed.summaryEnabled ? l.summariesOn : l.summariesOff}
-                    </Button>
-                    <Button
-                      size="small"
-                      variant={feed.researchEnabled ? 'contained' : 'outlined'}
-                      onClick={() => toggleFeedResearch(feed)}
-                      disabled={!connected}
-                      sx={compactBtnSx}
-                    >
-                      {feed.researchEnabled ? l.researchOn : l.researchOff}
-                    </Button>
-                    <FormControl size="small" sx={{ minWidth: 130, ...compactFormSx }}>
-                      <Select
-                        value={feed.budget}
-                        onChange={e => setFeedBudget(feed, e.target.value as BudgetMode)}
+                  <Box sx={{ mb: 1.1, display: 'grid', gap: 0.9 }}>
+                    <Stack direction="row" spacing={1} flexWrap="wrap" alignItems="center">
+                      <Button
+                        size="small"
+                        variant={feed.summaryEnabled ? 'contained' : 'outlined'}
+                        onClick={() => toggleFeedSummary(feed)}
                         disabled={!connected}
+                        sx={compactBtnSx}
                       >
-                        <MenuItem value="low">{l.budgetLow}</MenuItem>
-                        <MenuItem value="standard">{l.budgetStandard}</MenuItem>
-                        <MenuItem value="high">{l.budgetHigh}</MenuItem>
-                      </Select>
-                    </FormControl>
-                    <FormControl size="small" sx={{ minWidth: 102, ...compactFormSx }}>
-                      <Select
-                        value={String(feed.intervalSec || 120)}
-                        onChange={e => setFeedInterval(feed, Number(e.target.value) || 120)}
+                        {feed.summaryEnabled ? l.summariesOn : l.summariesOff}
+                      </Button>
+                      <Button
+                        size="small"
+                        variant={feed.researchEnabled ? 'contained' : 'outlined'}
+                        onClick={() => toggleFeedResearch(feed)}
                         disabled={!connected}
+                        sx={compactBtnSx}
                       >
-                        <MenuItem value="45">{l.poll45}</MenuItem>
-                        <MenuItem value="60">{l.poll60}</MenuItem>
-                        <MenuItem value="90">{l.poll90}</MenuItem>
-                        <MenuItem value="120">{l.poll120}</MenuItem>
-                        <MenuItem value="180">{l.poll180}</MenuItem>
-                        <MenuItem value="300">{l.poll300}</MenuItem>
-                      </Select>
-                    </FormControl>
-                    <FormControl size="small" sx={{ minWidth: 122, ...compactFormSx }}>
-                      <Select
-                        value={feed.sortMode}
-                        onChange={e => setFeedSortMode(feed, e.target.value as SortMode)}
-                        disabled={!connected}
+                        {feed.researchEnabled ? l.researchOn : l.researchOff}
+                      </Button>
+                    </Stack>
+                    <Stack direction="row" spacing={1} flexWrap="wrap" alignItems="center">
+                      <FormControl size="small" sx={{ minWidth: 130, ...compactFormSx }}>
+                        <Select
+                          value={feed.budget}
+                          onChange={e => setFeedBudget(feed, e.target.value as BudgetMode)}
+                          disabled={!connected}
+                        >
+                          <MenuItem value="low">{l.budgetLow}</MenuItem>
+                          <MenuItem value="standard">{l.budgetStandard}</MenuItem>
+                          <MenuItem value="high">{l.budgetHigh}</MenuItem>
+                        </Select>
+                      </FormControl>
+                      <FormControl size="small" sx={{ minWidth: 102, ...compactFormSx }}>
+                        <Select
+                          value={String(feed.intervalSec || 120)}
+                          onChange={e => setFeedInterval(feed, Number(e.target.value) || 120)}
+                          disabled={!connected}
+                        >
+                          <MenuItem value="45">{l.poll45}</MenuItem>
+                          <MenuItem value="60">{l.poll60}</MenuItem>
+                          <MenuItem value="90">{l.poll90}</MenuItem>
+                          <MenuItem value="120">{l.poll120}</MenuItem>
+                          <MenuItem value="180">{l.poll180}</MenuItem>
+                          <MenuItem value="300">{l.poll300}</MenuItem>
+                        </Select>
+                      </FormControl>
+                      <FormControl size="small" sx={{ minWidth: 122, ...compactFormSx }}>
+                        <Select
+                          value={feed.sortMode}
+                          onChange={e => setFeedSortMode(feed, e.target.value as SortMode)}
+                          disabled={!connected}
+                        >
+                          <MenuItem value="newest">{l.sortNewest}</MenuItem>
+                          <MenuItem value="oldest">{l.sortOldest}</MenuItem>
+                          <MenuItem value="matched">{l.sortMatched}</MenuItem>
+                        </Select>
+                      </FormControl>
+                    </Stack>
+                    <Stack direction="row" spacing={1.4} flexWrap="wrap" alignItems="center">
+                      <FormControlLabel
+                        control={
+                          <Checkbox
+                            size="small"
+                            checked={feed.filters.onlyMatches}
+                            onChange={() => toggleFeedFilter(feed, 'onlyMatches')}
+                            disabled={!connected}
+                          />
+                        }
+                        label={l.matches}
+                        sx={labelSx}
+                      />
+                      <FormControlLabel
+                        control={
+                          <Checkbox
+                            size="small"
+                            checked={feed.filters.onlyResearched}
+                            onChange={() => toggleFeedFilter(feed, 'onlyResearched')}
+                            disabled={!connected}
+                          />
+                        }
+                        label={l.researched}
+                        sx={labelSx}
+                      />
+                      <FormControlLabel
+                        control={
+                          <Checkbox
+                            size="small"
+                            checked={feed.filters.onlySummaries}
+                            onChange={() => toggleFeedFilter(feed, 'onlySummaries')}
+                            disabled={!connected}
+                          />
+                        }
+                        label={l.summaries}
+                        sx={labelSx}
+                      />
+                    </Stack>
+                    <Stack direction="row" spacing={1} flexWrap="wrap" alignItems="center">
+                      <FormControl size="small" sx={{ minWidth: 138, ...compactFormSx }}>
+                        <Select
+                          value={deleteAgeByUrl[feed.url] || 'week'}
+                          onChange={e => dispatch(setFeedDeleteAge({
+                            feedUrl: feed.url,
+                            age: e.target.value as 'yesterday' | 'week' | 'month' | 'year'
+                          }))}
+                        >
+                          <MenuItem value="yesterday">{l.deleteYesterday}</MenuItem>
+                          <MenuItem value="week">{l.deleteWeek}</MenuItem>
+                          <MenuItem value="month">{l.deleteMonth}</MenuItem>
+                          <MenuItem value="year">{l.deleteYear}</MenuItem>
+                        </Select>
+                      </FormControl>
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        color="error"
+                        startIcon={<DeleteOutlineIcon />}
+                        onClick={() => removeOldInFeed(feed)}
+                        sx={compactBtnSx}
                       >
-                        <MenuItem value="newest">{l.sortNewest}</MenuItem>
-                        <MenuItem value="oldest">{l.sortOldest}</MenuItem>
-                        <MenuItem value="matched">{l.sortMatched}</MenuItem>
-                      </Select>
-                    </FormControl>
-                    <FormControlLabel
-                      control={
-                        <Checkbox
-                          size="small"
-                          checked={feed.filters.onlyMatches}
-                          onChange={() => toggleFeedFilter(feed, 'onlyMatches')}
-                          disabled={!connected}
-                        />
-                      }
-                      label={l.matches}
-                      sx={labelSx}
-                    />
-                    <FormControlLabel
-                      control={
-                        <Checkbox
-                          size="small"
-                          checked={feed.filters.onlyResearched}
-                          onChange={() => toggleFeedFilter(feed, 'onlyResearched')}
-                          disabled={!connected}
-                        />
-                      }
-                      label={l.researched}
-                      sx={labelSx}
-                    />
-                    <FormControlLabel
-                      control={
-                        <Checkbox
-                          size="small"
-                          checked={feed.filters.onlySummaries}
-                          onChange={() => toggleFeedFilter(feed, 'onlySummaries')}
-                          disabled={!connected}
-                        />
-                      }
-                      label={l.summaries}
-                      sx={labelSx}
-                    />
-                    <FormControl size="small" sx={{ minWidth: 138, ...compactFormSx }}>
-                      <Select
-                        value={deleteAgeByUrl[feed.url] || 'week'}
-                        onChange={e => dispatch(setFeedDeleteAge({
-                          feedUrl: feed.url,
-                          age: e.target.value as 'yesterday' | 'week' | 'month' | 'year'
-                        }))}
-                      >
-                        <MenuItem value="yesterday">{l.deleteYesterday}</MenuItem>
-                        <MenuItem value="week">{l.deleteWeek}</MenuItem>
-                        <MenuItem value="month">{l.deleteMonth}</MenuItem>
-                        <MenuItem value="year">{l.deleteYear}</MenuItem>
-                      </Select>
-                    </FormControl>
-                    <Button
-                      size="small"
-                      variant="outlined"
-                      color="error"
-                      startIcon={<DeleteOutlineIcon />}
-                      onClick={() => removeOldInFeed(feed)}
-                      sx={compactBtnSx}
-                    >
-                      {l.deleteOld}
-                    </Button>
-                  </Stack>
+                        {l.deleteOld}
+                      </Button>
+                    </Stack>
+                  </Box>
                 ) : null}
                 {!isHydrated ? (
                   <Stack spacing={1.2} sx={{ py: 0.6 }}>
@@ -1042,7 +1174,7 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
                     <Alert severity="info" variant="outlined">
                       {items.length === 0 ? (isMatchColumn ? l.waitingMatches : l.waiting) : l.noMatches}
                     </Alert>
-                  ) : itemsVisible.map(it => (
+                  ) : shownItems.map(it => (
                     <Card
                       key={it.id}
                       variant="outlined"
@@ -1070,6 +1202,16 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
                             {formatTime(it.publishedMs)}
                           </Typography>
                           <Stack direction="row" spacing={0.6} alignItems="center">
+                            <Tooltip title={pinnedNewsById[it.id] ? l.unpinNews : l.pinNews}>
+                              <Button
+                                size="small"
+                                variant={pinnedNewsById[it.id] ? 'contained' : 'outlined'}
+                                sx={{ ...compactBtnSx, minWidth: 34, px: 0.75 }}
+                                onClick={() => dispatch(togglePinnedNews(it.id))}
+                              >
+                                <PushPinIcon sx={{ fontSize: 15 }} aria-hidden />
+                              </Button>
+                            </Tooltip>
                             {it.isMatch ? <Chip size="small" label={l.match} color="warning" variant="outlined" /> : null}
                             <Tooltip title={l.shareLink}>
                               <Button
@@ -1209,6 +1351,15 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
                             </Box>
                           );
                         })() : null}
+                        {feed.researchEnabled && aiEnabled && !it.research && !researchPendingById[it.id] && !hideAllResearch ? (
+                          <Chip
+                            size="small"
+                            label={l.autoResearching}
+                            icon={<CircularProgress size={11} color="inherit" />}
+                            variant="outlined"
+                            sx={{ mb: 0.9, color: 'rgba(152, 228, 255, 0.96)', borderColor: 'rgba(73,167,255,0.55)' }}
+                          />
+                        ) : null}
                         {it.research && !hideAllResearch ? (() => {
                           const key = bodyKey(it, 'research');
                           const mode = getBodyMode(key, it.research, 340);
@@ -1303,6 +1454,25 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
                       </CardContent>
                     </Card>
                   ))}
+                  {itemsVisible.length > shownItems.length ? (
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      onClick={() => setVisibleByFeed(prev => ({ ...prev, [feed.url]: (prev[feed.url] || 10) + 5 }))}
+                    >
+                      {l.showFiveMore}
+                    </Button>
+                  ) : null}
+                  {itemsVisible.length > 10 && shownItems.length > 10 ? (
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      color="secondary"
+                      onClick={() => setVisibleByFeed(prev => ({ ...prev, [feed.url]: 10 }))}
+                    >
+                      {l.showLessItems}
+                    </Button>
+                  ) : null}
                 </Stack>
                 )}
               </CardContent>

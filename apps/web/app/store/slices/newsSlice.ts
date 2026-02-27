@@ -23,6 +23,7 @@ type NewsState = {
   summaryPendingById: Record<string, true>;
   researchPendingById: Record<string, true>;
   askByItem: Record<string, AskItemState>;
+  pinnedNewsById: Record<string, true>;
 };
 
 const initialState: NewsState = {
@@ -30,7 +31,8 @@ const initialState: NewsState = {
   hiddenIds: [],
   summaryPendingById: {},
   researchPendingById: {},
-  askByItem: {}
+  askByItem: {},
+  pinnedNewsById: {}
 };
 
 function applyNewsBatch(state: NewsState, items: NewsItem[]) {
@@ -65,7 +67,12 @@ function applyNewsBatch(state: NewsState, items: NewsItem[]) {
   touchedFeeds.forEach(feedUrl => {
     const list = state.itemsByFeed[feedUrl];
     if (!Array.isArray(list)) return;
-    list.sort((a, b) => b.publishedMs - a.publishedMs);
+    list.sort((a, b) => {
+      const aPinned = !!state.pinnedNewsById[a.id];
+      const bPinned = !!state.pinnedNewsById[b.id];
+      if (aPinned !== bPinned) return aPinned ? -1 : 1;
+      return b.publishedMs - a.publishedMs;
+    });
     if (list.length > MAX_ITEMS_PER_COLUMN) {
       list.length = MAX_ITEMS_PER_COLUMN;
     }
@@ -107,6 +114,7 @@ const newsSlice = createSlice({
       });
       delete state.summaryPendingById[id];
       delete state.researchPendingById[id];
+      delete state.pinnedNewsById[id];
     },
     removeOldItemsInFeed(state, action: PayloadAction<{ feedUrl: string; cutoffMs: number }>) {
       const { feedUrl, cutoffMs } = action.payload;
@@ -157,6 +165,23 @@ const newsSlice = createSlice({
         list[idx] = { ...list[idx], research: '' };
         state.itemsByFeed[feedUrl] = list;
       }
+    },
+    togglePinnedNews(state, action: PayloadAction<string>) {
+      const id = String(action.payload || '').trim();
+      if (!id) return;
+      if (state.pinnedNewsById[id]) delete state.pinnedNewsById[id];
+      else state.pinnedNewsById[id] = true;
+
+      Object.keys(state.itemsByFeed).forEach(feedUrl => {
+        const list = state.itemsByFeed[feedUrl];
+        if (!Array.isArray(list)) return;
+        list.sort((a, b) => {
+          const aPinned = !!state.pinnedNewsById[a.id];
+          const bPinned = !!state.pinnedNewsById[b.id];
+          if (aPinned !== bPinned) return aPinned ? -1 : 1;
+          return b.publishedMs - a.publishedMs;
+        });
+      });
     },
     toggleAskOpen(state, action: PayloadAction<{ id: string; feedUrl: string }>) {
       const a = ensureAskState(state, action.payload.id, action.payload.feedUrl);
@@ -226,6 +251,7 @@ export const {
   setResearchPending,
   clearResearchPending,
   clearResearchForItem,
+  togglePinnedNews,
   toggleAskOpen,
   setAskDraft,
   enqueueAskQuestion,
