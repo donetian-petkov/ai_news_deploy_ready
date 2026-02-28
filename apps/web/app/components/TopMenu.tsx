@@ -1,14 +1,17 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Box, Button, Divider, Drawer, FormControl, IconButton, MenuItem, Select, Stack, Typography, useMediaQuery } from '@mui/material';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { Alert, Box, Button, Divider, Drawer, FormControl, IconButton, MenuItem, Select, Stack, Tooltip, Typography, useMediaQuery } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
+import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import CloseIcon from '@mui/icons-material/Close';
+import GridViewIcon from '@mui/icons-material/GridView';
 import MenuIcon from '@mui/icons-material/Menu';
 import OpenWithIcon from '@mui/icons-material/OpenWith';
 import SearchIcon from '@mui/icons-material/Search';
+import SummarizeIcon from '@mui/icons-material/Summarize';
 import TuneIcon from '@mui/icons-material/Tune';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { setLanguage, setSearchQuery, setTopUiState, setHideAllResearch, setHideAllSummaries, setNotifySettings, setAiSettings, setMoodFilter, setTypeFilter, setAppearanceSettings, hydrateUiSettings, setHelpOpen, dismissToast, enqueueToast, triggerShowMoreNewsAll, triggerResetNewsShownAll } from '../store/slices/uiSlice';
@@ -516,6 +519,7 @@ export default function TopMenu() {
   const controlsLabel = ui.controlsCollapsed ? labels.showTopControls : labels.hideTopControls;
   const allColumnLabel = ui.allColumnControlsHidden ? labels.showAllColumnControls : labels.hideAllColumnControls;
   const menuLabel = ui.menuCollapsed ? labels.showMenu : labels.hideMenu;
+  const menuItemsAsIcons = ui.buttonMode === 'icons';
   const showDesktopBody = !isMobile && !ui.menuCollapsed;
   const orderedFeeds = useMemo(() => {
     const list = [...feeds];
@@ -904,6 +908,32 @@ export default function TopMenu() {
     </div>
   );
 
+  const topActionButton = (id: string, label: string, icon: ReactNode, onClick: () => void) => {
+    if (!menuItemsAsIcons) {
+      return (
+        <Button id={id} className="btn ghost" size="small" variant="outlined" type="button" onClick={onClick}>
+          {label}
+        </Button>
+      );
+    }
+    return (
+      <Tooltip title={label}>
+        <Button
+          id={id}
+          className="btn ghost"
+          size="small"
+          variant="outlined"
+          type="button"
+          aria-label={label}
+          onClick={onClick}
+          sx={{ minWidth: 38, px: 0.95 }}
+        >
+          {icon}
+        </Button>
+      </Tooltip>
+    );
+  };
+
   return (
     <div className="topbar">
       <div className="topbarInner" id="topbarInner" ref={topbarInnerRef}>
@@ -958,31 +988,23 @@ export default function TopMenu() {
                 labels={labels}
                 onChange={nextVibe => dispatch(setAppearanceSettings({ vibe: nextVibe }))}
               />
-              <Button id="quickSearchBtn" className="btn ghost" size="small" variant="outlined" type="button" onClick={toggleSearch}>{searchLabel}</Button>
-              <Button id="quickAddStreamBtn" className="btn ghost" size="small" variant="outlined" type="button" onClick={toggleAddStream}>{addStreamLabel}</Button>
-              <Button id="controlsToggle" className="btn ghost" size="small" variant="outlined" type="button" onClick={toggleControls}>{controlsLabel}</Button>
-              <Button id="allColControlsToggle" className="btn ghost" size="small" variant="outlined" type="button" onClick={toggleAllColumnControls}>{allColumnLabel}</Button>
-              <Button
-                id="hideAllResearchBtn"
-                className="btn ghost"
-                size="small"
-                variant="outlined"
-                type="button"
-                onClick={() => dispatch(setHideAllResearch(!ui.hideAllResearch))}
-              >
-                {ui.hideAllResearch ? labels.showAllResearch : labels.hideAllResearch}
-              </Button>
-              <Button
-                id="hideAllSummariesBtn"
-                className="btn ghost"
-                size="small"
-                variant="outlined"
-                type="button"
-                onClick={() => dispatch(setHideAllSummaries(!ui.hideAllSummaries))}
-              >
-                {ui.hideAllSummaries ? labels.showAllSummaries : labels.hideAllSummaries}
-              </Button>
-              <Button id="menuToggle" className="btn ghost" size="small" variant="outlined" type="button" onClick={toggleMenu}>{menuLabel}</Button>
+              {topActionButton('quickSearchBtn', searchLabel, <SearchIcon fontSize="small" />, toggleSearch)}
+              {topActionButton('quickAddStreamBtn', addStreamLabel, <AddIcon fontSize="small" />, toggleAddStream)}
+              {topActionButton('controlsToggle', controlsLabel, <TuneIcon fontSize="small" />, toggleControls)}
+              {topActionButton('allColControlsToggle', allColumnLabel, <GridViewIcon fontSize="small" />, toggleAllColumnControls)}
+              {topActionButton(
+                'hideAllResearchBtn',
+                ui.hideAllResearch ? labels.showAllResearch : labels.hideAllResearch,
+                <AutoAwesomeIcon fontSize="small" />,
+                () => dispatch(setHideAllResearch(!ui.hideAllResearch))
+              )}
+              {topActionButton(
+                'hideAllSummariesBtn',
+                ui.hideAllSummaries ? labels.showAllSummaries : labels.hideAllSummaries,
+                <SummarizeIcon fontSize="small" />,
+                () => dispatch(setHideAllSummaries(!ui.hideAllSummaries))
+              )}
+              {topActionButton('menuToggle', menuLabel, <MenuIcon fontSize="small" />, toggleMenu)}
             </Stack>
           )}
         </div>
