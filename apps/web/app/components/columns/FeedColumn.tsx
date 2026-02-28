@@ -205,6 +205,11 @@ export function FeedColumn({
     <Box
       key={feed.url}
       data-feed-url={feed.url}
+      sx={{
+        width: '100%',
+        minWidth: 0,
+        mx: 'auto'
+      }}
       draggable={drag.canDrag}
       onDragStart={drag.onDragStart}
       onDragEnd={drag.onDragEnd}

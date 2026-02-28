@@ -704,8 +704,10 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
         sx={{
           display: 'grid',
           gap: 1.5,
+          width: '100%',
+          justifyItems: 'stretch',
           gridTemplateColumns: {
-            xs: '1fr',
+            xs: 'minmax(0, 1fr)',
             sm: 'repeat(2, minmax(320px, 1fr))',
             lg: 'repeat(3, minmax(330px, 1fr))',
             xl: 'repeat(4, minmax(330px, 1fr))'
