@@ -522,11 +522,10 @@ body::after {
 
 @media (max-width: 900px) {
   .topbar {
-    width: 100vw;
-    left: 0;
-    right: 0;
+    width: 100%;
     margin: 0;
     border-radius: 0;
+    overflow: hidden;
   }
   .topbarInner {
     max-width: none;
@@ -542,6 +541,12 @@ body::after {
     width: 100%;
     justify-content: flex-start;
   }
+  .container {
+    max-width: none;
+    width: 100%;
+    margin: 0;
+    padding: 10px 10px 14px;
+  }
   .headerLeft {
     min-width: 100%;
   }
@@ -553,13 +558,5 @@ body::after {
   }
   .mobileTopActions .topQuickLabel {
     width: 100%;
-  }
-  .mobileTopQuickButtons {
-    width: 100%;
-    justify-content: space-between;
-  }
-  .mobileTopQuickButtons .MuiButton-root {
-    flex: 1;
-    min-width: 0;
   }
 }

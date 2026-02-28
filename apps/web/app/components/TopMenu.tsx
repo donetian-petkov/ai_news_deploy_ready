@@ -1,8 +1,10 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-import { Alert, Box, Button, Divider, Drawer, FormControl, IconButton, MenuItem, Select, Stack, Tooltip, Typography, useMediaQuery } from '@mui/material';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Alert, Box, Button, Divider, Drawer, FormControl, IconButton, MenuItem, Select, Stack, Typography, useMediaQuery } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
+import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
+import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import CloseIcon from '@mui/icons-material/Close';
 import MenuIcon from '@mui/icons-material/Menu';
 import SearchIcon from '@mui/icons-material/Search';
@@ -10,7 +12,7 @@ import TuneIcon from '@mui/icons-material/Tune';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { setLanguage, setSearchQuery, setTopUiState, setHideAllResearch, setHideAllSummaries, setNotifySettings, setAiSettings, setMoodFilter, setTypeFilter, setAppearanceSettings, hydrateUiSettings, setHelpOpen, dismissToast, enqueueToast, triggerShowMoreNewsAll, triggerResetNewsShownAll } from '../store/slices/uiSlice';
 import { sendWsMessage } from '../store/wsClient';
-import { setFeedBudgetSetting } from '../store/slices/feedsSlice';
+import { reorderFeeds, setFeedBudgetSetting } from '../store/slices/feedsSlice';
 import { removeOldItemsInFeed, resetAllToNewestLimit } from '../store/slices/newsSlice';
 import { AddStreamSection } from './top-menu/AddStreamSection';
 import { HelpDialog } from './top-menu/HelpDialog';
@@ -18,6 +20,7 @@ import { QuickVibeSelect } from './top-menu/QuickVibeSelect';
 import { SearchSection } from './top-menu/SearchSection';
 import { StatusPills } from './top-menu/StatusPills';
 import { ToastStack } from './top-menu/ToastStack';
+import { FILTERED_FEED_URL } from '../store/constants';
 
 type VibeValue = 'default' | 'anime' | 'arcade' | 'cinema' | 'newspaper' | 'cyberwitch' | 'fantasy' | 'scifi';
 const VIBES: VibeValue[] = ['default', 'anime', 'arcade', 'cinema', 'newspaper', 'cyberwitch', 'fantasy', 'scifi'];
@@ -31,6 +34,7 @@ export default function TopMenu() {
   const isMobile = useMediaQuery('(max-width: 900px)');
   const resolvedColorMode = ui.colorMode === 'system' ? (prefersDark ? 'dark' : 'light') : ui.colorMode;
   const feeds = useAppSelector(s => s.feeds.feeds);
+  const orderByUrl = useAppSelector(s => s.feeds.orderByUrl);
   const lang = ui.language;
   const bg = lang === 'bg';
   const [searchDraft, setSearchDraft] = useState('');
@@ -121,7 +125,10 @@ export default function TopMenu() {
     aiUnavailable: bg ? 'AI не е наличен за избрания доставчик. Добави валиден API ключ от AI Settings.' : 'AI is unavailable for the selected provider. Add a valid API key in AI Settings.',
     perfMode: bg ? 'Режим производителност' : 'Performance mode',
     perfOn: bg ? 'ВКЛ' : 'ON',
-    perfOff: bg ? 'ИЗКЛ' : 'OFF'
+    perfOff: bg ? 'ИЗКЛ' : 'OFF',
+    reorderColumns: bg ? 'Подреди колони' : 'Reorder columns',
+    moveUp: bg ? 'Нагоре' : 'Move up',
+    moveDown: bg ? 'Надолу' : 'Move down'
   } as const;
 
   useEffect(() => {
@@ -500,6 +507,19 @@ export default function TopMenu() {
   const allColumnLabel = ui.allColumnControlsHidden ? labels.showAllColumnControls : labels.hideAllColumnControls;
   const menuLabel = ui.menuCollapsed ? labels.showMenu : labels.hideMenu;
   const showDesktopBody = !isMobile && !ui.menuCollapsed;
+  const orderedFeeds = useMemo(() => {
+    const list = [...feeds];
+    const orderIndex = new Map(orderByUrl.map((url, idx) => [url, idx]));
+    list.sort((a, b) => {
+      const aFiltered = a.url === FILTERED_FEED_URL;
+      const bFiltered = b.url === FILTERED_FEED_URL;
+      if (aFiltered !== bFiltered) return aFiltered ? -1 : 1;
+      const ai = orderIndex.get(a.url) ?? Number.MAX_SAFE_INTEGER;
+      const bi = orderIndex.get(b.url) ?? Number.MAX_SAFE_INTEGER;
+      return ai - bi;
+    });
+    return list;
+  }, [feeds, orderByUrl]);
 
   const searchSection = (
     <SearchSection
@@ -884,58 +904,6 @@ export default function TopMenu() {
                   <MenuIcon fontSize="small" />
                 </IconButton>
               </Stack>
-              <Stack direction="row" spacing={1} alignItems="center">
-                <QuickVibeSelect
-                  value={ui.vibe}
-                  labels={labels}
-                  fullWidth
-                  onChange={nextVibe => dispatch(setAppearanceSettings({ vibe: nextVibe }))}
-                />
-              </Stack>
-              <Stack direction="row" spacing={1} className="mobileTopQuickButtons">
-                <Tooltip title={searchLabel}>
-                  <Button
-                    id="quickSearchBtn"
-                    className="btn ghost"
-                    size="small"
-                    variant={ui.searchVisible ? 'contained' : 'outlined'}
-                    type="button"
-                    onClick={toggleSearch}
-                    aria-label={searchLabel}
-                    sx={{ flex: 1, minWidth: 0, height: 44, p: 0 }}
-                  >
-                    <SearchIcon fontSize="small" />
-                  </Button>
-                </Tooltip>
-                <Tooltip title={addStreamLabel}>
-                  <Button
-                    id="quickAddStreamBtn"
-                    className="btn ghost"
-                    size="small"
-                    variant={ui.addStreamVisible ? 'contained' : 'outlined'}
-                    type="button"
-                    onClick={toggleAddStream}
-                    aria-label={addStreamLabel}
-                    sx={{ flex: 1, minWidth: 0, height: 44, p: 0 }}
-                  >
-                    <AddIcon fontSize="small" />
-                  </Button>
-                </Tooltip>
-                <Tooltip title={controlsLabel}>
-                  <Button
-                    id="controlsToggle"
-                    className="btn ghost"
-                    size="small"
-                    variant={!ui.controlsCollapsed ? 'contained' : 'outlined'}
-                    type="button"
-                    onClick={toggleControls}
-                    aria-label={controlsLabel}
-                    sx={{ flex: 1, minWidth: 0, height: 44, p: 0 }}
-                  >
-                    <TuneIcon fontSize="small" />
-                  </Button>
-                </Tooltip>
-              </Stack>
             </Stack>
           ) : (
             <Stack className="headerRight" direction="row" flexWrap="wrap" gap={1.1} alignItems="center">
@@ -994,6 +962,14 @@ export default function TopMenu() {
           </Box>
           <Divider sx={{ borderColor: 'var(--panel-border)' }} />
           <Box sx={{ p: 1.4, overflowY: 'auto' }}>
+            <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
+              <QuickVibeSelect
+                value={ui.vibe}
+                labels={labels}
+                fullWidth
+                onChange={nextVibe => dispatch(setAppearanceSettings({ vibe: nextVibe }))}
+              />
+            </Stack>
             <Stack spacing={1}>
               <Button variant="outlined" onClick={toggleSearch} startIcon={<SearchIcon fontSize="small" />}>
                 {searchLabel}
@@ -1020,6 +996,64 @@ export default function TopMenu() {
                 {ui.hideAllSummaries ? labels.showAllSummaries : labels.hideAllSummaries}
               </Button>
             </Stack>
+            <Box sx={{ mt: 1.4, mb: 1 }}>
+              <Typography variant="subtitle2" sx={{ mb: 0.8, color: 'var(--text-muted)', fontWeight: 800 }}>
+                {labels.reorderColumns}
+              </Typography>
+              <Stack spacing={0.7}>
+                {orderedFeeds.map((feed, idx) => {
+                  const isFixed = feed.url === FILTERED_FEED_URL;
+                  const prev = orderedFeeds[idx - 1];
+                  const next = orderedFeeds[idx + 1];
+                  const canMoveUp = !isFixed && !!prev && prev.url !== FILTERED_FEED_URL;
+                  const canMoveDown = !isFixed && !!next;
+                  return (
+                    <Stack
+                      key={`mobile-order-${feed.url}`}
+                      direction="row"
+                      alignItems="center"
+                      justifyContent="space-between"
+                      sx={{
+                        p: 0.8,
+                        border: '1px solid var(--panel-border)',
+                        borderRadius: '12px',
+                        background: 'var(--field-bg)'
+                      }}
+                    >
+                      <Typography variant="body2" sx={{ fontWeight: 700, pr: 1 }}>
+                        {feed.label}
+                      </Typography>
+                      <Stack direction="row" spacing={0.4}>
+                        <IconButton
+                          size="small"
+                          onClick={() => {
+                            if (!canMoveUp || !prev) return;
+                            dispatch(reorderFeeds({ fromUrl: feed.url, toUrl: prev.url }));
+                          }}
+                          disabled={!canMoveUp}
+                          aria-label={labels.moveUp}
+                          sx={{ border: '1px solid var(--panel-border)', borderRadius: '10px' }}
+                        >
+                          <ArrowUpwardIcon fontSize="inherit" />
+                        </IconButton>
+                        <IconButton
+                          size="small"
+                          onClick={() => {
+                            if (!canMoveDown || !next) return;
+                            dispatch(reorderFeeds({ fromUrl: feed.url, toUrl: next.url }));
+                          }}
+                          disabled={!canMoveDown}
+                          aria-label={labels.moveDown}
+                          sx={{ border: '1px solid var(--panel-border)', borderRadius: '10px' }}
+                        >
+                          <ArrowDownwardIcon fontSize="inherit" />
+                        </IconButton>
+                      </Stack>
+                    </Stack>
+                  );
+                })}
+              </Stack>
+            </Box>
             {ui.searchVisible ? searchSection : null}
             {ui.addStreamVisible ? addStreamSection : null}
             {controlsPanel}
