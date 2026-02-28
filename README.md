@@ -124,6 +124,58 @@ Endpoints:
 - API health: `http://localhost:4000/health`
 - WebSocket: `ws://localhost:4000`
 
+## Run With Docker (Everything Included)
+
+This runs both services (`web` + `api`) with one command and persists SQLite data in a Docker volume.
+
+### 1) Prepare `.env`
+
+```bash
+cp .env.example .env
+```
+
+Set at least:
+
+```env
+OPENAI_API_KEY=...
+KEYWORDS=keyword1,keyword2
+NEXT_PUBLIC_WS_URL=ws://localhost:4000
+```
+
+### 2) Build and start containers
+
+```bash
+docker compose up -d --build
+```
+
+### 3) Verify
+- Web: `http://localhost:3000`
+- API health: `http://localhost:4000/health`
+
+### 4) Logs
+
+```bash
+docker compose logs -f api
+docker compose logs -f web
+```
+
+### 5) Stop
+
+```bash
+docker compose down
+```
+
+### 6) Reset everything (including SQLite volume)
+
+```bash
+docker compose down -v
+```
+
+### Notes
+- API container runs `prisma migrate deploy` automatically before starting server.
+- SQLite data persists in volume: `api_sqlite`.
+- For public domain deployment, set `NEXT_PUBLIC_WS_URL` to your public `wss://...` endpoint before `docker compose up --build`.
+
 ## Host Online From Your Own Computer (Mac)
 
 This option exposes your local app to the internet without VPS costs, using Cloudflare Tunnel.
@@ -222,6 +274,113 @@ pm2 restart ai-news-web ai-news-api
 
 ### Notes
 - If your Mac sleeps or shuts down, service goes offline.
+- Back up `apps/api/prisma/dev.db` regularly.
+- For heavier traffic, migrate from SQLite to Postgres.
+
+## Host Online From Your Own Computer (Windows 11)
+
+This option exposes your local app to the internet without VPS costs, using Cloudflare Tunnel.
+
+### What you need
+- A domain in Cloudflare DNS
+- `cloudflared` installed
+- Your Windows machine kept awake and online
+
+### 1) Set production env values
+In root `.env`:
+
+```env
+PORT=4000
+OPENAI_API_KEY=YOUR_KEY
+KEYWORDS=keyword1,keyword2
+DATABASE_URL="file:C:/Users/<your-user>/ai_news/ai_news_next_node/apps/api/prisma/dev.db"
+NEXT_PUBLIC_WS_URL=wss://api.yourdomain.com
+```
+
+### 2) Install, migrate, build
+
+```powershell
+npm install
+npm run prisma:generate
+npm run prisma:migrate
+npm run build
+```
+
+### 3) Start app locally (prod mode)
+
+```powershell
+npm run start
+```
+
+Verify:
+
+```powershell
+curl http://localhost:4000/health
+```
+
+### 4) Keep processes alive with PM2
+
+```powershell
+npm i -g pm2
+pm2 start "npm run start -w @ai-news/api" --name ai-news-api
+pm2 start "npm run start -w @ai-news/web" --name ai-news-web
+pm2 save
+```
+
+At login/startup, run:
+
+```powershell
+pm2 resurrect
+```
+
+### 5) Install and authenticate Cloudflare Tunnel
+
+```powershell
+winget install Cloudflare.cloudflared
+cloudflared tunnel login
+cloudflared tunnel create ai-news-home
+cloudflared tunnel route dns ai-news-home app.yourdomain.com
+cloudflared tunnel route dns ai-news-home api.yourdomain.com
+```
+
+### 6) Create tunnel config
+Create `%USERPROFILE%\.cloudflared\config.yml`:
+
+```yml
+tunnel: ai-news-home
+credentials-file: C:\Users\<your-user>\.cloudflared\<TUNNEL_ID>.json
+
+ingress:
+  - hostname: app.yourdomain.com
+    service: http://localhost:3000
+  - hostname: api.yourdomain.com
+    service: http://localhost:4000
+  - service: http_status:404
+```
+
+### 7) Run tunnel in background
+
+```powershell
+pm2 start "cloudflared tunnel run ai-news-home" --name ai-news-tunnel
+pm2 save
+```
+
+### 8) Verify public endpoints
+- App: `https://app.yourdomain.com`
+- API health: `https://api.yourdomain.com/health`
+- WebSocket target from web: `wss://api.yourdomain.com`
+
+### 9) Update flow after changing env/build
+If `NEXT_PUBLIC_*` or frontend code changes:
+
+```powershell
+npm run build
+pm2 restart ai-news-web ai-news-api
+```
+
+### Notes
+- If your PC sleeps, hibernates, or shuts down, service goes offline.
+- Ensure Windows Firewall allows local ports `3000` and `4000` for local loopback app access.
 - Back up `apps/api/prisma/dev.db` regularly.
 - For heavier traffic, migrate from SQLite to Postgres.
 
