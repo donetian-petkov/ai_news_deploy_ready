@@ -122,9 +122,12 @@ export const NewsCard = memo(function NewsCard({
     >
       <CardContent sx={{ pb: '12px !important' }}>
         <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 0.9 }}>
-          <Typography variant="caption" sx={{ color: 'rgba(210,219,235,0.74)' }}>
-            {formatTime(item.publishedMs)}
-          </Typography>
+          <Stack direction="row" spacing={0.8} alignItems="center">
+            <Typography variant="caption" sx={{ color: 'rgba(210,219,235,0.74)' }}>
+              {formatTime(item.publishedMs)}
+            </Typography>
+            {item.isMatch ? <Chip size="small" label={labels.match} variant="outlined" sx={{ color: matchAccent, borderColor: matchAccent, fontWeight: 800 }} /> : null}
+          </Stack>
           <Stack direction="row" spacing={0.6} alignItems="center">
             <Tooltip title={isPinnedNews ? labels.unpinNews : labels.pinNews}>
               <Button
@@ -136,7 +139,6 @@ export const NewsCard = memo(function NewsCard({
                 <PushPinIcon sx={{ fontSize: 15 }} aria-hidden />
               </Button>
             </Tooltip>
-            {item.isMatch ? <Chip size="small" label={labels.match} variant="outlined" sx={{ color: matchAccent, borderColor: matchAccent, fontWeight: 800 }} /> : null}
             <Tooltip title={labels.shareLink}>
               <Button
                 size="small"
