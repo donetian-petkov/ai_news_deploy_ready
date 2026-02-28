@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Alert, Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, Divider, Drawer, FormControl, IconButton, MenuItem, Select, Stack, TextField, Typography, useMediaQuery } from '@mui/material';
+import { Alert, Box, Button, Divider, Drawer, FormControl, IconButton, MenuItem, Select, Stack, Typography, useMediaQuery } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import CloseIcon from '@mui/icons-material/Close';
 import MenuIcon from '@mui/icons-material/Menu';
@@ -12,27 +12,21 @@ import { setLanguage, setSearchQuery, setTopUiState, setHideAllResearch, setHide
 import { sendWsMessage } from '../store/wsClient';
 import { setFeedBudgetSetting } from '../store/slices/feedsSlice';
 import { removeOldItemsInFeed, resetAllToNewestLimit } from '../store/slices/newsSlice';
+import { AddStreamSection } from './top-menu/AddStreamSection';
+import { HelpDialog } from './top-menu/HelpDialog';
+import { QuickVibeSelect } from './top-menu/QuickVibeSelect';
+import { SearchSection } from './top-menu/SearchSection';
+import { StatusPills } from './top-menu/StatusPills';
+import { ToastStack } from './top-menu/ToastStack';
 
 type VibeValue = 'default' | 'anime' | 'arcade' | 'cinema' | 'newspaper' | 'cyberwitch' | 'fantasy' | 'scifi';
 const VIBES: VibeValue[] = ['default', 'anime', 'arcade', 'cinema', 'newspaper', 'cyberwitch', 'fantasy', 'scifi'];
-
-function StatusPills() {
-  const connected = useAppSelector(s => s.connection.connected);
-  const status = useAppSelector(s => s.connection.status);
-  const totalTokens = useAppSelector(s => s.aiUsage.totalTokens);
-  const label = connected ? 'Connected' : status === 'error' ? 'Socket error' : status === 'connecting' ? 'Connecting...' : 'Disconnected';
-
-  return (
-    <>
-      <Chip id="status" className="statusPill" size="small" label={label} color={connected ? 'success' : 'default'} variant={connected ? 'filled' : 'outlined'} />
-      <Chip id="tokenUsage" className="statusPill" size="small" label={`Tokens: ${totalTokens.toLocaleString('en-US')}`} variant="outlined" />
-    </>
-  );
-}
-
 export default function TopMenu() {
   const dispatch = useAppDispatch();
   const ui = useAppSelector(s => s.ui);
+  const connected = useAppSelector(s => s.connection.connected);
+  const status = useAppSelector(s => s.connection.status);
+  const totalTokens = useAppSelector(s => s.aiUsage.totalTokens);
   const prefersDark = useMediaQuery('(prefers-color-scheme: dark)');
   const isMobile = useMediaQuery('(max-width: 900px)');
   const resolvedColorMode = ui.colorMode === 'system' ? (prefersDark ? 'dark' : 'light') : ui.colorMode;
@@ -508,79 +502,32 @@ export default function TopMenu() {
   const showDesktopBody = !isMobile && !ui.menuCollapsed;
 
   const searchSection = (
-    <Box sx={{ mt: 1.1, mb: 0.9 }}>
-      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
-        <TextField
-          inputRef={searchInputRef}
-          size={isMobile ? 'medium' : 'small'}
-          fullWidth
-          value={searchDraft}
-          onChange={e => setSearchDraft(e.target.value)}
-          placeholder={labels.searchPlaceholder}
-        />
-        <Button variant="outlined" size={isMobile ? 'medium' : 'small'} onClick={clearSearch} sx={isMobile ? { width: '100%' } : undefined}>
-          {labels.clear}
-        </Button>
-      </Stack>
-    </Box>
+    <SearchSection
+      isMobile={isMobile}
+      searchDraft={searchDraft}
+      onSearchDraftChange={setSearchDraft}
+      onClear={clearSearch}
+      searchInputRef={searchInputRef}
+      labels={labels}
+    />
   );
 
   const addStreamSection = (
-    <Box sx={{ mt: 0.3, mb: 1 }}>
-      <Stack direction={isMobile ? 'column' : { xs: 'column', md: 'row' }} spacing={1}>
-        <FormControl size={isMobile ? 'medium' : 'small'} sx={{ minWidth: 150 }}>
-          <Select value={feedType} onChange={e => setFeedType(e.target.value as 'rss' | 'reddit' | 'youtube')}>
-            <MenuItem value="rss">RSS</MenuItem>
-            <MenuItem value="reddit">Reddit (subreddit)</MenuItem>
-            <MenuItem value="youtube">YouTube (channel)</MenuItem>
-          </Select>
-        </FormControl>
-        <TextField
-          inputRef={addStreamInputRef}
-          size={isMobile ? 'medium' : 'small'}
-          fullWidth
-          value={feedUrl}
-          onChange={e => setFeedUrl(e.target.value)}
-          placeholder={labels.addUrlPlaceholder}
-        />
-        <TextField
-          size={isMobile ? 'medium' : 'small'}
-          value={feedLabel}
-          onChange={e => setFeedLabel(e.target.value)}
-          placeholder={labels.addLabelPlaceholder}
-          sx={{ minWidth: 180 }}
-        />
-        <FormControl size={isMobile ? 'medium' : 'small'} sx={{ minWidth: 110 }}>
-          <Select value={feedInterval} onChange={e => setFeedInterval(String(e.target.value))}>
-            <MenuItem value="45">45{labels.intervalSuffix}</MenuItem>
-            <MenuItem value="60">60{labels.intervalSuffix}</MenuItem>
-            <MenuItem value="90">90{labels.intervalSuffix}</MenuItem>
-            <MenuItem value="120">120{labels.intervalSuffix}</MenuItem>
-            <MenuItem value="180">180{labels.intervalSuffix}</MenuItem>
-            <MenuItem value="300">300{labels.intervalSuffix}</MenuItem>
-          </Select>
-        </FormControl>
-        <Button
-          variant="contained"
-          size={isMobile ? 'medium' : 'small'}
-          onClick={addStream}
-          sx={{
-            whiteSpace: 'nowrap',
-            minWidth: { xs: '100%', md: 124 },
-            borderRadius: 1.5,
-            alignSelf: { xs: 'stretch', md: 'center' },
-            py: isMobile ? 1.1 : undefined
-          }}
-        >
-          {labels.add}
-        </Button>
-      </Stack>
-      {addStatus ? (
-        <Alert severity={addStatus.kind} sx={{ mt: 1, py: 0 }}>
-          {addStatus.message}
-        </Alert>
-      ) : null}
-    </Box>
+    <AddStreamSection
+      isMobile={isMobile}
+      feedType={feedType}
+      feedUrl={feedUrl}
+      feedLabel={feedLabel}
+      feedInterval={feedInterval}
+      addStatus={addStatus}
+      addStreamInputRef={addStreamInputRef}
+      labels={labels}
+      onFeedTypeChange={setFeedType}
+      onFeedUrlChange={setFeedUrl}
+      onFeedLabelChange={setFeedLabel}
+      onFeedIntervalChange={setFeedInterval}
+      onAddStream={addStream}
+    />
   );
 
   const controlsPanel = (
@@ -926,7 +873,7 @@ export default function TopMenu() {
             <Stack className="headerRight mobileTopActions" spacing={1.1} sx={{ width: '100%' }}>
               <Stack direction="row" spacing={1} alignItems="center" justifyContent="space-between">
                 <Stack direction="row" spacing={0.8} sx={{ flexWrap: 'wrap' }}>
-                  <StatusPills />
+                  <StatusPills connected={connected} status={status} totalTokens={totalTokens} />
                 </Stack>
                 <IconButton
                   id="menuToggle"
@@ -938,28 +885,12 @@ export default function TopMenu() {
                 </IconButton>
               </Stack>
               <Stack direction="row" spacing={1} alignItems="center">
-                <label className="checkbox topQuickLabel" title="Quick vibe switch" style={{ flex: 1 }}>
-                  <span id="quickVibeLabelText">{labels.vibe}</span>
-                  <select
-                    id="quickVibeSelect"
-                    className="select topQuickSelect"
-                    value={ui.vibe}
-                    onChange={e => {
-                      const nextVibe = e.target.value as VibeValue;
-                      dispatch(setAppearanceSettings({ vibe: nextVibe }));
-                    }}
-                    style={{ width: '100%' }}
-                  >
-                    <option value="default">{labels.defaultVibe}</option>
-                    <option value="anime">{labels.anime}</option>
-                    <option value="arcade">{labels.arcade}</option>
-                    <option value="cinema">{labels.cinema}</option>
-                    <option value="newspaper">{labels.newspaper}</option>
-                    <option value="cyberwitch">{labels.cyberwitch}</option>
-                    <option value="fantasy">{labels.fantasy}</option>
-                    <option value="scifi">{labels.scifi}</option>
-                  </select>
-                </label>
+                <QuickVibeSelect
+                  value={ui.vibe}
+                  labels={labels}
+                  fullWidth
+                  onChange={nextVibe => dispatch(setAppearanceSettings({ vibe: nextVibe }))}
+                />
               </Stack>
               <Stack direction="row" spacing={1}>
                 <Button id="quickSearchBtn" className="btn ghost" size="small" variant="outlined" type="button" onClick={toggleSearch} startIcon={<SearchIcon fontSize="small" />} sx={{ flex: 1 }}>{searchLabel}</Button>
@@ -969,28 +900,12 @@ export default function TopMenu() {
             </Stack>
           ) : (
             <Stack className="headerRight" direction="row" flexWrap="wrap" gap={1.1} alignItems="center">
-              <StatusPills />
-              <label className="checkbox topQuickLabel" title="Quick vibe switch">
-                <span id="quickVibeLabelText">{labels.vibe}</span>
-                <select
-                  id="quickVibeSelect"
-                  className="select topQuickSelect"
-                  value={ui.vibe}
-                  onChange={e => {
-                    const nextVibe = e.target.value as VibeValue;
-                    dispatch(setAppearanceSettings({ vibe: nextVibe }));
-                  }}
-                >
-                  <option value="default">{labels.defaultVibe}</option>
-                  <option value="anime">{labels.anime}</option>
-                  <option value="arcade">{labels.arcade}</option>
-                  <option value="cinema">{labels.cinema}</option>
-                  <option value="newspaper">{labels.newspaper}</option>
-                  <option value="cyberwitch">{labels.cyberwitch}</option>
-                  <option value="fantasy">{labels.fantasy}</option>
-                  <option value="scifi">{labels.scifi}</option>
-                </select>
-              </label>
+              <StatusPills connected={connected} status={status} totalTokens={totalTokens} />
+              <QuickVibeSelect
+                value={ui.vibe}
+                labels={labels}
+                onChange={nextVibe => dispatch(setAppearanceSettings({ vibe: nextVibe }))}
+              />
               <Button id="quickSearchBtn" className="btn ghost" size="small" variant="outlined" type="button" onClick={toggleSearch}>{searchLabel}</Button>
               <Button id="quickAddStreamBtn" className="btn ghost" size="small" variant="outlined" type="button" onClick={toggleAddStream}>{addStreamLabel}</Button>
               <Button id="controlsToggle" className="btn ghost" size="small" variant="outlined" type="button" onClick={toggleControls}>{controlsLabel}</Button>
@@ -1072,51 +987,13 @@ export default function TopMenu() {
           </Box>
         </Drawer>
       ) : null}
-
-      <Dialog open={ui.helpOpen} onClose={() => dispatch(setHelpOpen(false))} maxWidth="sm" fullWidth>
-        <DialogTitle>{labels.helpTitle}</DialogTitle>
-        <DialogContent dividers>
-          <Typography variant="body2">`?` / `H`: Help</Typography>
-          <Typography variant="body2">`M`: Toggle menu</Typography>
-          <Typography variant="body2">`C`: Toggle top controls</Typography>
-          <Typography variant="body2">`G`: Toggle all column controls</Typography>
-          <Typography variant="body2">`S`: Toggle search section</Typography>
-          <Typography variant="body2">`/`: Focus search</Typography>
-          <Typography variant="body2">`A`: Toggle add stream section</Typography>
-          <Typography variant="body2">`T`: Cycle color mode</Typography>
-          <Typography variant="body2">`V`: Cycle vibe</Typography>
-          <Typography variant="body2">`Esc`: Close help</Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => dispatch(setHelpOpen(false))}>{labels.close}</Button>
-        </DialogActions>
-      </Dialog>
-      {toasts.length ? (
-        <Box
-          sx={{
-            position: 'fixed',
-            right: 14,
-            bottom: 14,
-            zIndex: 2200,
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 1,
-            width: { xs: 'calc(100vw - 28px)', sm: 420 }
-          }}
-        >
-          {toasts.map(t => (
-            <Alert
-              key={t.id}
-              severity={t.kind}
-              onClose={() => dispatch(dismissToast(t.id))}
-              variant="filled"
-              sx={{ boxShadow: '0 8px 22px rgba(0,0,0,0.34)' }}
-            >
-              {t.message}
-            </Alert>
-          ))}
-        </Box>
-      ) : null}
+      <HelpDialog
+        open={ui.helpOpen}
+        title={labels.helpTitle}
+        closeLabel={labels.close}
+        onClose={() => dispatch(setHelpOpen(false))}
+      />
+      <ToastStack toasts={toasts} onDismiss={id => dispatch(dismissToast(id))} />
     </div>
   );
 }
