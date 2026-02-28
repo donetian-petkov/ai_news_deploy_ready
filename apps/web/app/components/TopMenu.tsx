@@ -27,7 +27,54 @@ import { ToastStack } from './top-menu/ToastStack';
 import { FILTERED_FEED_URL } from '../store/constants';
 
 type VibeValue = 'default' | 'anime' | 'arcade' | 'cinema' | 'newspaper' | 'cyberwitch' | 'fantasy' | 'scifi';
+type SoundThemeValue = 'vibe' | VibeValue;
 const VIBES: VibeValue[] = ['default', 'anime', 'arcade', 'cinema', 'newspaper', 'cyberwitch', 'fantasy', 'scifi'];
+
+const SOUND_ROOT_FREQ: Record<VibeValue, number> = {
+  default: 330,
+  anime: 512,
+  arcade: 448,
+  cinema: 296,
+  newspaper: 264,
+  cyberwitch: 388,
+  fantasy: 352,
+  scifi: 420
+};
+
+let sharedAudioContext: AudioContext | null = null;
+
+function playSoundCue(theme: VibeValue, kind: 'toggle' | 'success' | 'error') {
+  if (typeof window === 'undefined') return;
+  const AC = window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+  if (!AC) return;
+  if (!sharedAudioContext) {
+    sharedAudioContext = new AC();
+  }
+  const ctx = sharedAudioContext;
+  if (ctx.state === 'suspended') {
+    void ctx.resume().catch(() => {});
+  }
+  const root = SOUND_ROOT_FREQ[theme] ?? SOUND_ROOT_FREQ.default;
+  const plan = kind === 'error'
+    ? [0, -5, -10]
+    : kind === 'success'
+      ? [0, 4, 7]
+      : [0, 2];
+  const now = ctx.currentTime;
+  plan.forEach((step, idx) => {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = kind === 'error' ? 'sawtooth' : 'triangle';
+    osc.frequency.value = root * Math.pow(2, step / 12);
+    gain.gain.setValueAtTime(0.0001, now + idx * 0.07);
+    gain.gain.exponentialRampToValueAtTime(kind === 'toggle' ? 0.035 : 0.05, now + idx * 0.07 + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + idx * 0.07 + 0.08);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(now + idx * 0.07);
+    osc.stop(now + idx * 0.07 + 0.09);
+  });
+}
+
 export default function TopMenu() {
   const dispatch = useAppDispatch();
   const ui = useAppSelector(s => s.ui);
@@ -53,6 +100,7 @@ export default function TopMenu() {
   const addStreamInputRef = useRef<HTMLInputElement | null>(null);
   const topbarInnerRef = useRef<HTMLDivElement | null>(null);
   const toastTimersRef = useRef<Record<string, number>>({});
+  const seenToastIdsRef = useRef<Set<string>>(new Set());
   const toasts = useAppSelector(s => s.ui.toasts);
 
   const labels = {
@@ -137,10 +185,25 @@ export default function TopMenu() {
     menuHints: bg ? 'Подсказки в менюто:' : 'Menu hints:',
     menuHintsText: bg ? 'Текст' : 'Text',
     menuHintsButtons: bg ? 'Бутони' : 'Buttons',
+    effectIntensity: bg ? 'Интензитет ефекти:' : 'Effect intensity:',
+    effectLow: bg ? 'Нисък' : 'Low',
+    effectMedium: bg ? 'Среден' : 'Medium',
+    effectHigh: bg ? 'Висок' : 'High',
+    sound: bg ? 'Звук:' : 'Sound:',
+    soundTheme: bg ? 'Тема звук:' : 'Sound theme:',
+    soundVibeLinked: bg ? 'По вайб' : 'Vibe-linked',
+    soundOn: bg ? 'ВКЛ' : 'ON',
+    soundOff: bg ? 'ИЗКЛ' : 'OFF',
+    perfFxSoundHidden: bg ? 'Ефектите и звукът са изключени в режим производителност.' : 'Effects and sound are disabled in Performance mode.',
     reorderColumns: bg ? 'Подреди колони' : 'Reorder columns',
     moveUp: bg ? 'Нагоре' : 'Move up',
     moveDown: bg ? 'Надолу' : 'Move down'
   } as const;
+  const resolvedSoundTheme: VibeValue = ui.soundTheme === 'vibe' ? ui.vibe : ui.soundTheme;
+  const triggerSoundCue = (kind: 'toggle' | 'success' | 'error') => {
+    if (ui.performanceMode || !ui.soundEnabled) return;
+    playSoundCue(resolvedSoundTheme, kind);
+  };
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -167,6 +230,9 @@ export default function TopMenu() {
           performanceMode: boolean;
           buttonMode: 'icons' | 'text';
           menuHintMode: 'text' | 'buttons';
+          effectIntensity: 'low' | 'medium' | 'high';
+          soundEnabled: boolean;
+          soundTheme: SoundThemeValue;
           vibe: VibeValue;
         }>;
         dispatch(hydrateUiSettings(parsed));
@@ -182,13 +248,14 @@ export default function TopMenu() {
     document.body.dataset.fontSize = ui.fontSize;
     document.body.dataset.scheme = ui.scheme;
     document.body.dataset.performance = ui.performanceMode ? 'on' : 'off';
+    document.body.dataset.effectIntensity = ui.effectIntensity;
     document.body.dataset.itemButtons = ui.buttonMode;
     document.body.dataset.theme = resolvedColorMode;
     document.documentElement.dataset.theme = resolvedColorMode;
     document.body.dataset.themeSource = ui.colorMode;
     document.documentElement.dataset.themeSource = ui.colorMode;
     document.documentElement.lang = ui.language;
-  }, [resolvedColorMode, ui.buttonMode, ui.colorMode, ui.controlsCollapsed, ui.font, ui.fontSize, ui.language, ui.menuCollapsed, ui.performanceMode, ui.scheme, ui.vibe]);
+  }, [resolvedColorMode, ui.buttonMode, ui.colorMode, ui.controlsCollapsed, ui.effectIntensity, ui.font, ui.fontSize, ui.language, ui.menuCollapsed, ui.performanceMode, ui.scheme, ui.vibe]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -213,10 +280,13 @@ export default function TopMenu() {
         performanceMode: ui.performanceMode,
         buttonMode: ui.buttonMode,
         menuHintMode: ui.menuHintMode,
+        effectIntensity: ui.effectIntensity,
+        soundEnabled: ui.soundEnabled,
+        soundTheme: ui.soundTheme,
         vibe: ui.vibe
       }));
     } catch {}
-  }, [ui.addStreamVisible, ui.allColumnControlsHidden, ui.hideAllResearch, ui.hideAllSummaries, ui.buttonMode, ui.colorMode, ui.controlsCollapsed, ui.font, ui.fontSize, ui.language, ui.menuCollapsed, ui.menuHintMode, ui.notifyEnabled, ui.notifyMode, ui.moodFilter, ui.typeFilter, ui.performanceMode, ui.scheme, ui.searchVisible, ui.vibe]);
+  }, [ui.addStreamVisible, ui.allColumnControlsHidden, ui.buttonMode, ui.colorMode, ui.controlsCollapsed, ui.effectIntensity, ui.font, ui.fontSize, ui.hideAllResearch, ui.hideAllSummaries, ui.language, ui.menuCollapsed, ui.menuHintMode, ui.moodFilter, ui.notifyEnabled, ui.notifyMode, ui.performanceMode, ui.scheme, ui.searchVisible, ui.soundEnabled, ui.soundTheme, ui.typeFilter, ui.vibe]);
 
   useEffect(() => {
     if (!isMobile) setMobileDrawerOpen(false);
@@ -244,7 +314,14 @@ export default function TopMenu() {
   }, [dispatch, isMobile, ui.controlsCollapsed, ui.menuCollapsed]);
 
   useEffect(() => {
+    const seen = seenToastIdsRef.current;
     toasts.forEach(t => {
+      if (!seen.has(t.id)) {
+        seen.add(t.id);
+        if (t.kind === 'error') triggerSoundCue('error');
+        else if (t.kind === 'success') triggerSoundCue('success');
+        else triggerSoundCue('toggle');
+      }
       if (toastTimersRef.current[t.id]) return;
       toastTimersRef.current[t.id] = window.setTimeout(() => {
         dispatch(dismissToast(t.id));
@@ -257,7 +334,10 @@ export default function TopMenu() {
       window.clearTimeout(toastTimersRef.current[id]);
       delete toastTimersRef.current[id];
     });
-  }, [dispatch, toasts]);
+    Array.from(seen).forEach(id => {
+      if (!known.has(id)) seen.delete(id);
+    });
+  }, [dispatch, toasts, resolvedSoundTheme, ui.performanceMode, ui.soundEnabled]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -858,6 +938,52 @@ export default function TopMenu() {
                 <option value="buttons">{labels.menuHintsButtons}</option>
               </select>
             </label>
+            <label className="checkbox" title="Visual ornament intensity">
+              <span id="effectIntensityPrefix">{labels.effectIntensity}</span>
+              <select
+                id="effectIntensitySelect"
+                className="select"
+                value={ui.effectIntensity}
+                disabled={ui.performanceMode}
+                onChange={e => dispatch(setAppearanceSettings({ effectIntensity: e.target.value as 'low' | 'medium' | 'high' }))}
+              >
+                <option value="low">{labels.effectLow}</option>
+                <option value="medium">{labels.effectMedium}</option>
+                <option value="high">{labels.effectHigh}</option>
+              </select>
+            </label>
+            <label className="checkbox" title="Audio vibe profile">
+              <span id="soundThemePrefix">{labels.soundTheme}</span>
+              <select
+                id="soundThemeSelect"
+                className="select"
+                value={ui.soundTheme}
+                disabled={ui.performanceMode}
+                onChange={e => dispatch(setAppearanceSettings({ soundTheme: e.target.value as SoundThemeValue }))}
+              >
+                <option value="vibe">{labels.soundVibeLinked}</option>
+                <option value="default">{labels.defaultVibe}</option>
+                <option value="anime">{labels.anime}</option>
+                <option value="arcade">{labels.arcade}</option>
+                <option value="cinema">{labels.cinema}</option>
+                <option value="newspaper">{labels.newspaper}</option>
+                <option value="cyberwitch">{labels.cyberwitch}</option>
+                <option value="fantasy">{labels.fantasy}</option>
+                <option value="scifi">{labels.scifi}</option>
+              </select>
+            </label>
+            <button
+              className="btn"
+              type="button"
+              disabled={ui.performanceMode}
+              onClick={() => {
+                const next = !ui.soundEnabled;
+                dispatch(setAppearanceSettings({ soundEnabled: next }));
+                if (next) triggerSoundCue('success');
+              }}
+            >
+              {labels.sound} {ui.soundEnabled ? labels.soundOn : labels.soundOff}
+            </button>
             <label className="checkbox" title="Visual vibe preset">
               <span id="vibePrefix">Vibe:</span>
               <select
@@ -901,6 +1027,11 @@ export default function TopMenu() {
             >
               {labels.perfMode}: {ui.performanceMode ? labels.perfOn : labels.perfOff}
             </button>
+            {ui.performanceMode ? (
+              <Alert severity="info" sx={{ py: 0 }}>
+                {labels.perfFxSoundHidden}
+              </Alert>
+            ) : null}
           </div>
         </details>
       </div>
@@ -909,9 +1040,13 @@ export default function TopMenu() {
   );
 
   const topActionButton = (id: string, label: string, icon: ReactNode, onClick: () => void) => {
+    const onActionClick = () => {
+      triggerSoundCue('toggle');
+      onClick();
+    };
     if (!menuItemsAsIcons) {
       return (
-        <Button id={id} className="btn ghost" size="small" variant="outlined" type="button" onClick={onClick}>
+        <Button id={id} className="btn ghost" size="small" variant="outlined" type="button" onClick={onActionClick}>
           {label}
         </Button>
       );
@@ -925,7 +1060,7 @@ export default function TopMenu() {
           variant="outlined"
           type="button"
           aria-label={label}
-          onClick={onClick}
+          onClick={onActionClick}
           sx={{ minWidth: 38, px: 0.95 }}
         >
           {icon}

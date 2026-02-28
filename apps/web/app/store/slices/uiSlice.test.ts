@@ -35,6 +35,9 @@ describe('uiSlice', () => {
       performanceMode: false,
       buttonMode: 'icons',
       menuHintMode: 'text',
+      effectIntensity: 'medium',
+      soundEnabled: true,
+      soundTheme: 'vibe',
       vibe: 'default',
       toasts: []
     });
@@ -81,13 +84,26 @@ describe('uiSlice', () => {
   });
 
   it('updates appearance and notify settings', () => {
-    let state = uiReducer(undefined, setAppearanceSettings({ font: 'sora', fontSize: 'lg', scheme: 'neon', performanceMode: true, buttonMode: 'text', menuHintMode: 'buttons' }));
+    let state = uiReducer(undefined, setAppearanceSettings({
+      font: 'sora',
+      fontSize: 'lg',
+      scheme: 'neon',
+      performanceMode: true,
+      buttonMode: 'text',
+      menuHintMode: 'buttons',
+      effectIntensity: 'high',
+      soundEnabled: true,
+      soundTheme: 'scifi'
+    }));
     expect(state.font).toBe('sora');
     expect(state.fontSize).toBe('lg');
     expect(state.scheme).toBe('neon');
     expect(state.performanceMode).toBe(true);
     expect(state.buttonMode).toBe('text');
     expect(state.menuHintMode).toBe('buttons');
+    expect(state.effectIntensity).toBe('high');
+    expect(state.soundTheme).toBe('scifi');
+    expect(state.soundEnabled).toBe(false);
     expect(state.moodFilter).toBe('all');
     expect(state.typeFilter).toBe('all');
 
@@ -143,6 +159,9 @@ describe('uiSlice', () => {
       hideAllSummaries: true,
       performanceMode: true,
       menuHintMode: 'buttons',
+      effectIntensity: 'low',
+      soundEnabled: true,
+      soundTheme: 'cinema',
       vibe: 'cyberwitch'
     }));
     expect(state.menuCollapsed).toBe(true);
@@ -153,6 +172,9 @@ describe('uiSlice', () => {
     expect(state.hideAllSummaries).toBe(true);
     expect(state.performanceMode).toBe(true);
     expect(state.menuHintMode).toBe('buttons');
+    expect(state.effectIntensity).toBe('low');
+    expect(state.soundTheme).toBe('cinema');
+    expect(state.soundEnabled).toBe(false);
     expect(state.vibe).toBe('cyberwitch');
   });
 

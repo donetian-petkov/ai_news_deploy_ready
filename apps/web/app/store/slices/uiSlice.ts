@@ -41,6 +41,9 @@ type UiState = {
   performanceMode: boolean;
   buttonMode: 'icons' | 'text';
   menuHintMode: 'text' | 'buttons';
+  effectIntensity: 'low' | 'medium' | 'high';
+  soundEnabled: boolean;
+  soundTheme: 'vibe' | 'default' | 'anime' | 'arcade' | 'cinema' | 'newspaper' | 'cyberwitch' | 'fantasy' | 'scifi';
   vibe: 'default' | 'anime' | 'arcade' | 'cinema' | 'newspaper' | 'cyberwitch' | 'fantasy' | 'scifi';
   toasts: Array<{ id: string; kind: 'info' | 'success' | 'error'; message: string }>;
 };
@@ -76,6 +79,9 @@ const initialState: UiState = {
   performanceMode: false,
   buttonMode: 'icons',
   menuHintMode: 'text',
+  effectIntensity: 'medium',
+  soundEnabled: true,
+  soundTheme: 'vibe',
   vibe: 'default',
   toasts: []
 };
@@ -185,7 +191,7 @@ const uiSlice = createSlice({
         state.typeFilter = next;
       }
     },
-    setAppearanceSettings(state, action: PayloadAction<Partial<Pick<UiState, 'font' | 'fontSize' | 'scheme' | 'performanceMode' | 'buttonMode' | 'menuHintMode' | 'vibe' | 'colorMode'>>>) {
+    setAppearanceSettings(state, action: PayloadAction<Partial<Pick<UiState, 'font' | 'fontSize' | 'scheme' | 'performanceMode' | 'buttonMode' | 'menuHintMode' | 'effectIntensity' | 'soundEnabled' | 'soundTheme' | 'vibe' | 'colorMode'>>>) {
       const next = action.payload;
       if (next.font === 'system' || next.font === 'manrope' || next.font === 'grotesk' || next.font === 'sora' || next.font === 'plex' || next.font === 'serif' || next.font === 'mono') {
         state.font = next.font;
@@ -201,6 +207,7 @@ const uiSlice = createSlice({
         if (next.performanceMode) {
           state.moodFilter = 'all';
           state.typeFilter = 'all';
+          state.soundEnabled = false;
         }
       }
       if (next.buttonMode === 'icons' || next.buttonMode === 'text') {
@@ -209,12 +216,34 @@ const uiSlice = createSlice({
       if (next.menuHintMode === 'text' || next.menuHintMode === 'buttons') {
         state.menuHintMode = next.menuHintMode;
       }
+      if (next.effectIntensity === 'low' || next.effectIntensity === 'medium' || next.effectIntensity === 'high') {
+        state.effectIntensity = next.effectIntensity;
+      }
+      if (typeof next.soundEnabled === 'boolean') {
+        state.soundEnabled = next.soundEnabled;
+      }
+      if (
+        next.soundTheme === 'vibe'
+        || next.soundTheme === 'default'
+        || next.soundTheme === 'anime'
+        || next.soundTheme === 'arcade'
+        || next.soundTheme === 'cinema'
+        || next.soundTheme === 'newspaper'
+        || next.soundTheme === 'cyberwitch'
+        || next.soundTheme === 'fantasy'
+        || next.soundTheme === 'scifi'
+      ) {
+        state.soundTheme = next.soundTheme;
+      }
       if (next.colorMode === 'system' || next.colorMode === 'dark' || next.colorMode === 'light') {
         state.colorMode = next.colorMode;
       }
       if (typeof next.vibe === 'string' && isVibe(next.vibe)) state.vibe = next.vibe;
+      if (state.performanceMode) {
+        state.soundEnabled = false;
+      }
     },
-    hydrateUiSettings(state, action: PayloadAction<Partial<Pick<UiState, 'language' | 'colorMode' | 'menuCollapsed' | 'controlsCollapsed' | 'searchVisible' | 'addStreamVisible' | 'allColumnControlsHidden' | 'hideAllResearch' | 'hideAllSummaries' | 'notifyEnabled' | 'notifyMode' | 'moodFilter' | 'typeFilter' | 'font' | 'fontSize' | 'scheme' | 'performanceMode' | 'buttonMode' | 'menuHintMode' | 'vibe'>>>) {
+    hydrateUiSettings(state, action: PayloadAction<Partial<Pick<UiState, 'language' | 'colorMode' | 'menuCollapsed' | 'controlsCollapsed' | 'searchVisible' | 'addStreamVisible' | 'allColumnControlsHidden' | 'hideAllResearch' | 'hideAllSummaries' | 'notifyEnabled' | 'notifyMode' | 'moodFilter' | 'typeFilter' | 'font' | 'fontSize' | 'scheme' | 'performanceMode' | 'buttonMode' | 'menuHintMode' | 'effectIntensity' | 'soundEnabled' | 'soundTheme' | 'vibe'>>>) {
       const next = action.payload;
       if (next.language === 'en' || next.language === 'bg') state.language = next.language;
       if (next.colorMode === 'system' || next.colorMode === 'dark' || next.colorMode === 'light') state.colorMode = next.colorMode;
@@ -263,9 +292,26 @@ const uiSlice = createSlice({
       if (state.performanceMode) {
         state.moodFilter = 'all';
         state.typeFilter = 'all';
+        state.soundEnabled = false;
       }
       if (next.buttonMode === 'icons' || next.buttonMode === 'text') state.buttonMode = next.buttonMode;
       if (next.menuHintMode === 'text' || next.menuHintMode === 'buttons') state.menuHintMode = next.menuHintMode;
+      if (next.effectIntensity === 'low' || next.effectIntensity === 'medium' || next.effectIntensity === 'high') state.effectIntensity = next.effectIntensity;
+      if (typeof next.soundEnabled === 'boolean') state.soundEnabled = next.soundEnabled;
+      if (
+        next.soundTheme === 'vibe'
+        || next.soundTheme === 'default'
+        || next.soundTheme === 'anime'
+        || next.soundTheme === 'arcade'
+        || next.soundTheme === 'cinema'
+        || next.soundTheme === 'newspaper'
+        || next.soundTheme === 'cyberwitch'
+        || next.soundTheme === 'fantasy'
+        || next.soundTheme === 'scifi'
+      ) state.soundTheme = next.soundTheme;
+      if (state.performanceMode) {
+        state.soundEnabled = false;
+      }
       if (typeof next.vibe === 'string' && isVibe(next.vibe)) state.vibe = next.vibe;
     },
     enqueueToast(state, action: PayloadAction<{ kind: 'info' | 'success' | 'error'; message: string }>) {
