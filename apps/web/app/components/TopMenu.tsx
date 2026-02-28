@@ -13,6 +13,7 @@ import OpenWithIcon from '@mui/icons-material/OpenWith';
 import SearchIcon from '@mui/icons-material/Search';
 import SummarizeIcon from '@mui/icons-material/Summarize';
 import TuneIcon from '@mui/icons-material/Tune';
+import { useTranslation } from 'react-i18next';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { setLanguage, setSearchQuery, setTopUiState, setHideAllResearch, setHideAllSummaries, setNotifySettings, setAiSettings, setMoodFilter, setTypeFilter, setAppearanceSettings, hydrateUiSettings, setHelpOpen, dismissToast, enqueueToast, triggerShowMoreNewsAll, triggerResetNewsShownAll } from '../store/slices/uiSlice';
 import { sendWsMessage } from '../store/wsClient';
@@ -89,6 +90,7 @@ function playSoundCue(theme: VibeValue, kind: 'toggle' | 'success' | 'error') {
 }
 
 export default function TopMenu() {
+  const { t } = useTranslation();
   const dispatch = useAppDispatch();
   const ui = useAppSelector(s => s.ui);
   const connected = useAppSelector(s => s.connection.connected);
@@ -99,9 +101,7 @@ export default function TopMenu() {
   const resolvedColorMode = ui.colorMode === 'system' ? (prefersDark ? 'dark' : 'light') : ui.colorMode;
   const feeds = useAppSelector(s => s.feeds.feeds);
   const orderByUrl = useAppSelector(s => s.feeds.orderByUrl);
-  const lang = ui.language;
-  const bg = lang === 'bg';
-  const [searchDraft, setSearchDraft] = useState('');
+  const [searchDraft, setSearchDraft] = useState(ui.searchQuery);
   const [feedType, setFeedType] = useState<'rss' | 'reddit' | 'youtube'>('rss');
   const [feedUrl, setFeedUrl] = useState('');
   const [feedLabel, setFeedLabel] = useState('');
@@ -114,6 +114,8 @@ export default function TopMenu() {
   const topbarInnerRef = useRef<HTMLDivElement | null>(null);
   const toastTimersRef = useRef<Record<string, number>>({});
   const seenToastIdsRef = useRef<Set<string>>(new Set());
+  const searchDebounceTimerRef = useRef<number | null>(null);
+  const focusTimerRef = useRef<number | null>(null);
   const toasts = useAppSelector(s => s.ui.toasts);
   const persistedUiPrefs = useMemo<PersistedUiPrefs>(() => ({
     language: ui.language,
@@ -164,103 +166,10 @@ export default function TopMenu() {
     ui.typeFilter,
     ui.vibe
   ]);
-
-  const labels = {
-    title: bg ? 'Поток Новини На Живо' : 'Live News Stream',
-    subHint: bg ? 'Влачи колони · ? Помощ · M Меню · / Търсене' : 'Drag columns · ? Help · M Menu · / Search',
-    subHintDrag: bg ? 'Влачи колони' : 'Drag columns',
-    subHintHelp: bg ? 'Помощ' : 'Help',
-    subHintMenu: bg ? 'Меню' : 'Menu',
-    subHintSearch: bg ? 'Търсене' : 'Search',
-    vibe: bg ? 'Вайб:' : 'Vibe:',
-    search: bg ? 'Търсене' : 'Search',
-    hideSearch: bg ? 'Скрий търсене' : 'Hide Search',
-    addStream: bg ? 'Добави поток' : 'Add Stream',
-    hideAddStream: bg ? 'Скрий добавяне поток' : 'Hide Add Stream',
-    hideTopControls: bg ? 'Скрий горни контроли' : 'Hide top controls',
-    showTopControls: bg ? 'Покажи горни контроли' : 'Show top controls',
-    hideAllColumnControls: bg ? 'Скрий всички контроли на колони' : 'Hide all column controls',
-    showAllColumnControls: bg ? 'Покажи всички контроли на колони' : 'Show all column controls',
-    hideAllResearch: bg ? 'Скрий всички проучвания' : 'Hide all research',
-    showAllResearch: bg ? 'Покажи всички проучвания' : 'Show all research',
-    hideAllSummaries: bg ? 'Скрий всички резюмета' : 'Hide all summaries',
-    showAllSummaries: bg ? 'Покажи всички резюмета' : 'Show all summaries',
-    showMoreNewsAll: bg ? 'Покажи +5 (всички колони)' : 'Show +5 (all columns)',
-    resetNewsShownAll: bg ? 'Нулирай показани до 10' : 'Reset shown to 10',
-    hideMenu: bg ? 'Скрий меню' : 'Hide menu',
-    showMenu: bg ? 'Покажи меню' : 'Show menu',
-    anime: bg ? 'Аниме Поп' : 'Anime Pop',
-    arcade: bg ? 'Видео игра' : 'Video Game',
-    cinema: bg ? 'Кино вечер' : 'Movie Night',
-    newspaper: bg ? 'Вестник' : 'Newspaper',
-    cyberwitch: bg ? 'Кибер вещица' : 'Cyber Witch',
-    fantasy: bg ? 'Фентъзи' : 'Fantasy',
-    scifi: bg ? 'Научна фантастика' : 'Sci-Fi',
-    defaultVibe: bg ? 'По подразбиране' : 'Default',
-    clear: bg ? 'Изчисти' : 'Clear',
-    add: bg ? 'Добави поток' : 'Add Stream',
-    adding: bg ? 'Добавяне...' : 'Adding...',
-    enterValue: bg ? 'Въведи стойност' : 'Enter a value',
-    searchPlaceholder: bg ? 'Търси (заглавие + резюме + проучване)...' : 'Search (title + summary + research)...',
-    addUrlPlaceholder: bg ? 'Постави RSS URL, subreddit или YouTube канал...' : 'Paste RSS URL, subreddit, or YouTube channel URL...',
-    addLabelPlaceholder: bg ? 'Етикет (по избор)' : 'Optional label',
-    intervalSuffix: bg ? 'с' : 's',
-    helpTitle: bg ? 'Помощ' : 'Help',
-    close: bg ? 'Затвори' : 'Close',
-    colorMode: bg ? 'Цветове' : 'Color mode',
-    aiProvider: bg ? 'AI доставчик:' : 'AI provider:',
-    moodFilter: bg ? 'Филтър настроение:' : 'Mood filter:',
-    typeFilter: bg ? 'Филтър тип:' : 'Type filter:',
-    openai: 'OpenAI',
-    claude: 'Claude',
-    openrouter: 'OpenRouter',
-    moodAll: bg ? 'Всички' : 'All',
-    moodPesimistic: bg ? 'Песимистично' : 'Pesimistic',
-    moodOptimistic: bg ? 'Оптимистично' : 'Optimistic',
-    moodRealistic: bg ? 'Реалистично' : 'Realistic',
-    moodMelancholy: bg ? 'Меланхолия' : 'Melancholy',
-    moodHappiness: bg ? 'Щастие' : 'Happiness',
-    moodSadness: bg ? 'Тъга' : 'Sadness',
-    moodRage: bg ? 'Ярост' : 'Rage',
-    moodUncertainty: bg ? 'Несигурност' : 'Uncertainty',
-    moodNeutral: bg ? 'Неутрално' : 'Neutral',
-    moodCurios: bg ? 'Любопитство' : 'Curios',
-    typeAll: bg ? 'Всички' : 'All',
-    typeScience: bg ? 'Наука' : 'Science',
-    typeMovies: bg ? 'Филми' : 'Movies',
-    typePolitics: bg ? 'Политика' : 'Politics',
-    typeBusiness: bg ? 'Бизнес' : 'Business',
-    typeTechnology: bg ? 'Технологии' : 'Technology',
-    typeSports: bg ? 'Спорт' : 'Sports',
-    typeHealth: bg ? 'Здраве' : 'Health',
-    typeWorld: bg ? 'Свят' : 'World',
-    typeCulture: bg ? 'Култура' : 'Culture',
-    typeEnvironment: bg ? 'Околна среда' : 'Environment',
-    typeCrime: bg ? 'Криминални' : 'Crime',
-    typeEducation: bg ? 'Образование' : 'Education',
-    typeOther: bg ? 'Друго' : 'Other',
-    perfAIFiltersHidden: bg ? 'AI филтрите за настроение/тип са изключени в режим производителност.' : 'Mood/type AI filters are disabled in Performance mode.',
-    aiUnavailable: bg ? 'AI не е наличен за избрания доставчик. Добави валиден API ключ от AI Settings.' : 'AI is unavailable for the selected provider. Add a valid API key in AI Settings.',
-    perfMode: bg ? 'Режим производителност' : 'Performance mode',
-    perfOn: bg ? 'ВКЛ' : 'ON',
-    perfOff: bg ? 'ИЗКЛ' : 'OFF',
-    menuHints: bg ? 'Подсказки в менюто:' : 'Menu hints:',
-    menuHintsText: bg ? 'Текст' : 'Text',
-    menuHintsButtons: bg ? 'Бутони' : 'Buttons',
-    effectIntensity: bg ? 'Интензитет ефекти:' : 'Effect intensity:',
-    effectLow: bg ? 'Нисък' : 'Low',
-    effectMedium: bg ? 'Среден' : 'Medium',
-    effectHigh: bg ? 'Висок' : 'High',
-    sound: bg ? 'Звук:' : 'Sound:',
-    soundTheme: bg ? 'Тема звук:' : 'Sound theme:',
-    soundVibeLinked: bg ? 'По вайб' : 'Vibe-linked',
-    soundOn: bg ? 'ВКЛ' : 'ON',
-    soundOff: bg ? 'ИЗКЛ' : 'OFF',
-    perfFxSoundHidden: bg ? 'Ефектите и звукът са изключени в режим производителност.' : 'Effects and sound are disabled in Performance mode.',
-    reorderColumns: bg ? 'Подреди колони' : 'Reorder columns',
-    moveUp: bg ? 'Нагоре' : 'Move up',
-    moveDown: bg ? 'Надолу' : 'Move down'
-  } as const;
+  const labels = useMemo(
+    () => t('topMenu', { returnObjects: true }) as Record<string, string>,
+    [t]
+  );
   const resolvedSoundTheme: VibeValue = ui.soundTheme === 'vibe' ? ui.vibe : ui.soundTheme;
   const triggerSoundCue = (kind: 'toggle' | 'success' | 'error') => {
     if (ui.performanceMode || !ui.soundEnabled) return;
@@ -298,6 +207,40 @@ export default function TopMenu() {
       window.localStorage.setItem(UI_PREFS_STORAGE_KEY, JSON.stringify(persistedUiPrefs));
     } catch {}
   }, [persistedUiPrefs]);
+
+  useEffect(() => {
+    return () => {
+      if (searchDebounceTimerRef.current != null) {
+        window.clearTimeout(searchDebounceTimerRef.current);
+      }
+      if (focusTimerRef.current != null) {
+        window.clearTimeout(focusTimerRef.current);
+      }
+    };
+  }, []);
+
+  const scheduleFocus = (target: 'search' | 'addStream', delay = 30) => {
+    if (focusTimerRef.current != null) {
+      window.clearTimeout(focusTimerRef.current);
+    }
+    focusTimerRef.current = window.setTimeout(() => {
+      if (target === 'search') {
+        searchInputRef.current?.focus();
+      } else {
+        addStreamInputRef.current?.focus();
+      }
+    }, delay);
+  };
+
+  const onSearchDraftChange = (value: string) => {
+    setSearchDraft(value);
+    if (searchDebounceTimerRef.current != null) {
+      window.clearTimeout(searchDebounceTimerRef.current);
+    }
+    searchDebounceTimerRef.current = window.setTimeout(() => {
+      dispatch(setSearchQuery(value));
+    }, 90);
+  };
 
   useEffect(() => {
     if (!isMobile) setMobileDrawerOpen(false);
@@ -351,31 +294,6 @@ export default function TopMenu() {
   }, [dispatch, toasts, resolvedSoundTheme, ui.performanceMode, ui.soundEnabled]);
 
   useEffect(() => {
-    const timer = window.setTimeout(() => {
-      dispatch(setSearchQuery(searchDraft));
-    }, 90);
-    return () => window.clearTimeout(timer);
-  }, [dispatch, searchDraft]);
-
-  useEffect(() => {
-    if (!searchDraft && ui.searchQuery) {
-      setSearchDraft(ui.searchQuery);
-    }
-  }, [searchDraft, ui.searchQuery]);
-
-  useEffect(() => {
-    if (ui.searchVisible) {
-      window.setTimeout(() => searchInputRef.current?.focus(), 30);
-    }
-  }, [ui.searchVisible]);
-
-  useEffect(() => {
-    if (ui.addStreamVisible) {
-      window.setTimeout(() => addStreamInputRef.current?.focus(), 30);
-    }
-  }, [ui.addStreamVisible]);
-
-  useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         dispatch(setHelpOpen(false));
@@ -402,8 +320,11 @@ export default function TopMenu() {
       }
       if (key === '/') {
         e.preventDefault();
-        if (!ui.searchVisible) toggleSearch();
-        window.setTimeout(() => searchInputRef.current?.focus(), 45);
+        if (!ui.searchVisible) {
+          toggleSearch();
+        } else {
+          scheduleFocus('search', 20);
+        }
         return;
       }
       if (lower === 'h') {
@@ -454,6 +375,9 @@ export default function TopMenu() {
   }, [dispatch, ui.addStreamVisible, ui.allColumnControlsHidden, ui.controlsCollapsed, ui.helpOpen, ui.menuCollapsed, ui.searchVisible, ui.vibe, ui.colorMode]);
 
   const clearSearch = () => {
+    if (searchDebounceTimerRef.current != null) {
+      window.clearTimeout(searchDebounceTimerRef.current);
+    }
     setSearchDraft('');
     dispatch(setSearchQuery(''));
   };
@@ -474,33 +398,41 @@ export default function TopMenu() {
     if (!ok) {
       setAddStatus({
         kind: 'error',
-        message: bg ? 'Няма връзка със сървъра' : 'No server connection'
+        message: labels.noServerConnection
       });
       return;
     }
-    setAddStatus({ kind: 'success', message: bg ? 'Потокът е изпратен' : 'Stream submitted' });
+    setAddStatus({ kind: 'success', message: labels.streamSubmitted });
     setFeedUrl('');
     setFeedLabel('');
   };
 
   const toggleSearch = () => {
+    const nextSearchVisible = !ui.searchVisible;
     if (isMobile) {
       setMobileDrawerOpen(true);
     }
     dispatch(setTopUiState({
       menuCollapsed: false,
-      searchVisible: !ui.searchVisible
+      searchVisible: nextSearchVisible
     }));
+    if (nextSearchVisible) {
+      scheduleFocus('search', isMobile ? 80 : 30);
+    }
   };
 
   const toggleAddStream = () => {
+    const nextAddStreamVisible = !ui.addStreamVisible;
     if (isMobile) {
       setMobileDrawerOpen(true);
     }
     dispatch(setTopUiState({
       menuCollapsed: false,
-      addStreamVisible: !ui.addStreamVisible
+      addStreamVisible: nextAddStreamVisible
     }));
+    if (nextAddStreamVisible) {
+      scheduleFocus('addStream', isMobile ? 80 : 30);
+    }
   };
 
   const toggleControls = () => {
@@ -563,15 +495,13 @@ export default function TopMenu() {
       : provider === 'openrouter'
         ? 'OPENROUTER_API_KEY'
         : 'OPENAI_API_KEY';
-    const promptText = bg
-      ? `Смяната на AI доставчик изисква API ключ (${keyLabel}). Въведи новия ключ:`
-      : `Switching AI provider requires an API key (${keyLabel}). Enter the new key:`;
+    const promptText = t('topMenu.switchProviderPrompt', { keyLabel });
     const apiKey = window.prompt(promptText, '');
     if (apiKey === null) return;
     if (!apiKey.trim()) {
       dispatch(enqueueToast({
         kind: 'error',
-        message: bg ? 'Смяната е прекратена: липсва API ключ.' : 'Provider switch cancelled: API key is required.'
+        message: labels.providerSwitchCancelled
       }));
       return;
     }
@@ -579,7 +509,7 @@ export default function TopMenu() {
     if (!ok) {
       dispatch(enqueueToast({
         kind: 'error',
-        message: bg ? 'Няма връзка със сървъра.' : 'No server connection.'
+        message: labels.noServerConnection
       }));
       return;
     }
@@ -636,7 +566,7 @@ export default function TopMenu() {
     <SearchSection
       isMobile={isMobile}
       searchDraft={searchDraft}
-      onSearchDraftChange={setSearchDraft}
+      onSearchDraftChange={onSearchDraftChange}
       onClear={clearSearch}
       searchInputRef={searchInputRef}
       labels={labels}
@@ -665,7 +595,7 @@ export default function TopMenu() {
     <div className="controls" style={ui.controlsCollapsed ? { display: 'none' } : undefined}>
       <div className="controlsCompactRow controlsRow">
         <div className="controlGroup">
-          <button id="resetBtn" className="btn" type="button" onClick={resetAllNewest}>Reset ALL to newest 10</button>
+          <button id="resetBtn" className="btn" type="button" onClick={resetAllNewest}>{labels.resetAllToNewestTen}</button>
           <button id="showMoreNewsAllBtn" className="btn" type="button" onClick={() => dispatch(triggerShowMoreNewsAll())}>
             {labels.showMoreNewsAll}
           </button>
@@ -673,15 +603,15 @@ export default function TopMenu() {
             {labels.resetNewsShownAll}
           </button>
           <label className="checkbox" title="Delete old news by age from all columns">
-            <span id="deleteAgePrefix">Delete age:</span>
+            <span id="deleteAgePrefix">{labels.deleteAgePrefix}</span>
             <select id="deleteAgeSelect" className="select" value={deleteAgeAll} onChange={e => setDeleteAgeAll(e.target.value as 'yesterday' | 'week' | 'month' | 'year')}>
-              <option value="yesterday">Yesterday</option>
-              <option value="week">Past week</option>
-              <option value="month">Past month</option>
-              <option value="year">Past year</option>
+              <option value="yesterday">{labels.ageYesterday}</option>
+              <option value="week">{labels.agePastWeek}</option>
+              <option value="month">{labels.agePastMonth}</option>
+              <option value="year">{labels.agePastYear}</option>
             </select>
           </label>
-          <button id="deleteAgeAllBtn" className="btn danger" type="button" onClick={deleteOldAllColumns}>Delete old (all columns)</button>
+          <button id="deleteAgeAllBtn" className="btn danger" type="button" onClick={deleteOldAllColumns}>{labels.deleteOldAllColumns}</button>
           <label className="checkbox" title="Embeddings matching, AI dedupe, summaries, research">
             {ui.aiAvailable ? (
               <>
@@ -696,22 +626,22 @@ export default function TopMenu() {
                     if (ok) dispatch(setAiSettings({ aiEnabled: enabled }));
                   }}
                 />
-                <span id="aiEnabledLabel">AI Enabled</span>
+                <span id="aiEnabledLabel">{labels.aiEnabledLabel}</span>
               </>
             ) : (
               <span id="aiUnavailableLabel">{labels.aiUnavailable}</span>
             )}
           </label>
-          <button id="helpBtn" className="btn" type="button" onClick={() => dispatch(setHelpOpen(true))}>Help</button>
+          <button id="helpBtn" className="btn" type="button" onClick={() => dispatch(setHelpOpen(true))}>{labels.helpTitle}</button>
         </div>
       </div>
       <div className="controlsHint" id="controlsHint">
-        Click section headers below to expand/collapse settings.
+        {labels.controlsHint}
       </div>
 
       <div className="controlsGrid">
         <details className="controlSection" open>
-          <summary id="notificationsSummary">Notifications</summary>
+          <summary id="notificationsSummary">{labels.notificationsSummary}</summary>
           <div className="controlGroup">
             <label className="checkbox">
               <input
@@ -724,27 +654,27 @@ export default function TopMenu() {
                   await requestNotificationPermission(enabled);
                 }}
               />
-              <span id="notifyEnabledLabel">Enable notifications</span>
+              <span id="notifyEnabledLabel">{labels.notifyEnabledLabel}</span>
             </label>
             <label className="checkbox">
-              <span id="notifyPrefix">Notify:</span>
+              <span id="notifyPrefix">{labels.notifyPrefix}</span>
               <select
                 id="notifyMode"
                 className="select"
                 value={ui.notifyMode}
                 onChange={e => dispatch(setNotifySettings({ notifyMode: e.target.value as 'matched' | 'matched_pinned' | 'pinned' | 'all' }))}
               >
-                <option value="matched">Only matched</option>
-                <option value="matched_pinned">Matched + pinned columns</option>
-                <option value="pinned">Only pinned columns</option>
-                <option value="all">All columns</option>
+                <option value="matched">{labels.notifyOnlyMatched}</option>
+                <option value="matched_pinned">{labels.notifyMatchedPinned}</option>
+                <option value="pinned">{labels.notifyOnlyPinned}</option>
+                <option value="all">{labels.notifyAllColumns}</option>
               </select>
             </label>
           </div>
         </details>
 
         <details className="controlSection" open>
-          <summary id="aiSettingsSummary">AI Settings</summary>
+          <summary id="aiSettingsSummary">{labels.aiSettingsSummary}</summary>
           <div className="controlGroup">
             <label className="checkbox">
               <span id="aiProviderPrefix">{labels.aiProvider}</span>
@@ -760,7 +690,7 @@ export default function TopMenu() {
               </select>
             </label>
             <label className="checkbox">
-              <span id="summaryLangPrefix">Summary:</span>
+              <span id="summaryLangPrefix">{labels.summaryPrefix}</span>
               <select
                 id="summaryLang"
                 className="select"
@@ -778,7 +708,7 @@ export default function TopMenu() {
               </select>
             </label>
             <label className="checkbox">
-              <span id="researchLangPrefix">Research:</span>
+              <span id="researchLangPrefix">{labels.researchPrefix}</span>
               <select
                 id="researchLang"
                 className="select"
@@ -850,7 +780,7 @@ export default function TopMenu() {
               </Alert>
             )}
             <label className="checkbox" title="Apply one budget to all columns">
-              <span id="allBudgetPrefix">AI Budget (all):</span>
+              <span id="allBudgetPrefix">{labels.allBudgetPrefix}</span>
               <select
                 id="allBudgetSelect"
                 className="select"
@@ -861,10 +791,10 @@ export default function TopMenu() {
                   if (budget !== 'mixed') applyAllBudget(budget);
                 }}
               >
-                <option value="mixed">Mixed</option>
-                <option value="low">Low</option>
-                <option value="standard">Standard</option>
-                <option value="high">High</option>
+                <option value="mixed">{labels.budgetMixed}</option>
+                <option value="low">{labels.budgetLow}</option>
+                <option value="standard">{labels.budgetStandard}</option>
+                <option value="high">{labels.budgetHigh}</option>
               </select>
             </label>
             {!ui.aiAvailable ? (
@@ -876,65 +806,65 @@ export default function TopMenu() {
         </details>
 
         <details className="controlSection" open>
-          <summary id="appearanceSummary">Appearance</summary>
+          <summary id="appearanceSummary">{labels.appearanceSummary}</summary>
           <div className="controlGroup" id="appearanceGroup">
             <label className="checkbox" title="Change UI font">
-              <span id="fontPrefix">Font:</span>
+              <span id="fontPrefix">{labels.fontPrefix}</span>
               <select
                 id="fontSelect"
                 className="select"
                 value={ui.font}
                 onChange={e => dispatch(setAppearanceSettings({ font: e.target.value as 'system' | 'manrope' | 'grotesk' | 'sora' | 'plex' | 'serif' | 'mono' }))}
               >
-                <option value="system">System</option>
-                <option value="manrope">Manrope</option>
-                <option value="grotesk">Space Grotesk</option>
-                <option value="sora">Sora</option>
-                <option value="plex">IBM Plex Sans</option>
-                <option value="serif">Serif</option>
-                <option value="mono">Mono</option>
+                <option value="system">{labels.fontSystem}</option>
+                <option value="manrope">{labels.fontManrope}</option>
+                <option value="grotesk">{labels.fontGrotesk}</option>
+                <option value="sora">{labels.fontSora}</option>
+                <option value="plex">{labels.fontPlex}</option>
+                <option value="serif">{labels.fontSerif}</option>
+                <option value="mono">{labels.fontMono}</option>
               </select>
             </label>
             <label className="checkbox" title="Scale text size">
-              <span id="fontSizePrefix">Font size:</span>
+              <span id="fontSizePrefix">{labels.fontSizePrefix}</span>
               <select
                 id="fontSizeSelect"
                 className="select"
                 value={ui.fontSize}
                 onChange={e => dispatch(setAppearanceSettings({ fontSize: e.target.value as 'sm' | 'md' | 'lg' | 'xl' }))}
               >
-                <option value="sm">Small</option>
-                <option value="md">Medium</option>
-                <option value="lg">Large</option>
-                <option value="xl">Extra Large</option>
+                <option value="sm">{labels.fontSizeSmall}</option>
+                <option value="md">{labels.fontSizeMedium}</option>
+                <option value="lg">{labels.fontSizeLarge}</option>
+                <option value="xl">{labels.fontSizeXL}</option>
               </select>
             </label>
             <label className="checkbox" title="Column accent scheme">
-              <span id="schemePrefix">Scheme:</span>
+              <span id="schemePrefix">{labels.schemePrefix}</span>
               <select
                 id="schemeSelect"
                 className="select"
                 value={ui.scheme}
                 onChange={e => dispatch(setAppearanceSettings({ scheme: e.target.value as 'classic' | 'vivid' | 'sunset' | 'neon' | 'ocean' | 'forest' }))}
               >
-                <option value="classic">Classic</option>
-                <option value="vivid">Vivid</option>
-                <option value="sunset">Sunset</option>
-                <option value="neon">Neon</option>
-                <option value="ocean">Ocean</option>
-                <option value="forest">Forest</option>
+                <option value="classic">{labels.schemeClassic}</option>
+                <option value="vivid">{labels.schemeVivid}</option>
+                <option value="sunset">{labels.schemeSunset}</option>
+                <option value="neon">{labels.schemeNeon}</option>
+                <option value="ocean">{labels.schemeOcean}</option>
+                <option value="forest">{labels.schemeForest}</option>
               </select>
             </label>
             <label className="checkbox" title="Item buttons look">
-              <span id="buttonsPrefix">Buttons:</span>
+              <span id="buttonsPrefix">{labels.buttonsPrefix}</span>
               <select
                 id="btnModeSelect"
                 className="select"
                 value={ui.buttonMode}
                 onChange={e => dispatch(setAppearanceSettings({ buttonMode: e.target.value as 'icons' | 'text' }))}
               >
-                <option value="icons">Icons</option>
-                <option value="text">Text</option>
+                <option value="icons">{labels.buttonsIcons}</option>
+                <option value="text">{labels.buttonsText}</option>
               </select>
             </label>
             <label className="checkbox" title="Top menu hint style">
@@ -996,25 +926,25 @@ export default function TopMenu() {
               {labels.sound} {ui.soundEnabled ? labels.soundOn : labels.soundOff}
             </button>
             <label className="checkbox" title="Visual vibe preset">
-              <span id="vibePrefix">Vibe:</span>
+              <span id="vibePrefix">{labels.vibePrefix}</span>
               <select
                 id="vibeSelect"
                 className="select"
                 value={ui.vibe}
                 onChange={e => dispatch(setAppearanceSettings({ vibe: e.target.value as VibeValue }))}
               >
-                <option value="default">Default</option>
-                <option value="anime">Anime Pop</option>
-                <option value="arcade">Video Game</option>
-                <option value="cinema">Movie Night</option>
-                <option value="newspaper">Newspaper</option>
-                <option value="cyberwitch">Cyber Witch</option>
-                <option value="fantasy">Fantasy</option>
-                <option value="scifi">Sci-Fi</option>
+                <option value="default">{labels.defaultVibe}</option>
+                <option value="anime">{labels.anime}</option>
+                <option value="arcade">{labels.arcade}</option>
+                <option value="cinema">{labels.cinema}</option>
+                <option value="newspaper">{labels.newspaper}</option>
+                <option value="cyberwitch">{labels.cyberwitch}</option>
+                <option value="fantasy">{labels.fantasy}</option>
+                <option value="scifi">{labels.scifi}</option>
               </select>
             </label>
             <label className="checkbox" title="Interface language">
-              <span id="interfaceLangPrefix">Interface:</span>
+              <span id="interfaceLangPrefix">{labels.interfacePrefix}</span>
               <select
                 id="interfaceLang"
                 className="select"

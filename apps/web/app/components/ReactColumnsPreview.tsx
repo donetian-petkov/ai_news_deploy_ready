@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Box, Chip, Snackbar, Stack, Typography } from '@mui/material';
+import { useTranslation } from 'react-i18next';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import {
   removeFeedLocally,
@@ -44,10 +45,10 @@ type Props = {
 };
 
 export default function ReactColumnsPreview({ wsUrl }: Props) {
+  const { t } = useTranslation();
   const dispatch = useAppDispatch();
   const connected = useAppSelector(s => s.connection.connected);
   const status = useAppSelector(s => s.connection.status);
-  const language = useAppSelector(s => s.ui.language);
   const vibe = useAppSelector(s => s.ui.vibe);
   const scheme = useAppSelector(s => s.ui.scheme);
   const buttonMode = useAppSelector(s => s.ui.buttonMode);
@@ -92,82 +93,10 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
   const [hydratedColumns, setHydratedColumns] = useState<Record<string, true>>({});
   const columnNodesRef = useRef<Record<string, HTMLDivElement | null>>({});
   const prevAllControlsHiddenRef = useRef<boolean | null>(null);
-  const bg = language === 'bg';
-  const l = useMemo(() => ({
-    previewTitle: bg ? 'Колони На Живо' : 'Live Columns',
-    live: bg ? 'На живо през WebSocket' : 'Live via WebSocket',
-    disconnected: bg ? 'Разкачен' : 'Disconnected',
-    waiting: bg ? 'Изчакване на новини...' : 'Waiting for news...',
-    waitingMatches: bg ? 'Няма съвпадения засега...' : 'No matched news yet...',
-    noMatches: bg ? 'Няма съвпадения за търсенето в този поток.' : 'No search matches in this stream.',
-    pinned: bg ? 'Закачена' : 'Pinned',
-    pin: bg ? 'Закачи' : 'Pin',
-    remove: bg ? 'Премахни' : 'Remove',
-    hideControls: bg ? 'Скрий контроли' : 'Hide controls',
-    showControls: bg ? 'Покажи контроли' : 'Show controls',
-    summariesOn: bg ? 'Резюмета: ВКЛ' : 'Summaries: ON',
-    summariesOff: bg ? 'Резюмета: ИЗКЛ' : 'Summaries: OFF',
-    researchOn: bg ? 'Авто проучване: ВКЛ' : 'Auto Research: ON',
-    researchOff: bg ? 'Авто проучване: ИЗКЛ' : 'Auto Research: OFF',
-    budgetLow: bg ? 'Бюджет: Нисък' : 'Budget: Low',
-    budgetStandard: bg ? 'Бюджет: Стандарт' : 'Budget: Standard',
-    budgetHigh: bg ? 'Бюджет: Висок' : 'Budget: High',
-    poll45: bg ? 'Проверка: 45с' : 'Poll: 45s',
-    poll60: bg ? 'Проверка: 60с' : 'Poll: 60s',
-    poll90: bg ? 'Проверка: 90с' : 'Poll: 90s',
-    poll120: bg ? 'Проверка: 120с' : 'Poll: 120s',
-    poll180: bg ? 'Проверка: 180с' : 'Poll: 180s',
-    poll300: bg ? 'Проверка: 300с' : 'Poll: 300s',
-    sortNewest: bg ? 'Сортиране: Най-нови' : 'Sort: Newest',
-    sortOldest: bg ? 'Сортиране: Най-стари' : 'Sort: Oldest',
-    sortMatched: bg ? 'Сортиране: Съвпадения' : 'Sort: Matched',
-    filterAll: bg ? 'Филтър: Всички' : 'Filter: All',
-    filterMatches: bg ? 'Филтър: Само съвпадения' : 'Filter: Matches',
-    filterResearched: bg ? 'Филтър: Само проучени' : 'Filter: Researched',
-    filterSummaries: bg ? 'Филтър: Само резюмета' : 'Filter: Summaries',
-    filterMatchesResearched: bg ? 'Филтър: Съвпадения + проучени' : 'Filter: Matches + Researched',
-    filterMatchesSummaries: bg ? 'Филтър: Съвпадения + резюмета' : 'Filter: Matches + Summaries',
-    filterResearchedSummaries: bg ? 'Филтър: Проучени + резюмета' : 'Filter: Researched + Summaries',
-    filterAllFlags: bg ? 'Филтър: Всички флагове' : 'Filter: All flags',
-    moreOptions: bg ? 'Още опции' : 'More options',
-    lessOptions: bg ? 'По-малко опции' : 'Less options',
-    matches: bg ? 'Съвпадения' : 'Matches',
-    researched: bg ? 'Проучени' : 'Researched',
-    summaries: bg ? 'Резюмета' : 'Summaries',
-    match: bg ? 'СЪВПАДЕНИЕ' : 'MATCH',
-    shareLink: bg ? 'Сподели линк' : 'Share Link',
-    copyNews: bg ? 'Копирай новината' : 'Copy News',
-    hideNews: bg ? 'Скрий новина' : 'Hide News',
-    generatingSummary: bg ? 'Генериране на резюме...' : 'Generating Summary...',
-    summary: bg ? 'Резюме' : 'Summary',
-    researching: bg ? 'Проучване...' : 'Researching...',
-    research: bg ? 'Проучване' : 'Research',
-    askAgent: bg ? 'Питай агента' : 'Ask Agent',
-    confidence: bg ? 'Увереност' : 'Confidence',
-    showSummary: bg ? 'Покажи резюме' : 'Show Summary',
-    hideSummary: bg ? 'Скрий резюме' : 'Hide Summary',
-    aiUnavailable: bg ? 'AI изключен' : 'AI unavailable',
-    showResearch: bg ? 'Покажи проучване' : 'Show Research',
-    hideResearch: bg ? 'Скрий проучване' : 'Hide Research',
-    showMore: bg ? 'Покажи още' : 'Show More',
-    showLess: bg ? 'Покажи по-малко' : 'Show Less',
-    showFiveMore: bg ? 'Покажи още 5' : 'Show 5 more',
-    resetToTenItems: bg ? 'Нулирай до 10' : 'Reset to 10',
-    autoResearching: bg ? 'Авто проучване...' : 'Auto researching...',
-    pinNews: bg ? 'Закачи новина' : 'Pin news',
-    unpinNews: bg ? 'Откачи новина' : 'Unpin news',
-    questionsLeft: bg ? 'Оставащи въпроси' : 'Questions left',
-    askPlaceholder: bg ? 'Питай за тази конкретна новина...' : 'Ask about this specific news...',
-    thinking: bg ? 'Мисля...' : 'Thinking...',
-    send: bg ? 'Изпрати' : 'Send',
-    linkCopied: bg ? 'Линкът е копиран' : 'Link copied',
-    newsCopied: bg ? 'Новината е копирана' : 'News copied',
-    deleteYesterday: bg ? 'Изтрий: Вчера' : 'Delete: Yesterday',
-    deleteWeek: bg ? 'Изтрий: Седмица' : 'Delete: Past week',
-    deleteMonth: bg ? 'Изтрий: Месец' : 'Delete: Past month',
-    deleteYear: bg ? 'Изтрий: Година' : 'Delete: Past year',
-    deleteOld: bg ? 'Изтрий стари' : 'Delete old'
-  }), [bg]);
+  const l = useMemo(
+    () => t('columns', { returnObjects: true }) as Record<string, string>,
+    [t]
+  );
 
   useEffect(() => {
     document.body.dataset.reactRenderer = '1';
@@ -518,10 +447,10 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
     if (!title && !summary && !research && !link) return;
 
     const chunks: string[] = [];
-    if (title) chunks.push(`Title: ${title}`);
-    if (summary) chunks.push(`Summary: ${summary}`);
-    if (research) chunks.push(`Research: ${research}`);
-    if (link) chunks.push(`Link: ${link}`);
+    if (title) chunks.push(`${l.copiedTitle}: ${title}`);
+    if (summary) chunks.push(`${l.copiedSummary}: ${summary}`);
+    if (research) chunks.push(`${l.copiedResearch}: ${research}`);
+    if (link) chunks.push(`${l.copiedLink}: ${link}`);
     const payload = chunks.join('\n\n');
 
     try {

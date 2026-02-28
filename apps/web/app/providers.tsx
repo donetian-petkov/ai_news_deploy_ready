@@ -1,10 +1,12 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { CssBaseline, ThemeProvider, createTheme, useMediaQuery } from '@mui/material';
 import { Provider } from 'react-redux';
+import { I18nextProvider } from 'react-i18next';
 import { store } from './store/store';
 import { useAppSelector } from './store/hooks';
+import i18n from './i18n';
 
 function MuiThemeBridge({ children }: { children: React.ReactNode }) {
   const ui = useAppSelector(s => s.ui);
@@ -93,10 +95,26 @@ function MuiThemeBridge({ children }: { children: React.ReactNode }) {
   );
 }
 
+function I18nBridge({ children }: { children: React.ReactNode }) {
+  const language = useAppSelector(s => s.ui.language);
+
+  useEffect(() => {
+    if (i18n.language !== language) {
+      void i18n.changeLanguage(language);
+    }
+  }, [language]);
+
+  return <>{children}</>;
+}
+
 export default function Providers({ children }: { children: React.ReactNode }) {
   return (
     <Provider store={store}>
-      <MuiThemeBridge>{children}</MuiThemeBridge>
+      <I18nextProvider i18n={i18n}>
+        <I18nBridge>
+          <MuiThemeBridge>{children}</MuiThemeBridge>
+        </I18nBridge>
+      </I18nextProvider>
     </Provider>
   );
 }

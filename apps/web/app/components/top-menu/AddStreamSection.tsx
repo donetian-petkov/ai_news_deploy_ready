@@ -41,9 +41,9 @@ export function AddStreamSection({
       <Stack direction={isMobile ? 'column' : { xs: 'column', md: 'row' }} spacing={1}>
         <FormControl size={isMobile ? 'medium' : 'small'} sx={{ minWidth: 150 }}>
           <Select value={feedType} onChange={e => onFeedTypeChange(e.target.value as 'rss' | 'reddit' | 'youtube')}>
-            <MenuItem value="rss">RSS</MenuItem>
-            <MenuItem value="reddit">Reddit (subreddit)</MenuItem>
-            <MenuItem value="youtube">YouTube (channel)</MenuItem>
+            <MenuItem value="rss">{labels.addStreamTypeRss}</MenuItem>
+            <MenuItem value="reddit">{labels.addStreamTypeReddit}</MenuItem>
+            <MenuItem value="youtube">{labels.addStreamTypeYoutube}</MenuItem>
           </Select>
         </FormControl>
         <TextField

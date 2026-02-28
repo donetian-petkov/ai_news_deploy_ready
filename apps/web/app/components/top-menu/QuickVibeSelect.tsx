@@ -11,7 +11,7 @@ type QuickVibeSelectProps = {
 
 export function QuickVibeSelect({ value, labels, fullWidth = false, onChange }: QuickVibeSelectProps) {
   return (
-    <label className="checkbox topQuickLabel" title="Quick vibe switch" style={fullWidth ? { flex: 1 } : undefined}>
+    <label className="checkbox topQuickLabel" title={labels.vibe} style={fullWidth ? { flex: 1 } : undefined}>
       <span id="quickVibeLabelText">{labels.vibe}</span>
       <select
         id="quickVibeSelect"
