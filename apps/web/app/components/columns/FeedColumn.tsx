@@ -219,8 +219,14 @@ export function FeedColumn({
       onDrop={drag.onDrop}
     >
       <Card
+        className="feed-column-shell"
+        data-column-theme={colTheme}
         variant="outlined"
         sx={{
+          '--ornament-accent': isMatchColumn ? palette.m : accent,
+          '--ornament-soft': soft,
+          position: 'relative',
+          overflow: 'hidden',
           background: performanceMode
             ? (isMatchColumn ? 'rgba(28, 20, 7, 0.98)' : 'rgba(8, 14, 29, 0.98)')
             : (isMatchColumn

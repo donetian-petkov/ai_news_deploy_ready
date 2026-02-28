@@ -107,8 +107,14 @@ export const NewsCard = memo(function NewsCard({
 
   return (
     <Card
+      className="news-item-card"
+      data-match={item.isMatch ? '1' : '0'}
       variant="outlined"
       sx={{
+        '--ornament-accent': item.isMatch ? matchAccent : accent,
+        '--ornament-soft': soft,
+        position: 'relative',
+        overflow: 'hidden',
         background: performanceMode
           ? 'rgba(8, 14, 29, 0.98)'
           : `linear-gradient(155deg, rgba(5, 12, 25, 0.92), rgba(7, 14, 28, 0.86)), radial-gradient(550px 180px at 0% 0%, ${soft}, transparent 72%), var(--news-card-overlay)`,
