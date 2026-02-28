@@ -361,6 +361,28 @@ body::after {
   font-size: calc(0.95rem * var(--ui-font-scale));
 }
 
+.subHintButtons {
+  margin-top: 8px;
+}
+
+.topbar .MuiButton-root.subHintBtn {
+  color: var(--text-main) !important;
+  border-color: var(--panel-border) !important;
+  background: color-mix(in srgb, var(--field-bg) 88%, transparent) !important;
+  border-radius: 999px !important;
+  text-transform: none !important;
+  font-size: calc(0.78rem * var(--ui-font-scale)) !important;
+  font-weight: 700 !important;
+  line-height: 1 !important;
+  min-height: 28px !important;
+  padding: 4px 10px !important;
+}
+
+.topbar .MuiButton-root.subHintBtn:hover {
+  transform: translateY(var(--button-hover-lift));
+  box-shadow: var(--button-hover-shadow);
+}
+
 .headerRight {
   flex: 1;
   justify-content: flex-end;
@@ -566,6 +588,15 @@ body::after {
   }
   .subHint {
     font-size: calc(0.86rem * var(--ui-font-scale));
+  }
+  .subHintButtons {
+    margin-top: 7px;
+    row-gap: 6px;
+  }
+  .topbar .MuiButton-root.subHintBtn {
+    font-size: calc(0.72rem * var(--ui-font-scale)) !important;
+    min-height: 26px !important;
+    padding: 3px 8px !important;
   }
   .mobileTopActions .topQuickLabel {
     width: 100%;

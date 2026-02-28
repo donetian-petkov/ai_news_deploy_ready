@@ -7,6 +7,7 @@ import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import CloseIcon from '@mui/icons-material/Close';
 import MenuIcon from '@mui/icons-material/Menu';
+import OpenWithIcon from '@mui/icons-material/OpenWith';
 import SearchIcon from '@mui/icons-material/Search';
 import TuneIcon from '@mui/icons-material/Tune';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
@@ -54,6 +55,10 @@ export default function TopMenu() {
   const labels = {
     title: bg ? 'Поток Новини На Живо' : 'Live News Stream',
     subHint: bg ? 'Влачи колони · ? Помощ · M Меню · / Търсене' : 'Drag columns · ? Help · M Menu · / Search',
+    subHintDrag: bg ? 'Влачи колони' : 'Drag columns',
+    subHintHelp: bg ? 'Помощ' : 'Help',
+    subHintMenu: bg ? 'Меню' : 'Menu',
+    subHintSearch: bg ? 'Търсене' : 'Search',
     vibe: bg ? 'Вайб:' : 'Vibe:',
     search: bg ? 'Търсене' : 'Search',
     hideSearch: bg ? 'Скрий търсене' : 'Hide Search',
@@ -126,6 +131,9 @@ export default function TopMenu() {
     perfMode: bg ? 'Режим производителност' : 'Performance mode',
     perfOn: bg ? 'ВКЛ' : 'ON',
     perfOff: bg ? 'ИЗКЛ' : 'OFF',
+    menuHints: bg ? 'Подсказки в менюто:' : 'Menu hints:',
+    menuHintsText: bg ? 'Текст' : 'Text',
+    menuHintsButtons: bg ? 'Бутони' : 'Buttons',
     reorderColumns: bg ? 'Подреди колони' : 'Reorder columns',
     moveUp: bg ? 'Нагоре' : 'Move up',
     moveDown: bg ? 'Надолу' : 'Move down'
@@ -155,6 +163,7 @@ export default function TopMenu() {
           scheme: 'classic' | 'vivid' | 'sunset' | 'neon' | 'ocean' | 'forest';
           performanceMode: boolean;
           buttonMode: 'icons' | 'text';
+          menuHintMode: 'text' | 'buttons';
           vibe: VibeValue;
         }>;
         dispatch(hydrateUiSettings(parsed));
@@ -200,10 +209,11 @@ export default function TopMenu() {
         scheme: ui.scheme,
         performanceMode: ui.performanceMode,
         buttonMode: ui.buttonMode,
+        menuHintMode: ui.menuHintMode,
         vibe: ui.vibe
       }));
     } catch {}
-  }, [ui.addStreamVisible, ui.allColumnControlsHidden, ui.hideAllResearch, ui.hideAllSummaries, ui.buttonMode, ui.colorMode, ui.controlsCollapsed, ui.font, ui.fontSize, ui.language, ui.menuCollapsed, ui.notifyEnabled, ui.notifyMode, ui.moodFilter, ui.typeFilter, ui.performanceMode, ui.scheme, ui.searchVisible, ui.vibe]);
+  }, [ui.addStreamVisible, ui.allColumnControlsHidden, ui.hideAllResearch, ui.hideAllSummaries, ui.buttonMode, ui.colorMode, ui.controlsCollapsed, ui.font, ui.fontSize, ui.language, ui.menuCollapsed, ui.menuHintMode, ui.notifyEnabled, ui.notifyMode, ui.moodFilter, ui.typeFilter, ui.performanceMode, ui.scheme, ui.searchVisible, ui.vibe]);
 
   useEffect(() => {
     if (!isMobile) setMobileDrawerOpen(false);
@@ -521,6 +531,12 @@ export default function TopMenu() {
     return list;
   }, [feeds, orderByUrl]);
 
+  const topHintAsButtons = ui.menuHintMode === 'buttons';
+
+  const scrollToColumns = () => {
+    document.querySelector('.container')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
   const searchSection = (
     <SearchSection
       isMobile={isMobile}
@@ -826,6 +842,18 @@ export default function TopMenu() {
                 <option value="text">Text</option>
               </select>
             </label>
+            <label className="checkbox" title="Top menu hint style">
+              <span id="menuHintsPrefix">{labels.menuHints}</span>
+              <select
+                id="menuHintsSelect"
+                className="select"
+                value={ui.menuHintMode}
+                onChange={e => dispatch(setAppearanceSettings({ menuHintMode: e.target.value as 'text' | 'buttons' }))}
+              >
+                <option value="text">{labels.menuHintsText}</option>
+                <option value="buttons">{labels.menuHintsButtons}</option>
+              </select>
+            </label>
             <label className="checkbox" title="Visual vibe preset">
               <span id="vibePrefix">Vibe:</span>
               <select
@@ -884,9 +912,26 @@ export default function TopMenu() {
             <Typography id="appTitle" component="h1" sx={{ margin: 0, fontSize: 28, fontWeight: 900, lineHeight: 1.1 }}>
               {labels.title}
             </Typography>
-            <div className="subHint" id="subHint">
-              {labels.subHint}
-            </div>
+            {topHintAsButtons ? (
+              <Stack className="subHintButtons" id="subHintButtons" direction="row" spacing={0.7} flexWrap="wrap">
+                <Button className="subHintBtn" size="small" variant="outlined" type="button" onClick={scrollToColumns} startIcon={<OpenWithIcon fontSize="small" />}>
+                  {labels.subHintDrag}
+                </Button>
+                <Button className="subHintBtn" size="small" variant="outlined" type="button" onClick={() => dispatch(setHelpOpen(true))}>
+                  ? {labels.subHintHelp}
+                </Button>
+                <Button className="subHintBtn" size="small" variant="outlined" type="button" onClick={toggleMenu} startIcon={<MenuIcon fontSize="small" />}>
+                  M {labels.subHintMenu}
+                </Button>
+                <Button className="subHintBtn" size="small" variant="outlined" type="button" onClick={toggleSearch} startIcon={<SearchIcon fontSize="small" />}>
+                  / {labels.subHintSearch}
+                </Button>
+              </Stack>
+            ) : (
+              <div className="subHint" id="subHint">
+                {labels.subHint}
+              </div>
+            )}
           </Box>
 
           {isMobile ? (

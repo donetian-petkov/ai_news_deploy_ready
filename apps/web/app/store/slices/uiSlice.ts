@@ -40,6 +40,7 @@ type UiState = {
   scheme: 'classic' | 'vivid' | 'sunset' | 'neon' | 'ocean' | 'forest';
   performanceMode: boolean;
   buttonMode: 'icons' | 'text';
+  menuHintMode: 'text' | 'buttons';
   vibe: 'default' | 'anime' | 'arcade' | 'cinema' | 'newspaper' | 'cyberwitch' | 'fantasy' | 'scifi';
   toasts: Array<{ id: string; kind: 'info' | 'success' | 'error'; message: string }>;
 };
@@ -74,6 +75,7 @@ const initialState: UiState = {
   scheme: 'classic',
   performanceMode: false,
   buttonMode: 'icons',
+  menuHintMode: 'text',
   vibe: 'default',
   toasts: []
 };
@@ -183,7 +185,7 @@ const uiSlice = createSlice({
         state.typeFilter = next;
       }
     },
-    setAppearanceSettings(state, action: PayloadAction<Partial<Pick<UiState, 'font' | 'fontSize' | 'scheme' | 'performanceMode' | 'buttonMode' | 'vibe' | 'colorMode'>>>) {
+    setAppearanceSettings(state, action: PayloadAction<Partial<Pick<UiState, 'font' | 'fontSize' | 'scheme' | 'performanceMode' | 'buttonMode' | 'menuHintMode' | 'vibe' | 'colorMode'>>>) {
       const next = action.payload;
       if (next.font === 'system' || next.font === 'manrope' || next.font === 'grotesk' || next.font === 'sora' || next.font === 'plex' || next.font === 'serif' || next.font === 'mono') {
         state.font = next.font;
@@ -204,12 +206,15 @@ const uiSlice = createSlice({
       if (next.buttonMode === 'icons' || next.buttonMode === 'text') {
         state.buttonMode = next.buttonMode;
       }
+      if (next.menuHintMode === 'text' || next.menuHintMode === 'buttons') {
+        state.menuHintMode = next.menuHintMode;
+      }
       if (next.colorMode === 'system' || next.colorMode === 'dark' || next.colorMode === 'light') {
         state.colorMode = next.colorMode;
       }
       if (typeof next.vibe === 'string' && isVibe(next.vibe)) state.vibe = next.vibe;
     },
-    hydrateUiSettings(state, action: PayloadAction<Partial<Pick<UiState, 'language' | 'colorMode' | 'menuCollapsed' | 'controlsCollapsed' | 'searchVisible' | 'addStreamVisible' | 'allColumnControlsHidden' | 'hideAllResearch' | 'hideAllSummaries' | 'notifyEnabled' | 'notifyMode' | 'moodFilter' | 'typeFilter' | 'font' | 'fontSize' | 'scheme' | 'performanceMode' | 'buttonMode' | 'vibe'>>>) {
+    hydrateUiSettings(state, action: PayloadAction<Partial<Pick<UiState, 'language' | 'colorMode' | 'menuCollapsed' | 'controlsCollapsed' | 'searchVisible' | 'addStreamVisible' | 'allColumnControlsHidden' | 'hideAllResearch' | 'hideAllSummaries' | 'notifyEnabled' | 'notifyMode' | 'moodFilter' | 'typeFilter' | 'font' | 'fontSize' | 'scheme' | 'performanceMode' | 'buttonMode' | 'menuHintMode' | 'vibe'>>>) {
       const next = action.payload;
       if (next.language === 'en' || next.language === 'bg') state.language = next.language;
       if (next.colorMode === 'system' || next.colorMode === 'dark' || next.colorMode === 'light') state.colorMode = next.colorMode;
@@ -260,6 +265,7 @@ const uiSlice = createSlice({
         state.typeFilter = 'all';
       }
       if (next.buttonMode === 'icons' || next.buttonMode === 'text') state.buttonMode = next.buttonMode;
+      if (next.menuHintMode === 'text' || next.menuHintMode === 'buttons') state.menuHintMode = next.menuHintMode;
       if (typeof next.vibe === 'string' && isVibe(next.vibe)) state.vibe = next.vibe;
     },
     enqueueToast(state, action: PayloadAction<{ kind: 'info' | 'success' | 'error'; message: string }>) {

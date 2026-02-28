@@ -34,6 +34,7 @@ describe('uiSlice', () => {
       scheme: 'classic',
       performanceMode: false,
       buttonMode: 'icons',
+      menuHintMode: 'text',
       vibe: 'default',
       toasts: []
     });
@@ -80,12 +81,13 @@ describe('uiSlice', () => {
   });
 
   it('updates appearance and notify settings', () => {
-    let state = uiReducer(undefined, setAppearanceSettings({ font: 'sora', fontSize: 'lg', scheme: 'neon', performanceMode: true, buttonMode: 'text' }));
+    let state = uiReducer(undefined, setAppearanceSettings({ font: 'sora', fontSize: 'lg', scheme: 'neon', performanceMode: true, buttonMode: 'text', menuHintMode: 'buttons' }));
     expect(state.font).toBe('sora');
     expect(state.fontSize).toBe('lg');
     expect(state.scheme).toBe('neon');
     expect(state.performanceMode).toBe(true);
     expect(state.buttonMode).toBe('text');
+    expect(state.menuHintMode).toBe('buttons');
     expect(state.moodFilter).toBe('all');
     expect(state.typeFilter).toBe('all');
 
@@ -140,6 +142,7 @@ describe('uiSlice', () => {
       hideAllResearch: true,
       hideAllSummaries: true,
       performanceMode: true,
+      menuHintMode: 'buttons',
       vibe: 'cyberwitch'
     }));
     expect(state.menuCollapsed).toBe(true);
@@ -149,6 +152,7 @@ describe('uiSlice', () => {
     expect(state.hideAllResearch).toBe(true);
     expect(state.hideAllSummaries).toBe(true);
     expect(state.performanceMode).toBe(true);
+    expect(state.menuHintMode).toBe('buttons');
     expect(state.vibe).toBe('cyberwitch');
   });
 
