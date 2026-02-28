@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Alert, Box, Button, Divider, Drawer, FormControl, IconButton, MenuItem, Select, Stack, Typography, useMediaQuery } from '@mui/material';
+import { Alert, Box, Button, Divider, Drawer, FormControl, IconButton, MenuItem, Select, Stack, Tooltip, Typography, useMediaQuery } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import CloseIcon from '@mui/icons-material/Close';
 import MenuIcon from '@mui/icons-material/Menu';
@@ -892,10 +892,49 @@ export default function TopMenu() {
                   onChange={nextVibe => dispatch(setAppearanceSettings({ vibe: nextVibe }))}
                 />
               </Stack>
-              <Stack direction="row" spacing={1}>
-                <Button id="quickSearchBtn" className="btn ghost" size="small" variant="outlined" type="button" onClick={toggleSearch} startIcon={<SearchIcon fontSize="small" />} sx={{ flex: 1 }}>{searchLabel}</Button>
-                <Button id="quickAddStreamBtn" className="btn ghost" size="small" variant="outlined" type="button" onClick={toggleAddStream} startIcon={<AddIcon fontSize="small" />} sx={{ flex: 1 }}>{addStreamLabel}</Button>
-                <Button id="controlsToggle" className="btn ghost" size="small" variant="outlined" type="button" onClick={toggleControls} startIcon={<TuneIcon fontSize="small" />} sx={{ flex: 1 }}>{controlsLabel}</Button>
+              <Stack direction="row" spacing={1} className="mobileTopQuickButtons">
+                <Tooltip title={searchLabel}>
+                  <Button
+                    id="quickSearchBtn"
+                    className="btn ghost"
+                    size="small"
+                    variant={ui.searchVisible ? 'contained' : 'outlined'}
+                    type="button"
+                    onClick={toggleSearch}
+                    aria-label={searchLabel}
+                    sx={{ flex: 1, minWidth: 0, height: 44, p: 0 }}
+                  >
+                    <SearchIcon fontSize="small" />
+                  </Button>
+                </Tooltip>
+                <Tooltip title={addStreamLabel}>
+                  <Button
+                    id="quickAddStreamBtn"
+                    className="btn ghost"
+                    size="small"
+                    variant={ui.addStreamVisible ? 'contained' : 'outlined'}
+                    type="button"
+                    onClick={toggleAddStream}
+                    aria-label={addStreamLabel}
+                    sx={{ flex: 1, minWidth: 0, height: 44, p: 0 }}
+                  >
+                    <AddIcon fontSize="small" />
+                  </Button>
+                </Tooltip>
+                <Tooltip title={controlsLabel}>
+                  <Button
+                    id="controlsToggle"
+                    className="btn ghost"
+                    size="small"
+                    variant={!ui.controlsCollapsed ? 'contained' : 'outlined'}
+                    type="button"
+                    onClick={toggleControls}
+                    aria-label={controlsLabel}
+                    sx={{ flex: 1, minWidth: 0, height: 44, p: 0 }}
+                  >
+                    <TuneIcon fontSize="small" />
+                  </Button>
+                </Tooltip>
               </Stack>
             </Stack>
           ) : (

@@ -521,7 +521,16 @@ body::after {
 }
 
 @media (max-width: 900px) {
+  .topbar {
+    width: 100vw;
+    left: 0;
+    right: 0;
+    margin: 0;
+    border-radius: 0;
+  }
   .topbarInner {
+    max-width: none;
+    width: 100%;
     padding: 12px 14px;
   }
   .headerRow {
@@ -544,5 +553,13 @@ body::after {
   }
   .mobileTopActions .topQuickLabel {
     width: 100%;
+  }
+  .mobileTopQuickButtons {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .mobileTopQuickButtons .MuiButton-root {
+    flex: 1;
+    min-width: 0;
   }
 }
