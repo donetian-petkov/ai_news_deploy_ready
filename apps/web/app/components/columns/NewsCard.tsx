@@ -72,6 +72,7 @@ export const NewsCard = memo(function NewsCard({
   const CopyIconComp = vibeIcons.copy;
   const iconOnly = buttonMode === 'icons';
   const showAiActions = aiAvailable;
+  const researchToggleActive = hasResearchBlock && researchVisible;
   const actionSx = {
     ...compactBtnSx,
     minWidth: iconOnly ? 36 : 86,
@@ -290,19 +291,29 @@ export const NewsCard = memo(function NewsCard({
                     : (summaryPending ? labels.generatingSummary : labels.summary)}
                 </Button>
               </Tooltip>
-              <Tooltip title={researchPending ? labels.researching : labels.research}>
+              <Tooltip title={researchPending ? labels.researching : (researchToggleActive ? labels.hideResearch : labels.research)}>
                 <Button
                   size="small"
-                  variant={researchPending ? 'contained' : 'outlined'}
-                  sx={actionSx}
-                  onClick={() => onRequestResearch(item)}
+                  variant={researchPending ? 'contained' : (researchToggleActive ? 'contained' : 'outlined')}
+                  sx={researchToggleActive ? matchActionSx : actionSx}
+                  onClick={() => {
+                    if (researchToggleActive) {
+                      onSetResearchMode('hidden');
+                      return;
+                    }
+                    if (hasResearchBlock && !researchVisible) {
+                      onSetResearchMode(researchLong ? 'collapsed' : 'expanded');
+                      return;
+                    }
+                    onRequestResearch(item);
+                  }}
                   disabled={!connected || researchPending}
                 >
                   {iconOnly
                     ? (researchPending
                       ? <AutoFixHighIcon sx={{ fontSize: 15 }} className="spinAnim" aria-hidden />
                       : <ResearchIconComp sx={{ fontSize: 15 }} aria-hidden />)
-                    : (researchPending ? labels.researching : labels.research)}
+                    : (researchPending ? labels.researching : (researchToggleActive ? labels.hideResearch : labels.research))}
                 </Button>
               </Tooltip>
               <Tooltip title={labels.askAgent}>
@@ -333,18 +344,6 @@ export const NewsCard = memo(function NewsCard({
                 onClick={() => onSetSummaryMode(summaryVisible ? 'hidden' : (summaryLong ? 'collapsed' : 'expanded'))}
               >
                 {iconOnly ? <SummaryIconComp sx={{ fontSize: 15 }} aria-hidden /> : (summaryVisible ? labels.hideSummary : labels.showSummary)}
-              </Button>
-            </Tooltip>
-          ) : null}
-          {hasResearchBlock ? (
-            <Tooltip title={researchVisible ? labels.hideResearch : labels.showResearch}>
-              <Button
-                size="small"
-                variant={researchVisible ? 'contained' : 'outlined'}
-                sx={researchVisible ? matchActionSx : actionSx}
-                onClick={() => onSetResearchMode(researchVisible ? 'hidden' : (researchLong ? 'collapsed' : 'expanded'))}
-              >
-                {iconOnly ? <ResearchIconComp sx={{ fontSize: 15 }} aria-hidden /> : (researchVisible ? labels.hideResearch : labels.showResearch)}
               </Button>
             </Tooltip>
           ) : null}
