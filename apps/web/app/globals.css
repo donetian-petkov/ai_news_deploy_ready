@@ -938,6 +938,224 @@ body[data-vibe='scifi'] .news-item-card::after {
   opacity: 0.72;
 }
 
+/* Clean border-first ornaments (no heavy background overlays) */
+.feed-column-shell .MuiCardContent-root,
+.news-item-card .MuiCardContent-root {
+  position: relative;
+  z-index: 1;
+}
+
+.feed-column-shell::before,
+.feed-column-shell::after,
+.news-item-card::before,
+.news-item-card::after {
+  content: '';
+  position: absolute;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.feed-column-shell::before {
+  inset: 5px;
+  border-radius: calc(var(--column-radius, 16px) - 5px);
+  border: 1.5px solid var(--ornament-accent, rgba(111, 154, 220, 0.72));
+  opacity: 0.78;
+}
+
+.news-item-card::before {
+  inset: 4px;
+  border-radius: calc(var(--news-card-radius, 14px) - 4px);
+  border: 1.5px solid var(--ornament-accent, rgba(111, 154, 220, 0.72));
+  opacity: 0.8;
+}
+
+.feed-column-shell::after {
+  inset: 1px;
+  border-radius: calc(var(--column-radius, 16px) - 1px);
+  background:
+    radial-gradient(circle at 8% 8%, var(--ornament-accent, rgba(111, 154, 220, 0.84)) 0 2px, transparent 2.5px),
+    radial-gradient(circle at 92% 8%, var(--ornament-accent, rgba(111, 154, 220, 0.84)) 0 2px, transparent 2.5px),
+    radial-gradient(circle at 8% 92%, var(--ornament-accent, rgba(111, 154, 220, 0.84)) 0 2px, transparent 2.5px),
+    radial-gradient(circle at 92% 92%, var(--ornament-accent, rgba(111, 154, 220, 0.84)) 0 2px, transparent 2.5px);
+  opacity: 0.52;
+}
+
+.news-item-card::after {
+  inset: 1px;
+  border-radius: calc(var(--news-card-radius, 14px) - 1px);
+  background:
+    linear-gradient(90deg, transparent 0 9%, var(--ornament-accent, rgba(111,154,220,0.6)) 9% 12%, transparent 12% 88%, var(--ornament-accent, rgba(111,154,220,0.6)) 88% 91%, transparent 91% 100%);
+  -webkit-mask: linear-gradient(transparent, #000 7%, #000 93%, transparent);
+  mask: linear-gradient(transparent, #000 7%, #000 93%, transparent);
+  opacity: 0.3;
+}
+
+.feed-column-shell[data-column-theme='match']::before {
+  border-style: double;
+  border-width: 2px;
+  opacity: 0.9;
+}
+
+/* ANIME POP: rounded energy frame */
+body[data-vibe='anime'] .feed-column-shell {
+  border-radius: 20px !important;
+}
+body[data-vibe='anime'] .news-item-card {
+  border-radius: 16px !important;
+}
+body[data-vibe='anime'] .feed-column-shell::before,
+body[data-vibe='anime'] .news-item-card::before {
+  border-color: rgba(255, 126, 219, 0.9);
+  box-shadow: inset 0 0 0 1px rgba(112, 236, 255, 0.58);
+}
+body[data-vibe='anime'] .feed-column-shell::after,
+body[data-vibe='anime'] .news-item-card::after {
+  background:
+    radial-gradient(circle at 8% 8%, rgba(255, 152, 226, 0.92) 0 4px, transparent 4.5px),
+    radial-gradient(circle at 92% 8%, rgba(125, 235, 255, 0.92) 0 4px, transparent 4.5px),
+    radial-gradient(circle at 8% 92%, rgba(125, 235, 255, 0.92) 0 4px, transparent 4.5px),
+    radial-gradient(circle at 92% 92%, rgba(255, 152, 226, 0.92) 0 4px, transparent 4.5px),
+    repeating-conic-gradient(from 0deg at 50% -42%, rgba(255, 151, 224, 0.22) 0deg 2deg, transparent 2deg 8deg);
+  opacity: 0.55;
+}
+
+/* ARCADE: pixel-notched + dashed neon */
+body[data-vibe='arcade'] .feed-column-shell,
+body[data-vibe='arcade'] .news-item-card {
+  border-radius: 5px !important;
+  clip-path: polygon(
+    0 12px, 12px 12px, 12px 0, calc(100% - 12px) 0, calc(100% - 12px) 12px, 100% 12px,
+    100% calc(100% - 12px), calc(100% - 12px) calc(100% - 12px), calc(100% - 12px) 100%,
+    12px 100%, 12px calc(100% - 12px), 0 calc(100% - 12px)
+  );
+}
+body[data-vibe='arcade'] .feed-column-shell::before,
+body[data-vibe='arcade'] .news-item-card::before {
+  border-style: dashed;
+  border-color: rgba(98, 245, 255, 0.9);
+}
+body[data-vibe='arcade'] .feed-column-shell::after,
+body[data-vibe='arcade'] .news-item-card::after {
+  background:
+    linear-gradient(90deg, rgba(74, 255, 177, 0.64) 0 12px, transparent 12px calc(100% - 12px), rgba(255, 96, 247, 0.64) calc(100% - 12px)),
+    repeating-linear-gradient(0deg, transparent 0 10px, rgba(99, 255, 241, 0.26) 10px 11px);
+  opacity: 0.56;
+}
+
+/* CINEMA: film-strip side perforations */
+body[data-vibe='cinema'] .feed-column-shell,
+body[data-vibe='cinema'] .news-item-card {
+  border-radius: 12px !important;
+}
+body[data-vibe='cinema'] .feed-column-shell::before,
+body[data-vibe='cinema'] .news-item-card::before {
+  border-color: rgba(240, 196, 118, 0.9);
+}
+body[data-vibe='cinema'] .feed-column-shell::after,
+body[data-vibe='cinema'] .news-item-card::after {
+  background:
+    linear-gradient(90deg, rgba(247, 203, 124, 0.34) 0 16px, transparent 16px calc(100% - 16px), rgba(247, 203, 124, 0.34) calc(100% - 16px)),
+    radial-gradient(circle at 8px 8px, rgba(255, 245, 218, 0.72) 0 3px, transparent 3.5px),
+    radial-gradient(circle at calc(100% - 8px) 8px, rgba(255, 245, 218, 0.72) 0 3px, transparent 3.5px);
+  background-size: auto, 100% 21px, 100% 21px;
+  background-repeat: no-repeat, repeat-y, repeat-y;
+  background-position: center, left top, right top;
+  opacity: 0.44;
+}
+
+/* NEWSPAPER: hard square + ruled print lines */
+body[data-vibe='newspaper'] .feed-column-shell,
+body[data-vibe='newspaper'] .news-item-card {
+  border-radius: 2px !important;
+}
+body[data-vibe='newspaper'] .feed-column-shell::before,
+body[data-vibe='newspaper'] .news-item-card::before {
+  inset: 4px;
+  border-style: double;
+  border-width: 2px;
+  border-color: rgba(212, 226, 238, 0.9);
+}
+body[data-vibe='newspaper'] .feed-column-shell::after,
+body[data-vibe='newspaper'] .news-item-card::after {
+  background:
+    repeating-linear-gradient(0deg, rgba(204, 219, 238, 0.28) 0 1px, transparent 1px 9px),
+    linear-gradient(90deg, rgba(204, 219, 238, 0.32) 0 2px, transparent 2px calc(100% - 2px), rgba(204, 219, 238, 0.32) calc(100% - 2px));
+  opacity: 0.5;
+}
+
+/* CYBER WITCH: octagonal rails + arcane neon */
+body[data-vibe='cyberwitch'] .feed-column-shell,
+body[data-vibe='cyberwitch'] .news-item-card {
+  border-radius: 16px !important;
+  clip-path: polygon(14px 0, calc(100% - 14px) 0, 100% 14px, 100% calc(100% - 14px), calc(100% - 14px) 100%, 14px 100%, 0 calc(100% - 14px), 0 14px);
+}
+body[data-vibe='cyberwitch'] .feed-column-shell::before,
+body[data-vibe='cyberwitch'] .news-item-card::before {
+  border-color: rgba(102, 219, 255, 0.9);
+  box-shadow: inset 0 0 0 1px rgba(194, 118, 255, 0.45), 0 0 14px rgba(102, 219, 255, 0.18);
+}
+body[data-vibe='cyberwitch'] .feed-column-shell::after,
+body[data-vibe='cyberwitch'] .news-item-card::after {
+  background:
+    linear-gradient(90deg, rgba(136, 103, 255, 0.44) 0 11%, transparent 11% 89%, rgba(63, 227, 255, 0.44) 89% 100%),
+    linear-gradient(0deg, transparent 0 14%, rgba(65, 229, 255, 0.2) 14% 15%, transparent 15% 85%, rgba(188, 115, 255, 0.2) 85% 86%, transparent 86% 100%);
+  opacity: 0.52;
+}
+
+/* FANTASY: art nouveau / deco ornaments */
+body[data-vibe='fantasy'] .feed-column-shell,
+body[data-vibe='fantasy'] .news-item-card {
+  border-radius: 10px !important;
+}
+body[data-vibe='fantasy'] .feed-column-shell::before,
+body[data-vibe='fantasy'] .news-item-card::before {
+  border-width: 2px;
+  border-color: rgba(231, 193, 111, 0.92);
+  box-shadow: inset 0 0 0 1px rgba(126, 228, 180, 0.38);
+}
+body[data-vibe='fantasy'] .feed-column-shell::after,
+body[data-vibe='fantasy'] .news-item-card::after {
+  background:
+    linear-gradient(90deg, transparent 0 42%, rgba(231, 193, 111, 0.46) 42% 50%, transparent 50% 58%, rgba(231, 193, 111, 0.46) 58% 100%),
+    radial-gradient(circle at 50% 5%, rgba(238, 203, 128, 0.78) 0 6px, transparent 6.5px),
+    radial-gradient(circle at 50% 95%, rgba(238, 203, 128, 0.78) 0 6px, transparent 6.5px),
+    radial-gradient(circle at 8% 8%, rgba(128, 228, 182, 0.6) 0 3px, transparent 3.5px),
+    radial-gradient(circle at 92% 8%, rgba(128, 228, 182, 0.6) 0 3px, transparent 3.5px),
+    radial-gradient(circle at 8% 92%, rgba(128, 228, 182, 0.6) 0 3px, transparent 3.5px),
+    radial-gradient(circle at 92% 92%, rgba(128, 228, 182, 0.6) 0 3px, transparent 3.5px);
+  -webkit-mask: linear-gradient(transparent, #000 4%, #000 96%, transparent);
+  mask: linear-gradient(transparent, #000 4%, #000 96%, transparent);
+  opacity: 0.56;
+}
+
+/* SCI-FI: HUD chamfers + corner brackets */
+body[data-vibe='scifi'] .feed-column-shell,
+body[data-vibe='scifi'] .news-item-card {
+  border-radius: 10px !important;
+  clip-path: polygon(0 12px, 12px 0, calc(100% - 12px) 0, 100% 12px, 100% calc(100% - 12px), calc(100% - 12px) 100%, 12px 100%, 0 calc(100% - 12px));
+}
+body[data-vibe='scifi'] .feed-column-shell::before,
+body[data-vibe='scifi'] .news-item-card::before {
+  border-width: 2px;
+  border-color: rgba(118, 229, 255, 0.92);
+  box-shadow: inset 0 0 0 1px rgba(133, 149, 255, 0.42);
+}
+body[data-vibe='scifi'] .feed-column-shell::after,
+body[data-vibe='scifi'] .news-item-card::after {
+  background:
+    linear-gradient(90deg, rgba(112, 232, 255, 0.48) 0 9%, transparent 9% 91%, rgba(133, 149, 255, 0.48) 91% 100%),
+    linear-gradient(0deg, rgba(112, 232, 255, 0.3) 0 2px, transparent 2px calc(100% - 2px), rgba(133, 149, 255, 0.3) calc(100% - 2px) 100%),
+    repeating-linear-gradient(0deg, transparent 0 12px, rgba(97, 201, 255, 0.16) 12px 13px);
+  opacity: 0.52;
+}
+
+body[data-performance='on'] .feed-column-shell::before,
+body[data-performance='on'] .feed-column-shell::after,
+body[data-performance='on'] .news-item-card::before,
+body[data-performance='on'] .news-item-card::after {
+  display: none;
+}
+
 @media (max-width: 900px) {
   .topbar {
     width: 100%;
