@@ -1,4 +1,4 @@
-# AI News Next + Node
+# AI News Stream (Next.js + Node)
 
 [![CI](https://github.com/donetian-petkov/ai_news_next_node/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/donetian-petkov/ai_news_next_node/actions/workflows/ci.yml)
 ![Next.js](https://img.shields.io/badge/Next.js-14.2-black?logo=next.js)
@@ -8,60 +8,102 @@
 ![Redux Toolkit](https://img.shields.io/badge/Redux_Toolkit-Enabled-764ABC?logo=redux&logoColor=white)
 ![MUI](https://img.shields.io/badge/MUI-7-007FFF?logo=mui&logoColor=white)
 
-Next.js + Node.js implementation of the live AI news stream app, with WebSocket updates, per-column controls, Ask Agent, and persisted state via Prisma + SQLite.
+A real-time, multi-column news intelligence dashboard with AI summaries, AI research, Ask-Agent Q&A, advanced feed controls, and theme/vibe customization.
 
-## Highlights
+## Product Snapshot
 
-- Real-time news cards over WebSocket with feed-level controls.
-- AI summary + research actions (manual and auto modes).
-- Ask Agent per news item with usage guardrails and question limits.
-- Filtered stream for matched items.
-- Theme/vibe, fonts, color scheme, notifications, and mobile-aware UI behavior.
-- Redux Toolkit state with typed slices and WebSocket dispatch flow.
-- Performance improvements:
-  - WebSocket news batching to reduce render thrash.
-  - Lazy hydration for below-fold columns.
+| Area | What you get |
+|---|---|
+| Live ingestion | RSS / Reddit / YouTube streams over WebSocket |
+| AI workflows | Summary, Research, Ask Agent (per-news contextual chat) |
+| Stream control | Per-column budget, polling, sort, filters, pin/remove, age cleanup |
+| UX controls | Top menu + mobile drawer, shortcuts, notifications, EN/BG interface |
+| Personalization | Vibes, schemes, fonts, button modes, performance mode |
+| Persistence | Prisma + SQLite for app/server state, localStorage for UI prefs |
+
+## Core Features
+
+### News + Columns
+- Real-time column updates over WebSocket.
+- Drag-and-drop column reordering.
+- Filtered column for matched items.
+- Per-column news limit behavior:
+  - default visible count = 10
+  - show +5 incrementally
+  - reset back to 10 (column and global)
+
+### AI Behaviors
+- AI provider switching from UI (`OpenAI`, `Claude`, `OpenRouter`) with runtime key prompt.
+- Summary and Research language controls.
+- Per-column AI budget (`low`, `standard`, `high`) + global apply-all budget.
+- Ask Agent per news item with remaining-question limits and contextual replies.
+- Mood and Type filters (disabled automatically in performance mode).
+- AI-off fallback behavior (UI indicates unavailable AI features).
+
+### Interaction + UX
+- Top quick actions: Search, Add Stream, Toggle controls/menu, hide all research/summaries.
+- Notification modes:
+  - only matched
+  - matched + pinned columns
+  - only pinned columns
+  - all columns
+- Stackable dismissible toasts for connection/feed problems.
+- EN/BG interface.
+- Responsive mobile drawer for top controls.
+
+### Rendering + Performance
+- Batched WebSocket updates to reduce render churn.
+- Lazy hydration for below-fold columns.
+- Dedicated performance mode for reduced visual overhead.
+- Component split for maintainability (SOLID/DRY):
+  - `ReactColumnsPreview` orchestrator
+  - `FeedColumn` presenter
+  - `NewsCard` presenter
+  - extracted `top-menu/*` sections
 
 ## Architecture
 
-| Layer | Tech | Location |
-|---|---|---|
-| Frontend | Next.js 14 + React 18 + MUI + RTK | `apps/web` |
-| Backend | Node.js + Express + ws | `apps/api` |
-| Validation | zod schemas/types | `packages/shared` |
-| Persistence | Prisma + SQLite | `apps/api/prisma` |
+```mermaid
+flowchart LR
+  A["Feeds: RSS / Reddit / YouTube"] --> B["API (Node + Express + ws)"]
+  B --> C["Matching + AI Jobs"]
+  C --> D["Prisma + SQLite state"]
+  B --> E["WebSocket stream"]
+  E --> F["Web App (Next.js + Redux Toolkit + MUI)"]
+  F --> G["Columns / News Cards / Ask Agent"]
+```
 
-## Monorepo Structure
+## Monorepo Layout
 
 ```text
 ai_news_next_node/
   apps/
-    api/        # polling, matching, AI jobs, websocket server
-    web/        # next.js ui
+    api/            # ingestion, matching, AI orchestration, websocket server
+    web/            # Next.js client app + Redux + MUI
   packages/
-    shared/     # zod contracts + shared types
+    shared/         # zod contracts + shared TS types
 ```
 
 ## Quick Start
 
 ### 1) Prerequisites
-
-- Node.js 20+
-- npm 10+
+- Node.js `20+`
+- npm `10+`
 
 ### 2) Configure environment
-
-Copy `.env.example` to `.env` in the repository root:
+Copy `.env.example` to `.env`:
 
 ```bash
 cp .env.example .env
 ```
 
-Required variables:
+Minimum required values:
 
-- `OPENAI_API_KEY`
-- `NEXT_PUBLIC_WS_URL` (default: `ws://localhost:4000`)
-- `DATABASE_URL` (default: `file:./dev.db`)
+```env
+OPENAI_API_KEY=...
+NEXT_PUBLIC_WS_URL=ws://localhost:4000
+DATABASE_URL="file:./dev.db"
+```
 
 ### 3) Install + initialize
 
@@ -71,14 +113,13 @@ npm run prisma:generate
 npm run prisma:migrate
 ```
 
-### 4) Run in development
+### 4) Run locally
 
 ```bash
 npm run dev
 ```
 
-Services:
-
+Endpoints:
 - Web: `http://localhost:3000`
 - API health: `http://localhost:4000/health`
 - WebSocket: `ws://localhost:4000`
@@ -86,60 +127,78 @@ Services:
 ## Scripts
 
 ```bash
-# Run web + api together
+# Development
 npm run dev
-
-# Run individually
 npm run dev:web
 npm run dev:api
 
-# Build all workspaces
+# Build + start
 npm run build
+npm run start
 
-# Full test suite (web + shared)
+# Tests
 npm run test
-
-# Alias for full suite
 npm run test:all
-
-# Per-workspace tests
 npm run test -w @ai-news/web
 npm run test -w @ai-news/shared
+
+# Prisma
+npm run prisma:generate
+npm run prisma:migrate
 ```
 
-## Current Functional Scope
+## Environment Reference
 
-- Top menu + expanded controls are React-owned.
-- Search/Add Stream quick panels are controlled from top menu buttons.
-- Stream order drag-and-drop with local persistence.
-- Per-stream settings:
-  - Summaries
-  - Auto Research
-  - Budget
-  - Poll interval
-  - Sort + filter toggles
-  - Delete old by age window
-- Per-item actions:
-  - Summary
-  - Research
-  - Ask Agent
-  - Share Link
-  - Hide News
-  - Show More / Show Less / Hide summary/research content
-- Notifications:
-  - only matched
-  - only pinned columns
-  - matched + pinned columns
-  - all columns
-- BG/EN interface support.
+### Core
+- `PORT` (default: `4000`)
+- `NEXT_PUBLIC_WS_URL` (default: `ws://localhost:4000`)
+- `DATABASE_URL` (example: `file:./dev.db`)
 
-## Testing
+### AI Provider + Keys
+- `AI_PROVIDER` (`openai` | `claude` | `openrouter`, default `openai`)
+- `OPENAI_API_KEY`
+- `ANTHROPIC_API_KEY` (or `CLAUDE_API_KEY`)
+- `OPENROUTER_API_KEY`
+- `OPENROUTER_BASE_URL` (optional override)
+
+### AI Behavior
+- `AI_ENABLED` (`true`/`false`)
+- `SUMMARY_LANG` (`bilingual` | `bg` | `en`)
+- `RESEARCH_LANG` (`bg` | `en`)
+- `OPENAI_EMBED_MODEL`
+- `OPENAI_SUMMARY_MODEL`
+- `OPENAI_RESEARCH_MODEL`
+- `OPENROUTER_SUMMARY_MODEL`
+- `OPENROUTER_RESEARCH_MODEL`
+
+### Matching / Dedupe
+- `KEYWORDS` (comma-separated)
+- `MATCH_THRESHOLD`
+- `DEDUPE_THRESHOLD`
+- `FILTERED_AI_DEDUPE`
+- `FILTERED_DEDUPE_THRESHOLD`
+
+## Keyboard Shortcuts
+
+| Shortcut | Action |
+|---|---|
+| `?` / `H` | Open/close Help |
+| `M` | Toggle menu |
+| `C` | Toggle top controls |
+| `G` | Toggle all column controls |
+| `S` | Toggle Search section |
+| `/` | Focus Search |
+| `A` | Toggle Add Stream section |
+| `T` | Cycle color mode |
+| `V` | Cycle vibe |
+| `Esc` | Close Help |
+
+## Testing Scope
 
 Current automated coverage includes:
-
-- Redux slices (`ui`, `feeds`, `news`, `connection`, `aiUsage`)
-- WebSocket client message mapping and connection lifecycle
-- Shared zod schema contracts (`clientMsgSchema`) including AI provider switching message validation
+- Redux slices: `ui`, `feeds`, `news`, `connection`, `aiUsage`
+- WebSocket client lifecycle + message mapping
+- Shared `zod` schema contracts in `packages/shared`
 
 Run:
 
@@ -147,39 +206,40 @@ Run:
 npm run test
 ```
 
-## Build for Production
+## Troubleshooting
 
-```bash
-npm run build
-npm run start
-```
+### API is healthy but UI says `Disconnected`
+- Verify `NEXT_PUBLIC_WS_URL` points to the running API websocket host/port.
+- Ensure API is reachable from browser network context.
+- Check browser devtools for WS handshake errors.
 
-## Self-Hosting on Your Own Computer
+### Prisma error: `Environment variable not found: DATABASE_URL`
+- Add `DATABASE_URL` in root `.env`.
+- Re-run:
+  - `npm run prisma:generate`
+  - `npm run prisma:migrate`
 
-For always-on local hosting:
+### AI shows unavailable despite key
+- Confirm key exists for selected provider.
+- If provider changed in UI, provide key in the prompt dialog.
+- Restart API after changing env keys.
 
-1. Keep machine awake and connected.
-2. Run with PM2:
-
-```bash
-pm2 start "npm run dev:api" --name ai-news-api
-pm2 start "npm run dev:web" --name ai-news-web
-pm2 save
-```
-
-3. (Optional) expose web safely with Cloudflare Tunnel and keep API internal.
+### Slow rendering on local machine
+- Enable Performance mode in Appearance.
+- Reduce open columns and heavy auto-AI operations.
+- Keep tests/build watchers off when not needed.
 
 ## CI
 
-GitHub Actions workflow: `.github/workflows/ci.yml`
+Workflow: `.github/workflows/ci.yml`
 
 Pipeline runs:
-
 - dependency install
 - Prisma generate/migrate
 - unit tests
-- full monorepo build
+- monorepo build
 
 ## Release Notes
 
-See [RELEASE_NOTES.md](./RELEASE_NOTES.md) for chronological change history.
+- Active changelog: [RELEASE_NOTES.md](./RELEASE_NOTES.md)
+- Releases: [GitHub Releases](https://github.com/donetian-petkov/ai_news_next_node/releases)
