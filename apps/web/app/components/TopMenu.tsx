@@ -15,26 +15,26 @@ import SummarizeIcon from '@mui/icons-material/Summarize';
 import TuneIcon from '@mui/icons-material/Tune';
 import { useTranslation } from 'react-i18next';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
-import { setLanguage, setSearchQuery, setTopUiState, setHideAllResearch, setHideAllSummaries, setNotifySettings, setAiSettings, setMoodFilter, setTypeFilter, setAppearanceSettings, hydrateUiSettings, setHelpOpen, dismissToast, enqueueToast, triggerShowMoreNewsAll, triggerResetNewsShownAll } from '../store/slices/uiSlice';
+import { setLanguage, setSearchQuery, setTopUiState, setHideAllResearch, setHideAllSummaries, setNotifySettings, setAiSettings, setMoodFilter, setTypeFilter, setAppearanceSettings, hydrateUiSettings, setHelpOpen, dismissToast, triggerShowMoreNewsAll, triggerResetNewsShownAll } from '../store/slices/uiSlice';
 import { sendWsMessage } from '../store/wsClient';
-import { reorderFeeds, setFeedBudgetSetting } from '../store/slices/feedsSlice';
-import { removeOldItemsInFeed, resetAllToNewestLimit } from '../store/slices/newsSlice';
+import { reorderFeeds } from '../store/slices/feedsSlice';
 import { AddStreamSection } from './top-menu/AddStreamSection';
 import { HelpDialog } from './top-menu/HelpDialog';
 import { QuickVibeSelect } from './top-menu/QuickVibeSelect';
 import { SearchSection } from './top-menu/SearchSection';
 import { StatusPills } from './top-menu/StatusPills';
 import { ToastStack } from './top-menu/ToastStack';
+import { useTopMenuHotkeys } from './top-menu/useTopMenuHotkeys';
+import { useTopMenuActions } from './top-menu/useTopMenuActions';
+import { type TopMenuDeleteAge, type TopMenuVibe } from './top-menu/topMenu.services';
 import { FILTERED_FEED_URL } from '../store/constants';
 
-type VibeValue = 'default' | 'anime' | 'arcade' | 'cinema' | 'newspaper' | 'cyberwitch' | 'fantasy' | 'scifi';
-type SoundThemeValue = 'vibe' | VibeValue;
+type SoundThemeValue = 'vibe' | TopMenuVibe;
 type PersistedUiPrefs = Parameters<typeof hydrateUiSettings>[0];
 
-const VIBES: VibeValue[] = ['default', 'anime', 'arcade', 'cinema', 'newspaper', 'cyberwitch', 'fantasy', 'scifi'];
 const UI_PREFS_STORAGE_KEY = 'aiNews.uiPrefs.v2';
 
-const SOUND_ROOT_FREQ: Record<VibeValue, number> = {
+const SOUND_ROOT_FREQ: Record<TopMenuVibe, number> = {
   default: 330,
   anime: 512,
   arcade: 448,
@@ -57,7 +57,7 @@ function parsePersistedUiPrefs(raw: string): PersistedUiPrefs | null {
   }
 }
 
-function playSoundCue(theme: VibeValue, kind: 'toggle' | 'success' | 'error') {
+function playSoundCue(theme: TopMenuVibe, kind: 'toggle' | 'success' | 'error') {
   if (typeof window === 'undefined') return;
   const AC = window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
   if (!AC) return;
@@ -107,7 +107,7 @@ export default function TopMenu() {
   const [feedLabel, setFeedLabel] = useState('');
   const [feedInterval, setFeedInterval] = useState('120');
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
-  const [deleteAgeAll, setDeleteAgeAll] = useState<'yesterday' | 'week' | 'month' | 'year'>('week');
+  const [deleteAgeAll, setDeleteAgeAll] = useState<TopMenuDeleteAge>('week');
   const [addStatus, setAddStatus] = useState<{ kind: 'info' | 'success' | 'error'; message: string } | null>(null);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const addStreamInputRef = useRef<HTMLInputElement | null>(null);
@@ -170,7 +170,7 @@ export default function TopMenu() {
     () => t('topMenu', { returnObjects: true }) as Record<string, string>,
     [t]
   );
-  const resolvedSoundTheme: VibeValue = ui.soundTheme === 'vibe' ? ui.vibe : ui.soundTheme;
+  const resolvedSoundTheme: TopMenuVibe = ui.soundTheme === 'vibe' ? ui.vibe : ui.soundTheme;
   const triggerSoundCue = (kind: 'toggle' | 'success' | 'error') => {
     if (ui.performanceMode || !ui.soundEnabled) return;
     playSoundCue(resolvedSoundTheme, kind);
@@ -293,87 +293,6 @@ export default function TopMenu() {
     });
   }, [dispatch, toasts, resolvedSoundTheme, ui.performanceMode, ui.soundEnabled]);
 
-  useEffect(() => {
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        dispatch(setHelpOpen(false));
-        return;
-      }
-
-      if (e.ctrlKey || e.metaKey || e.altKey) return;
-
-      const targetEl = e.target as HTMLElement | null;
-      const typing = !!targetEl && (
-        targetEl.tagName === 'INPUT'
-        || targetEl.tagName === 'TEXTAREA'
-        || targetEl.isContentEditable
-      );
-      if (typing) return;
-
-      const key = String(e.key || '');
-      const lower = key.toLowerCase();
-
-      if (key === '?') {
-        e.preventDefault();
-        dispatch(setHelpOpen(!ui.helpOpen));
-        return;
-      }
-      if (key === '/') {
-        e.preventDefault();
-        if (!ui.searchVisible) {
-          toggleSearch();
-        } else {
-          scheduleFocus('search', 20);
-        }
-        return;
-      }
-      if (lower === 'h') {
-        e.preventDefault();
-        dispatch(setHelpOpen(!ui.helpOpen));
-        return;
-      }
-      if (lower === 'm') {
-        e.preventDefault();
-        toggleMenu();
-        return;
-      }
-      if (lower === 'c') {
-        e.preventDefault();
-        toggleControls();
-        return;
-      }
-      if (lower === 'g') {
-        e.preventDefault();
-        toggleAllColumnControls();
-        return;
-      }
-      if (lower === 's') {
-        e.preventDefault();
-        toggleSearch();
-        return;
-      }
-      if (lower === 'a') {
-        e.preventDefault();
-        toggleAddStream();
-        return;
-      }
-      if (lower === 't') {
-        e.preventDefault();
-        cycleTheme();
-        return;
-      }
-      if (lower === 'v') {
-        e.preventDefault();
-        cycleVibe();
-      }
-    };
-
-    window.addEventListener('keydown', onKeyDown);
-    return () => {
-      window.removeEventListener('keydown', onKeyDown);
-    };
-  }, [dispatch, ui.addStreamVisible, ui.allColumnControlsHidden, ui.controlsCollapsed, ui.helpOpen, ui.menuCollapsed, ui.searchVisible, ui.vibe, ui.colorMode]);
-
   const clearSearch = () => {
     if (searchDebounceTimerRef.current != null) {
       window.clearTimeout(searchDebounceTimerRef.current);
@@ -382,158 +301,52 @@ export default function TopMenu() {
     dispatch(setSearchQuery(''));
   };
 
-  const addStream = () => {
-    if (!feedUrl.trim()) {
-      setAddStatus({ kind: 'error', message: labels.enterValue });
-      return;
-    }
-    setAddStatus({ kind: 'info', message: labels.adding });
-    const ok = sendWsMessage({
-      type: 'add_feed',
-      kind: feedType,
-      url: feedUrl.trim(),
-      label: feedLabel.trim(),
-      intervalSec: Number(feedInterval) || 120
-    });
-    if (!ok) {
-      setAddStatus({
-        kind: 'error',
-        message: labels.noServerConnection
-      });
-      return;
-    }
-    setAddStatus({ kind: 'success', message: labels.streamSubmitted });
-    setFeedUrl('');
-    setFeedLabel('');
-  };
+  const {
+    addStream,
+    toggleSearch,
+    toggleAddStream,
+    toggleControls,
+    toggleMenu,
+    toggleAllColumnControls,
+    cycleTheme,
+    cycleVibe,
+    applyAllBudget,
+    changeAiProvider,
+    requestNotificationPermission,
+    resetAllNewest,
+    deleteOldAllColumns
+  } = useTopMenuActions({
+    dispatch,
+    ui,
+    feeds,
+    isMobile,
+    labels,
+    t,
+    feedType,
+    feedUrl,
+    feedLabel,
+    feedInterval,
+    deleteAgeAll,
+    setAddStatus,
+    setFeedUrl,
+    setFeedLabel,
+    setMobileDrawerOpen,
+    scheduleFocus
+  });
 
-  const toggleSearch = () => {
-    const nextSearchVisible = !ui.searchVisible;
-    if (isMobile) {
-      setMobileDrawerOpen(true);
-    }
-    dispatch(setTopUiState({
-      menuCollapsed: false,
-      searchVisible: nextSearchVisible
-    }));
-    if (nextSearchVisible) {
-      scheduleFocus('search', isMobile ? 80 : 30);
-    }
-  };
-
-  const toggleAddStream = () => {
-    const nextAddStreamVisible = !ui.addStreamVisible;
-    if (isMobile) {
-      setMobileDrawerOpen(true);
-    }
-    dispatch(setTopUiState({
-      menuCollapsed: false,
-      addStreamVisible: nextAddStreamVisible
-    }));
-    if (nextAddStreamVisible) {
-      scheduleFocus('addStream', isMobile ? 80 : 30);
-    }
-  };
-
-  const toggleControls = () => {
-    if (isMobile) {
-      setMobileDrawerOpen(true);
-    }
-    dispatch(setTopUiState({
-      menuCollapsed: false,
-      controlsCollapsed: !ui.controlsCollapsed
-    }));
-  };
-
-  const toggleMenu = () => {
-    if (isMobile) {
-      setMobileDrawerOpen(prev => !prev);
-      return;
-    }
-    const next = !ui.menuCollapsed;
-    dispatch(setTopUiState({
-      menuCollapsed: next,
-      controlsCollapsed: next ? ui.controlsCollapsed : false
-    }));
-  };
-
-  const toggleAllColumnControls = () => {
-    dispatch(setTopUiState({ allColumnControlsHidden: !ui.allColumnControlsHidden }));
-  };
-
-  const cycleTheme = () => {
-    const order: Array<'system' | 'dark' | 'light'> = ['system', 'dark', 'light'];
-    const idx = order.indexOf(ui.colorMode);
-    dispatch(setAppearanceSettings({ colorMode: order[(idx + 1) % order.length] }));
-  };
-
-  const cycleVibe = () => {
-    const idx = VIBES.indexOf(ui.vibe);
-    dispatch(setAppearanceSettings({ vibe: VIBES[(idx + 1) % VIBES.length] }));
-  };
-
-  const cutoffFromAge = (age: 'yesterday' | 'week' | 'month' | 'year'): number => {
-    const now = Date.now();
-    if (age === 'yesterday') return now - 24 * 60 * 60 * 1000;
-    if (age === 'month') return now - 30 * 24 * 60 * 60 * 1000;
-    if (age === 'year') return now - 365 * 24 * 60 * 60 * 1000;
-    return now - 7 * 24 * 60 * 60 * 1000;
-  };
-
-  const applyAllBudget = (budget: 'low' | 'standard' | 'high') => {
-    const ok = sendWsMessage({ type: 'set_all_budget', budget });
-    if (!ok) return;
-    dispatch(setAiSettings({ allBudget: budget }));
-    feeds.forEach(feed => {
-      dispatch(setFeedBudgetSetting({ feedUrl: feed.url, budget }));
-    });
-  };
-
-  const changeAiProvider = (provider: 'openai' | 'claude' | 'openrouter') => {
-    const keyLabel = provider === 'claude'
-      ? 'ANTHROPIC_API_KEY'
-      : provider === 'openrouter'
-        ? 'OPENROUTER_API_KEY'
-        : 'OPENAI_API_KEY';
-    const promptText = t('topMenu.switchProviderPrompt', { keyLabel });
-    const apiKey = window.prompt(promptText, '');
-    if (apiKey === null) return;
-    if (!apiKey.trim()) {
-      dispatch(enqueueToast({
-        kind: 'error',
-        message: labels.providerSwitchCancelled
-      }));
-      return;
-    }
-    const ok = sendWsMessage({ type: 'set_ai_provider', provider, apiKey: apiKey.trim() });
-    if (!ok) {
-      dispatch(enqueueToast({
-        kind: 'error',
-        message: labels.noServerConnection
-      }));
-      return;
-    }
-  };
-
-  const requestNotificationPermission = async (enabled: boolean) => {
-    if (!enabled || typeof Notification === 'undefined') return;
-    try {
-      if (Notification.permission === 'default') {
-        await Notification.requestPermission();
-      }
-    } catch {}
-  };
-
-  const resetAllNewest = () => {
-    dispatch(resetAllToNewestLimit(10));
-  };
-
-  const deleteOldAllColumns = () => {
-    const cutoffMs = cutoffFromAge(deleteAgeAll);
-    feeds.forEach(feed => {
-      dispatch(removeOldItemsInFeed({ feedUrl: feed.url, cutoffMs }));
-    });
-  };
+  useTopMenuHotkeys({
+    searchVisible: ui.searchVisible,
+    onCloseHelp: () => dispatch(setHelpOpen(false)),
+    onToggleHelp: () => dispatch(setHelpOpen(!ui.helpOpen)),
+    onFocusSearch: () => scheduleFocus('search', 20),
+    onToggleMenu: toggleMenu,
+    onToggleControls: toggleControls,
+    onToggleAllColumnControls: toggleAllColumnControls,
+    onToggleSearch: toggleSearch,
+    onToggleAddStream: toggleAddStream,
+    onCycleTheme: cycleTheme,
+    onCycleVibe: cycleVibe
+  });
 
   const searchLabel = ui.searchVisible ? labels.hideSearch : labels.search;
   const addStreamLabel = ui.addStreamVisible ? labels.hideAddStream : labels.addStream;
@@ -604,7 +417,7 @@ export default function TopMenu() {
           </button>
           <label className="checkbox" title="Delete old news by age from all columns">
             <span id="deleteAgePrefix">{labels.deleteAgePrefix}</span>
-            <select id="deleteAgeSelect" className="select" value={deleteAgeAll} onChange={e => setDeleteAgeAll(e.target.value as 'yesterday' | 'week' | 'month' | 'year')}>
+            <select id="deleteAgeSelect" className="select" value={deleteAgeAll} onChange={e => setDeleteAgeAll(e.target.value as TopMenuDeleteAge)}>
               <option value="yesterday">{labels.ageYesterday}</option>
               <option value="week">{labels.agePastWeek}</option>
               <option value="month">{labels.agePastMonth}</option>
@@ -931,7 +744,7 @@ export default function TopMenu() {
                 id="vibeSelect"
                 className="select"
                 value={ui.vibe}
-                onChange={e => dispatch(setAppearanceSettings({ vibe: e.target.value as VibeValue }))}
+                onChange={e => dispatch(setAppearanceSettings({ vibe: e.target.value as TopMenuVibe }))}
               >
                 <option value="default">{labels.defaultVibe}</option>
                 <option value="anime">{labels.anime}</option>
