@@ -28,7 +28,10 @@ import { FILTERED_FEED_URL } from '../store/constants';
 
 type VibeValue = 'default' | 'anime' | 'arcade' | 'cinema' | 'newspaper' | 'cyberwitch' | 'fantasy' | 'scifi';
 type SoundThemeValue = 'vibe' | VibeValue;
+type PersistedUiPrefs = Parameters<typeof hydrateUiSettings>[0];
+
 const VIBES: VibeValue[] = ['default', 'anime', 'arcade', 'cinema', 'newspaper', 'cyberwitch', 'fantasy', 'scifi'];
+const UI_PREFS_STORAGE_KEY = 'aiNews.uiPrefs.v2';
 
 const SOUND_ROOT_FREQ: Record<VibeValue, number> = {
   default: 330,
@@ -42,6 +45,16 @@ const SOUND_ROOT_FREQ: Record<VibeValue, number> = {
 };
 
 let sharedAudioContext: AudioContext | null = null;
+
+function parsePersistedUiPrefs(raw: string): PersistedUiPrefs | null {
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return null;
+    return parsed as PersistedUiPrefs;
+  } catch {
+    return null;
+  }
+}
 
 function playSoundCue(theme: VibeValue, kind: 'toggle' | 'success' | 'error') {
   if (typeof window === 'undefined') return;
@@ -102,6 +115,55 @@ export default function TopMenu() {
   const toastTimersRef = useRef<Record<string, number>>({});
   const seenToastIdsRef = useRef<Set<string>>(new Set());
   const toasts = useAppSelector(s => s.ui.toasts);
+  const persistedUiPrefs = useMemo<PersistedUiPrefs>(() => ({
+    language: ui.language,
+    colorMode: ui.colorMode,
+    menuCollapsed: ui.menuCollapsed,
+    controlsCollapsed: ui.controlsCollapsed,
+    searchVisible: ui.searchVisible,
+    addStreamVisible: ui.addStreamVisible,
+    allColumnControlsHidden: ui.allColumnControlsHidden,
+    hideAllResearch: ui.hideAllResearch,
+    hideAllSummaries: ui.hideAllSummaries,
+    notifyEnabled: ui.notifyEnabled,
+    notifyMode: ui.notifyMode,
+    moodFilter: ui.moodFilter,
+    typeFilter: ui.typeFilter,
+    font: ui.font,
+    fontSize: ui.fontSize,
+    scheme: ui.scheme,
+    performanceMode: ui.performanceMode,
+    buttonMode: ui.buttonMode,
+    menuHintMode: ui.menuHintMode,
+    effectIntensity: ui.effectIntensity,
+    soundEnabled: ui.soundEnabled,
+    soundTheme: ui.soundTheme,
+    vibe: ui.vibe
+  }), [
+    ui.addStreamVisible,
+    ui.allColumnControlsHidden,
+    ui.buttonMode,
+    ui.colorMode,
+    ui.controlsCollapsed,
+    ui.effectIntensity,
+    ui.font,
+    ui.fontSize,
+    ui.hideAllResearch,
+    ui.hideAllSummaries,
+    ui.language,
+    ui.menuCollapsed,
+    ui.menuHintMode,
+    ui.moodFilter,
+    ui.notifyEnabled,
+    ui.notifyMode,
+    ui.performanceMode,
+    ui.scheme,
+    ui.searchVisible,
+    ui.soundEnabled,
+    ui.soundTheme,
+    ui.typeFilter,
+    ui.vibe
+  ]);
 
   const labels = {
     title: bg ? 'Поток Новини На Живо' : 'Live News Stream',
@@ -207,37 +269,10 @@ export default function TopMenu() {
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    try {
-      const raw = window.localStorage.getItem('aiNews.uiPrefs.v2');
-      if (raw) {
-        const parsed = JSON.parse(raw) as Partial<{
-          language: 'en' | 'bg';
-          colorMode: 'system' | 'dark' | 'light';
-          menuCollapsed: boolean;
-          controlsCollapsed: boolean;
-          searchVisible: boolean;
-          addStreamVisible: boolean;
-          allColumnControlsHidden: boolean;
-          hideAllResearch: boolean;
-          hideAllSummaries: boolean;
-          notifyEnabled: boolean;
-          notifyMode: 'matched' | 'matched_pinned' | 'pinned' | 'all';
-          moodFilter: 'all' | 'pesimistic' | 'optimistic' | 'realistic' | 'melancholy' | 'happiness' | 'sadness' | 'rage' | 'uncertainty' | 'neutral' | 'curios';
-          typeFilter: 'all' | 'science' | 'movies' | 'politics' | 'business' | 'technology' | 'sports' | 'health' | 'world' | 'culture' | 'environment' | 'crime' | 'education' | 'other';
-          font: 'system' | 'manrope' | 'grotesk' | 'sora' | 'plex' | 'serif' | 'mono';
-          fontSize: 'sm' | 'md' | 'lg' | 'xl';
-          scheme: 'classic' | 'vivid' | 'sunset' | 'neon' | 'ocean' | 'forest';
-          performanceMode: boolean;
-          buttonMode: 'icons' | 'text';
-          menuHintMode: 'text' | 'buttons';
-          effectIntensity: 'low' | 'medium' | 'high';
-          soundEnabled: boolean;
-          soundTheme: SoundThemeValue;
-          vibe: VibeValue;
-        }>;
-        dispatch(hydrateUiSettings(parsed));
-      }
-    } catch {}
+    const raw = window.localStorage.getItem(UI_PREFS_STORAGE_KEY);
+    if (!raw) return;
+    const parsed = parsePersistedUiPrefs(raw);
+    if (parsed) dispatch(hydrateUiSettings(parsed));
   }, [dispatch]);
 
   useEffect(() => {
@@ -260,33 +295,9 @@ export default function TopMenu() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
     try {
-      window.localStorage.setItem('aiNews.uiPrefs.v2', JSON.stringify({
-        language: ui.language,
-        colorMode: ui.colorMode,
-        menuCollapsed: ui.menuCollapsed,
-        controlsCollapsed: ui.controlsCollapsed,
-        searchVisible: ui.searchVisible,
-        addStreamVisible: ui.addStreamVisible,
-        allColumnControlsHidden: ui.allColumnControlsHidden,
-        hideAllResearch: ui.hideAllResearch,
-        hideAllSummaries: ui.hideAllSummaries,
-        notifyEnabled: ui.notifyEnabled,
-        notifyMode: ui.notifyMode,
-        moodFilter: ui.moodFilter,
-        typeFilter: ui.typeFilter,
-        font: ui.font,
-        fontSize: ui.fontSize,
-        scheme: ui.scheme,
-        performanceMode: ui.performanceMode,
-        buttonMode: ui.buttonMode,
-        menuHintMode: ui.menuHintMode,
-        effectIntensity: ui.effectIntensity,
-        soundEnabled: ui.soundEnabled,
-        soundTheme: ui.soundTheme,
-        vibe: ui.vibe
-      }));
+      window.localStorage.setItem(UI_PREFS_STORAGE_KEY, JSON.stringify(persistedUiPrefs));
     } catch {}
-  }, [ui.addStreamVisible, ui.allColumnControlsHidden, ui.buttonMode, ui.colorMode, ui.controlsCollapsed, ui.effectIntensity, ui.font, ui.fontSize, ui.hideAllResearch, ui.hideAllSummaries, ui.language, ui.menuCollapsed, ui.menuHintMode, ui.moodFilter, ui.notifyEnabled, ui.notifyMode, ui.performanceMode, ui.scheme, ui.searchVisible, ui.soundEnabled, ui.soundTheme, ui.typeFilter, ui.vibe]);
+  }, [persistedUiPrefs]);
 
   useEffect(() => {
     if (!isMobile) setMobileDrawerOpen(false);
