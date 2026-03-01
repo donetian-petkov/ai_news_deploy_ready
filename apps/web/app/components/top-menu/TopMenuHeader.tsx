@@ -12,65 +12,38 @@ import TuneIcon from '@mui/icons-material/Tune';
 import { StatusPills } from './StatusPills';
 import { QuickVibeSelect } from './QuickVibeSelect';
 import { TopMenuActionButton } from './TopMenuActionButton';
-import type { TopMenuVibe } from './topMenu.services';
+import { useTopMenuContext } from './context/TopMenuContext';
 
-type TopMenuHeaderProps = {
-  labels: Record<string, string>;
-  topHintAsButtons: boolean;
-  isMobile: boolean;
-  connected: boolean;
-  status: string;
-  totalTokens: number;
-  menuItemsAsIcons: boolean;
-  vibe: TopMenuVibe;
-  searchLabel: string;
-  addStreamLabel: string;
-  controlsLabel: string;
-  allColumnLabel: string;
-  menuLabel: string;
-  hideAllResearchLabel: string;
-  hideAllSummariesLabel: string;
-  onScrollToColumns: () => void;
-  onOpenHelp: () => void;
-  onToggleMenu: () => void;
-  onToggleSearch: () => void;
-  onToggleAddStream: () => void;
-  onToggleControls: () => void;
-  onToggleAllColumnControls: () => void;
-  onToggleHideAllResearch: () => void;
-  onToggleHideAllSummaries: () => void;
-  onChangeVibe: (nextVibe: TopMenuVibe) => void;
-  onPlayToggleSound: () => void;
-};
+export function TopMenuHeader() {
+  const {
+    labels,
+    topHintAsButtons,
+    isMobile,
+    connected,
+    status,
+    totalTokens,
+    menuItemsAsIcons,
+    vibe,
+    searchLabel,
+    addStreamLabel,
+    controlsLabel,
+    allColumnLabel,
+    menuLabel,
+    hideAllResearchLabel,
+    hideAllSummariesLabel,
+    onScrollToColumns,
+    onOpenHelp,
+    onToggleMenu,
+    onToggleSearch,
+    onToggleAddStream,
+    onToggleControls,
+    onToggleAllColumnControls,
+    onToggleHideAllResearch,
+    onToggleHideAllSummaries,
+    onChangeVibe,
+    onPlayToggleSound
+  } = useTopMenuContext();
 
-export function TopMenuHeader({
-  labels,
-  topHintAsButtons,
-  isMobile,
-  connected,
-  status,
-  totalTokens,
-  menuItemsAsIcons,
-  vibe,
-  searchLabel,
-  addStreamLabel,
-  controlsLabel,
-  allColumnLabel,
-  menuLabel,
-  hideAllResearchLabel,
-  hideAllSummariesLabel,
-  onScrollToColumns,
-  onOpenHelp,
-  onToggleMenu,
-  onToggleSearch,
-  onToggleAddStream,
-  onToggleControls,
-  onToggleAllColumnControls,
-  onToggleHideAllResearch,
-  onToggleHideAllSummaries,
-  onChangeVibe,
-  onPlayToggleSound
-}: TopMenuHeaderProps) {
   return (
     <div className="headerRow">
       <Box className="headerLeft">

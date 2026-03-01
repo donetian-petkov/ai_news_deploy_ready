@@ -9,63 +9,46 @@ import CloseIcon from '@mui/icons-material/Close';
 import SearchIcon from '@mui/icons-material/Search';
 import TuneIcon from '@mui/icons-material/Tune';
 import { QuickVibeSelect } from './QuickVibeSelect';
-import type { FeedInfo } from '../../store/types';
-import type { TopMenuVibe } from './topMenu.services';
 import { FILTERED_FEED_URL } from '../../store/constants';
+import { useTopMenuContext } from './context/TopMenuContext';
 
 type TopMenuMobileDrawerProps = {
   open: boolean;
-  labels: Record<string, string>;
-  vibe: TopMenuVibe;
-  searchLabel: string;
-  addStreamLabel: string;
-  controlsLabel: string;
-  allColumnLabel: string;
-  hideAllResearchLabel: string;
-  hideAllSummariesLabel: string;
-  orderedFeeds: FeedInfo[];
-  searchVisible: boolean;
-  addStreamVisible: boolean;
   searchSection: ReactNode;
   addStreamSection: ReactNode;
   controlsPanel: ReactNode;
   onClose: () => void;
-  onChangeVibe: (nextVibe: TopMenuVibe) => void;
-  onToggleSearch: () => void;
-  onToggleAddStream: () => void;
-  onToggleControls: () => void;
-  onToggleAllColumnControls: () => void;
-  onToggleHideAllResearch: () => void;
-  onToggleHideAllSummaries: () => void;
-  onReorderFeeds: (fromUrl: string, toUrl: string) => void;
 };
 
 export function TopMenuMobileDrawer({
   open,
-  labels,
-  vibe,
-  searchLabel,
-  addStreamLabel,
-  controlsLabel,
-  allColumnLabel,
-  hideAllResearchLabel,
-  hideAllSummariesLabel,
-  orderedFeeds,
-  searchVisible,
-  addStreamVisible,
   searchSection,
   addStreamSection,
   controlsPanel,
-  onClose,
-  onChangeVibe,
-  onToggleSearch,
-  onToggleAddStream,
-  onToggleControls,
-  onToggleAllColumnControls,
-  onToggleHideAllResearch,
-  onToggleHideAllSummaries,
-  onReorderFeeds
+  onClose
 }: TopMenuMobileDrawerProps) {
+  const {
+    labels,
+    vibe,
+    searchLabel,
+    addStreamLabel,
+    controlsLabel,
+    allColumnLabel,
+    hideAllResearchLabel,
+    hideAllSummariesLabel,
+    orderedFeeds,
+    searchVisible,
+    addStreamVisible,
+    onChangeVibe,
+    onToggleSearch,
+    onToggleAddStream,
+    onToggleControls,
+    onToggleAllColumnControls,
+    onToggleHideAllResearch,
+    onToggleHideAllSummaries,
+    onReorderFeeds
+  } = useTopMenuContext();
+
   return (
     <Drawer anchor="left" open={open} onClose={onClose} PaperProps={{ className: 'mobileDrawerPaper' }}>
       <Box className="mobileDrawerHeader">

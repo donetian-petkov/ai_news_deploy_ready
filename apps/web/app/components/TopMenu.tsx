@@ -17,6 +17,7 @@ import { ToastStack } from './top-menu/ToastStack';
 import { useTopMenuHotkeys } from './top-menu/useTopMenuHotkeys';
 import { useTopMenuActions } from './top-menu/useTopMenuActions';
 import { type TopMenuDeleteAge, type TopMenuVibe } from './top-menu/topMenu.services';
+import { TopMenuProvider } from './top-menu/context/TopMenuContext';
 import { FILTERED_FEED_URL } from '../store/constants';
 
 type SoundThemeValue = 'vibe' | TopMenuVibe;
@@ -360,6 +361,12 @@ export default function TopMenu() {
   }, [feeds, orderByUrl]);
 
   const topHintAsButtons = ui.menuHintMode === 'buttons';
+  const onOpenHelp = () => dispatch(setHelpOpen(true));
+  const onToggleHideAllResearch = () => dispatch(setHideAllResearch(!ui.hideAllResearch));
+  const onToggleHideAllSummaries = () => dispatch(setHideAllSummaries(!ui.hideAllSummaries));
+  const onChangeVibe = (nextVibe: TopMenuVibe) => dispatch(setAppearanceSettings({ vibe: nextVibe }));
+  const onPlayToggleSound = () => triggerSoundCue('toggle');
+  const onReorderFeeds = (fromUrl: string, toUrl: string) => dispatch(reorderFeeds({ fromUrl, toUrl }));
 
   const scrollToColumns = () => {
     document.querySelector('.container')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -425,7 +432,7 @@ export default function TopMenu() {
       onResetNewsShownAll={() => dispatch(triggerResetNewsShownAll())}
       onDeleteOldAllColumns={deleteOldAllColumns}
       onToggleAiEnabled={onToggleAiEnabled}
-      onOpenHelp={() => dispatch(setHelpOpen(true))}
+      onOpenHelp={onOpenHelp}
       onNotifyEnabledChange={onNotifyEnabledChange}
       onNotifyModeChange={notifyMode => dispatch(setNotifySettings({ notifyMode }))}
       onChangeAiProvider={changeAiProvider}
@@ -446,37 +453,75 @@ export default function TopMenu() {
     />
   );
 
+  const topMenuContextValue = useMemo(() => ({
+    labels,
+    topHintAsButtons,
+    isMobile,
+    connected,
+    status,
+    totalTokens,
+    menuItemsAsIcons,
+    vibe: ui.vibe,
+    searchLabel,
+    addStreamLabel,
+    controlsLabel,
+    allColumnLabel,
+    menuLabel,
+    hideAllResearchLabel: ui.hideAllResearch ? labels.showAllResearch : labels.hideAllResearch,
+    hideAllSummariesLabel: ui.hideAllSummaries ? labels.showAllSummaries : labels.hideAllSummaries,
+    orderedFeeds,
+    searchVisible: ui.searchVisible,
+    addStreamVisible: ui.addStreamVisible,
+    onScrollToColumns: scrollToColumns,
+    onOpenHelp,
+    onToggleMenu: toggleMenu,
+    onToggleSearch: toggleSearch,
+    onToggleAddStream: toggleAddStream,
+    onToggleControls: toggleControls,
+    onToggleAllColumnControls: toggleAllColumnControls,
+    onToggleHideAllResearch,
+    onToggleHideAllSummaries,
+    onChangeVibe,
+    onPlayToggleSound,
+    onReorderFeeds
+  }), [
+    addStreamLabel,
+    allColumnLabel,
+    connected,
+    controlsLabel,
+    isMobile,
+    labels,
+    menuItemsAsIcons,
+    menuLabel,
+    onChangeVibe,
+    onOpenHelp,
+    onPlayToggleSound,
+    onReorderFeeds,
+    onToggleHideAllResearch,
+    onToggleHideAllSummaries,
+    orderedFeeds,
+    searchLabel,
+    status,
+    toggleAddStream,
+    toggleAllColumnControls,
+    toggleControls,
+    toggleMenu,
+    toggleSearch,
+    topHintAsButtons,
+    totalTokens,
+    scrollToColumns,
+    ui.addStreamVisible,
+    ui.hideAllResearch,
+    ui.hideAllSummaries,
+    ui.searchVisible,
+    ui.vibe
+  ]);
+
   return (
-    <div className="topbar">
+    <TopMenuProvider value={topMenuContextValue}>
+      <div className="topbar">
       <div className="topbarInner" id="topbarInner" ref={topbarInnerRef}>
-        <TopMenuHeader
-          labels={labels}
-          topHintAsButtons={topHintAsButtons}
-          isMobile={isMobile}
-          connected={connected}
-          status={status}
-          totalTokens={totalTokens}
-          menuItemsAsIcons={menuItemsAsIcons}
-          vibe={ui.vibe}
-          searchLabel={searchLabel}
-          addStreamLabel={addStreamLabel}
-          controlsLabel={controlsLabel}
-          allColumnLabel={allColumnLabel}
-          menuLabel={menuLabel}
-          hideAllResearchLabel={ui.hideAllResearch ? labels.showAllResearch : labels.hideAllResearch}
-          hideAllSummariesLabel={ui.hideAllSummaries ? labels.showAllSummaries : labels.hideAllSummaries}
-          onScrollToColumns={scrollToColumns}
-          onOpenHelp={() => dispatch(setHelpOpen(true))}
-          onToggleMenu={toggleMenu}
-          onToggleSearch={toggleSearch}
-          onToggleAddStream={toggleAddStream}
-          onToggleControls={toggleControls}
-          onToggleAllColumnControls={toggleAllColumnControls}
-          onToggleHideAllResearch={() => dispatch(setHideAllResearch(!ui.hideAllResearch))}
-          onToggleHideAllSummaries={() => dispatch(setHideAllSummaries(!ui.hideAllSummaries))}
-          onChangeVibe={nextVibe => dispatch(setAppearanceSettings({ vibe: nextVibe }))}
-          onPlayToggleSound={() => triggerSoundCue('toggle')}
-        />
+        <TopMenuHeader />
 
         {showDesktopBody && ui.searchVisible ? searchSection : null}
         {showDesktopBody && ui.addStreamVisible ? addStreamSection : null}
@@ -486,29 +531,10 @@ export default function TopMenu() {
       {isMobile ? (
         <TopMenuMobileDrawer
           open={mobileDrawerOpen}
-          labels={labels}
-          vibe={ui.vibe}
-          searchLabel={searchLabel}
-          addStreamLabel={addStreamLabel}
-          controlsLabel={controlsLabel}
-          allColumnLabel={allColumnLabel}
-          hideAllResearchLabel={ui.hideAllResearch ? labels.showAllResearch : labels.hideAllResearch}
-          hideAllSummariesLabel={ui.hideAllSummaries ? labels.showAllSummaries : labels.hideAllSummaries}
-          orderedFeeds={orderedFeeds}
-          searchVisible={ui.searchVisible}
-          addStreamVisible={ui.addStreamVisible}
           searchSection={searchSection}
           addStreamSection={addStreamSection}
           controlsPanel={controlsPanel}
           onClose={() => setMobileDrawerOpen(false)}
-          onChangeVibe={nextVibe => dispatch(setAppearanceSettings({ vibe: nextVibe }))}
-          onToggleSearch={toggleSearch}
-          onToggleAddStream={toggleAddStream}
-          onToggleControls={toggleControls}
-          onToggleAllColumnControls={toggleAllColumnControls}
-          onToggleHideAllResearch={() => dispatch(setHideAllResearch(!ui.hideAllResearch))}
-          onToggleHideAllSummaries={() => dispatch(setHideAllSummaries(!ui.hideAllSummaries))}
-          onReorderFeeds={(fromUrl, toUrl) => dispatch(reorderFeeds({ fromUrl, toUrl }))}
         />
       ) : null}
       <HelpDialog
@@ -518,6 +544,7 @@ export default function TopMenu() {
         onClose={() => dispatch(setHelpOpen(false))}
       />
       <ToastStack toasts={toasts} onDismiss={id => dispatch(dismissToast(id))} />
-    </div>
+      </div>
+    </TopMenuProvider>
   );
 }
