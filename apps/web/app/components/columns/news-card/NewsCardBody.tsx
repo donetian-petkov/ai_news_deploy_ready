@@ -2,6 +2,7 @@
 
 import { Box, Button, Chip, CircularProgress, Typography } from '@mui/material';
 import type { NewsCardProps } from '../reactColumns.types';
+import { NEWS_CARD_COLOR_TOKENS } from '../designTokens';
 
 type Props = {
   item: NewsCardProps['item'];
@@ -57,7 +58,7 @@ export function NewsCardBody({
               sx={{
                 fontSize: `${0.96 * fontScale}rem`,
                 lineHeight: 1.52,
-                color: 'rgba(226,234,250,0.96)',
+                color: NEWS_CARD_COLOR_TOKENS.summaryText,
                 whiteSpace: 'pre-wrap',
                 fontFamily: 'var(--news-body-font-family, var(--font-family))'
               }}
@@ -84,7 +85,7 @@ export function NewsCardBody({
           label={labels.autoResearching}
           icon={<CircularProgress size={11} color="inherit" />}
           variant="outlined"
-          sx={{ mb: 0.9, color: 'rgba(152, 228, 255, 0.96)', borderColor: 'rgba(73,167,255,0.55)' }}
+          sx={{ mb: 0.9, color: NEWS_CARD_COLOR_TOKENS.autoResearchText, borderColor: NEWS_CARD_COLOR_TOKENS.autoResearchBorder }}
         />
       ) : null}
 
@@ -93,7 +94,7 @@ export function NewsCardBody({
           {researchVisible ? (
             <>
               {researchConfidence ? (
-                <Typography variant="caption" sx={{ color: 'rgba(212,220,236,0.75)', display: 'block', mb: 0.35 }}>
+                <Typography variant="caption" sx={{ color: NEWS_CARD_COLOR_TOKENS.confidenceText, display: 'block', mb: 0.35 }}>
                   {labels.confidence}: {researchConfidence}
                 </Typography>
               ) : null}
@@ -102,7 +103,7 @@ export function NewsCardBody({
                 sx={{
                   fontSize: `${0.98 * fontScale}rem`,
                   lineHeight: 1.52,
-                  color: 'rgba(205,218,238,0.93)',
+                  color: NEWS_CARD_COLOR_TOKENS.researchText,
                   whiteSpace: 'pre-wrap',
                   fontFamily: 'var(--news-body-font-family, var(--font-family))'
                 }}
@@ -125,7 +126,15 @@ export function NewsCardBody({
       ) : null}
 
       {(hasSummaryBlock || hasResearchBlock) ? (
-        <Box sx={{ mt: 1.2, pt: 0.95, borderTop: performanceMode ? '1px solid rgba(124, 150, 193, 0.22)' : '1px dashed rgba(124, 150, 193, 0.3)' }} />
+        <Box
+          sx={{
+            mt: 1.2,
+            pt: 0.95,
+            borderTop: performanceMode
+              ? `1px solid ${NEWS_CARD_COLOR_TOKENS.footerDividerSoft}`
+              : `1px dashed ${NEWS_CARD_COLOR_TOKENS.footerDividerDashed}`
+          }}
+        />
       ) : null}
     </>
   );

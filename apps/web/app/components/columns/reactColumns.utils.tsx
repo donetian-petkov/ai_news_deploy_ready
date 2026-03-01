@@ -27,6 +27,7 @@ import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import WizardHatIcon from '@mui/icons-material/AutoAwesome';
 import type { FeedInfo } from '../../store/types';
 import type { ColumnPalette, FeedFilterPreset, SchemeValue, VibeIcons, VibeValue } from './reactColumns.types';
+import { COLUMN_LAYOUT_TOKENS } from './designTokens';
 
 type Rgb = { r: number; g: number; b: number };
 type Hsl = { h: number; s: number; l: number };
@@ -210,7 +211,9 @@ export function extractConfidence(research: string): string {
 
 export function compactResearch(research: string): string {
   const normalized = String(research || '').replace(/\s+/g, ' ').trim();
-  return normalized.length > 340 ? `${normalized.slice(0, 340)}...` : normalized;
+  return normalized.length > COLUMN_LAYOUT_TOKENS.researchCollapseThreshold
+    ? `${normalized.slice(0, COLUMN_LAYOUT_TOKENS.researchCollapseThreshold)}...`
+    : normalized;
 }
 
 export function collapseText(text: string, maxChars: number): string {

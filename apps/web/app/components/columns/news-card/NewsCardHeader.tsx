@@ -6,6 +6,7 @@ import PushPinIcon from '@mui/icons-material/PushPin';
 import { Box, Button, Chip, Link as MuiLink, Stack, Tooltip, Typography } from '@mui/material';
 import type { NewsCardProps } from '../reactColumns.types';
 import { formatTime } from '../reactColumns.utils';
+import { NEWS_CARD_COLOR_TOKENS } from '../designTokens';
 
 type Props = {
   item: NewsCardProps['item'];
@@ -13,7 +14,6 @@ type Props = {
   iconOnly: boolean;
   actionSx: Record<string, unknown>;
   matchActionSx: Record<string, unknown>;
-  accent: string;
   matchAccent: string;
   fontScale: number;
   connected: boolean;
@@ -35,7 +35,6 @@ export function NewsCardHeader({
   iconOnly,
   actionSx,
   matchActionSx,
-  accent,
   matchAccent,
   fontScale,
   connected,
@@ -54,7 +53,7 @@ export function NewsCardHeader({
     <>
       <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 0.9 }}>
         <Stack direction="row" spacing={0.8} alignItems="center">
-          <Typography variant="caption" sx={{ color: 'rgba(210,219,235,0.74)' }}>
+          <Typography variant="caption" sx={{ color: NEWS_CARD_COLOR_TOKENS.headerMuted }}>
             {formatTime(item.publishedMs)}
           </Typography>
           {item.isMatch ? <Chip size="small" label={labels.match} variant="outlined" sx={{ color: matchAccent, borderColor: matchAccent, fontWeight: 800 }} /> : null}
@@ -116,7 +115,7 @@ export function NewsCardHeader({
           fontSize: `${1.12 * fontScale}rem`,
           lineHeight: 1.36,
           fontWeight: 800,
-          color: 'primary.light',
+          color: NEWS_CARD_COLOR_TOKENS.title,
           mb: 1.1,
           fontFamily: 'var(--news-title-font-family, var(--font-family))'
         }}
@@ -126,7 +125,14 @@ export function NewsCardHeader({
       </MuiLink>
 
       {hasBodyBlock ? (
-        <Box sx={{ borderTop: performanceMode ? '1px solid rgba(128, 154, 201, 0.22)' : '1px solid rgba(128, 154, 201, 0.34)', mb: 1.1 }} />
+        <Box
+          sx={{
+            borderTop: performanceMode
+              ? `1px solid ${NEWS_CARD_COLOR_TOKENS.dividerSoft}`
+              : `1px solid ${NEWS_CARD_COLOR_TOKENS.dividerStrong}`,
+            mb: 1.1
+          }}
+        />
       ) : null}
     </>
   );

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import type { MutableRefObject } from 'react';
 import type { FeedInfo } from '../../../store/types';
+import { COLUMN_LAYOUT_TOKENS } from '../designTokens';
 
 type Args = {
   renderedFeeds: FeedInfo[];
@@ -25,7 +26,7 @@ export function useColumnHydration({
     setVisibleByFeed(prev => {
       const next: Record<string, number> = {};
       renderedFeeds.forEach(feed => {
-        next[feed.url] = Math.max(10, prev[feed.url] || 10);
+        next[feed.url] = Math.max(COLUMN_LAYOUT_TOKENS.initialVisibleItems, prev[feed.url] || COLUMN_LAYOUT_TOKENS.initialVisibleItems);
       });
       return next;
     });
@@ -36,7 +37,10 @@ export function useColumnHydration({
     setVisibleByFeed(prev => {
       const next = { ...prev };
       renderedFeeds.forEach(feed => {
-        next[feed.url] = Math.max(10, (next[feed.url] || 10) + 5);
+        next[feed.url] = Math.max(
+          COLUMN_LAYOUT_TOKENS.initialVisibleItems,
+          (next[feed.url] || COLUMN_LAYOUT_TOKENS.initialVisibleItems) + COLUMN_LAYOUT_TOKENS.visibleItemsStep
+        );
       });
       return next;
     });
@@ -47,7 +51,7 @@ export function useColumnHydration({
     setVisibleByFeed(prev => {
       const next = { ...prev };
       renderedFeeds.forEach(feed => {
-        next[feed.url] = 10;
+        next[feed.url] = COLUMN_LAYOUT_TOKENS.initialVisibleItems;
       });
       return next;
     });
@@ -57,7 +61,7 @@ export function useColumnHydration({
     setHydratedColumns(prev => {
       const next = { ...prev };
       let changed = false;
-      for (let i = 0; i < Math.min(4, renderedFeeds.length); i++) {
+      for (let i = 0; i < Math.min(COLUMN_LAYOUT_TOKENS.eagerHydratedColumns, renderedFeeds.length); i++) {
         const url = renderedFeeds[i].url;
         if (!next[url]) {
           next[url] = true;
@@ -92,8 +96,8 @@ export function useColumnHydration({
       });
     }, {
       root: null,
-      rootMargin: '320px 0px',
-      threshold: 0.01
+      rootMargin: COLUMN_LAYOUT_TOKENS.intersectionRootMargin,
+      threshold: COLUMN_LAYOUT_TOKENS.intersectionThreshold
     });
 
     renderedFeeds.forEach(feed => {

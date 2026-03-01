@@ -5,6 +5,7 @@ import type { FeedInfo, NewsItem } from '../../../store/types';
 import type { BodyMode, FeedAskState, FeedColumnHandlers, FeedColumnStateModel, FeedColumnViewModel } from '../reactColumns.types';
 import { collapseText, compactResearch, extractConfidence } from '../reactColumns.utils';
 import { NewsCard } from '../NewsCard';
+import { COLUMN_COLOR_TOKENS, COLUMN_LAYOUT_TOKENS } from '../designTokens';
 
 type Props = {
   feed: FeedInfo;
@@ -121,8 +122,8 @@ export function FeedColumnItemsList({
   if (!isHydrated) {
     return (
       <Stack spacing={1.2} sx={{ py: 0.6 }}>
-        <Skeleton variant="rounded" height={80} sx={{ bgcolor: 'rgba(120,140,180,0.14)' }} />
-        <Skeleton variant="rounded" height={80} sx={{ bgcolor: 'rgba(120,140,180,0.14)' }} />
+        <Skeleton variant="rounded" height={80} sx={{ bgcolor: COLUMN_COLOR_TOKENS.skeletonBg }} />
+        <Skeleton variant="rounded" height={80} sx={{ bgcolor: COLUMN_COLOR_TOKENS.skeletonBg }} />
         <Alert severity="info" variant="outlined">Loading column...</Alert>
       </Stack>
     );
@@ -147,12 +148,12 @@ export function FeedColumnItemsList({
         const summaryResearchHidden = hideAllResearch || bodyModes[researchKey] === 'hidden';
         const savedSummaryMode = bodyModes[summaryKey];
         const summaryMode = summaryResearchHidden && savedSummaryMode === 'hidden'
-          ? getDefaultBodyMode(it.summary || '', 260)
-          : getBodyMode(summaryKey, it.summary || '', 260);
-        const summaryLong = String(it.summary || '').trim().length > 260;
-        const summaryText = summaryMode === 'collapsed' ? collapseText(it.summary || '', 260) : String(it.summary || '');
-        const researchMode = getBodyMode(researchKey, it.research || '', 340);
-        const researchLong = String(it.research || '').trim().length > 340;
+          ? getDefaultBodyMode(it.summary || '', COLUMN_LAYOUT_TOKENS.summaryCollapseThreshold)
+          : getBodyMode(summaryKey, it.summary || '', COLUMN_LAYOUT_TOKENS.summaryCollapseThreshold);
+        const summaryLong = String(it.summary || '').trim().length > COLUMN_LAYOUT_TOKENS.summaryCollapseThreshold;
+        const summaryText = summaryMode === 'collapsed' ? collapseText(it.summary || '', COLUMN_LAYOUT_TOKENS.summaryCollapseThreshold) : String(it.summary || '');
+        const researchMode = getBodyMode(researchKey, it.research || '', COLUMN_LAYOUT_TOKENS.researchCollapseThreshold);
+        const researchLong = String(it.research || '').trim().length > COLUMN_LAYOUT_TOKENS.researchCollapseThreshold;
         const researchText = researchMode === 'collapsed' ? compactResearch(it.research || '') : String(it.research || '');
         const researchConfidence = extractConfidence(it.research || '');
         return (
@@ -207,7 +208,7 @@ export function FeedColumnItemsList({
           {labels.showFiveMore}
         </Button>
       ) : null}
-      {itemsVisible.length > 10 && shownItems.length > 10 ? (
+      {itemsVisible.length > COLUMN_LAYOUT_TOKENS.initialVisibleItems && shownItems.length > COLUMN_LAYOUT_TOKENS.initialVisibleItems ? (
         <Button
           size="small"
           variant="outlined"

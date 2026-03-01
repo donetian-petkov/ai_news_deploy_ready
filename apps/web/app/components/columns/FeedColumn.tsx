@@ -10,6 +10,7 @@ import { FILTERED_FEED_URL } from '../../store/constants';
 import type { FeedColumnHandlers, FeedColumnStateModel, FeedColumnViewModel } from './reactColumns.types';
 import { FeedColumnControlsPanel } from './feed-column/FeedColumnControlsPanel';
 import { FeedColumnItemsList } from './feed-column/FeedColumnItemsList';
+import { COLUMN_COLOR_TOKENS, COLUMN_LAYOUT_TOKENS, COLUMN_STYLE_TOKENS } from './designTokens';
 
 type DragState = {
   canDrag: boolean;
@@ -83,7 +84,7 @@ export function FeedColumn({
     })
     : typeFilteredItems;
 
-  const visibleLimit = Math.max(10, visibleByFeed[feed.url] || 10);
+  const visibleLimit = Math.max(COLUMN_LAYOUT_TOKENS.initialVisibleItems, visibleByFeed[feed.url] || COLUMN_LAYOUT_TOKENS.initialVisibleItems);
   const shownItems = itemsVisible.slice(0, visibleLimit);
   const isHydrated = !!hydratedColumns[feed.url];
   const pinned = !!pinnedByUrl[feed.url];
@@ -114,57 +115,59 @@ export function FeedColumn({
           position: 'relative',
           overflow: 'hidden',
           background: performanceMode
-            ? (isMatchColumn ? 'rgba(28, 20, 7, 0.98)' : 'rgba(8, 14, 29, 0.98)')
+            ? (isMatchColumn ? COLUMN_COLOR_TOKENS.perfBackgroundMatch : COLUMN_COLOR_TOKENS.perfBackgroundDefault)
             : (isMatchColumn
-              ? `linear-gradient(180deg, ${palette.mSoft}, rgba(34, 20, 7, 0.95) 74%, rgba(10, 14, 28, 0.98) 100%), var(--column-shell-overlay)`
-              : `linear-gradient(180deg, ${soft}, rgba(9, 15, 30, 0.96) 78%), var(--column-shell-overlay)`),
+              ? `linear-gradient(180deg, ${palette.mSoft}, ${COLUMN_COLOR_TOKENS.gradientMatchMid} 74%, ${COLUMN_COLOR_TOKENS.gradientMatchEnd} 100%), var(--column-shell-overlay)`
+              : `linear-gradient(180deg, ${soft}, ${COLUMN_COLOR_TOKENS.gradientDefaultEnd} 78%), var(--column-shell-overlay)`),
           borderColor: drag.isDropTarget
             ? accent
-            : (drag.isDragging ? accent : (isMatchColumn ? `${palette.m}` : 'rgba(97, 123, 161, 0.42)')),
-          borderTop: `4px solid ${isMatchColumn ? palette.m : accent}`,
+            : (drag.isDragging ? accent : (isMatchColumn ? `${palette.m}` : COLUMN_COLOR_TOKENS.borderNeutral)),
+          borderTop: `${COLUMN_STYLE_TOKENS.columnBorderTopWidthPx}px solid ${isMatchColumn ? palette.m : accent}`,
           boxShadow: performanceMode
-            ? (drag.isDropTarget ? `0 0 0 1px ${accent}` : 'none')
+            ? (drag.isDropTarget ? `0 0 0 ${COLUMN_STYLE_TOKENS.columnDropOutlineWidthPx}px ${accent}` : 'none')
             : (drag.isDropTarget
-              ? `0 0 0 2px ${accent}66, 0 18px 34px rgba(0,0,0,0.30)`
+              ? `0 0 0 ${COLUMN_STYLE_TOKENS.columnDropOutlineStrongWidthPx}px ${accent}66, ${COLUMN_STYLE_TOKENS.columnDropShadowOffset} ${COLUMN_COLOR_TOKENS.shadowDropColor}`
               : (isMatchColumn
-                ? '0 12px 26px rgba(0,0,0,0.30), inset 0 0 0 1px rgba(255,180,62,0.12)'
-                : '0 10px 22px rgba(0,0,0,0.22)')),
-          borderRadius: 'var(--column-radius, 16px)',
-          color: 'rgba(234, 242, 255, 0.96)',
-          opacity: drag.isDragging ? 0.45 : 1,
-          transform: drag.isDragging ? 'scale(0.985)' : (drag.isDropTarget ? 'translateY(-4px)' : 'translateY(0)'),
-          transition: performanceMode ? 'none' : 'transform 130ms ease, box-shadow 130ms ease, opacity 130ms ease, border-color 130ms ease',
+                ? `${COLUMN_STYLE_TOKENS.columnMatchShadowOffset} ${COLUMN_COLOR_TOKENS.shadowDropColor}, inset 0 0 0 ${COLUMN_STYLE_TOKENS.columnDropOutlineWidthPx}px ${COLUMN_COLOR_TOKENS.shadowMatchInset}`
+                : `${COLUMN_STYLE_TOKENS.columnDefaultShadowOffset} ${COLUMN_COLOR_TOKENS.shadowDefaultColor}`)),
+          borderRadius: COLUMN_STYLE_TOKENS.columnRadius,
+          color: COLUMN_COLOR_TOKENS.textMain,
+          opacity: drag.isDragging ? COLUMN_STYLE_TOKENS.columnDragOpacity : 1,
+          transform: drag.isDragging ? `scale(${COLUMN_STYLE_TOKENS.columnDragScale})` : (drag.isDropTarget ? `translateY(${COLUMN_STYLE_TOKENS.columnDropTranslateYPx}px)` : 'translateY(0)'),
+          transition: performanceMode
+            ? 'none'
+            : `transform ${COLUMN_LAYOUT_TOKENS.transitionMs}ms ${COLUMN_STYLE_TOKENS.transitionEasing}, box-shadow ${COLUMN_LAYOUT_TOKENS.transitionMs}ms ${COLUMN_STYLE_TOKENS.transitionEasing}, opacity ${COLUMN_LAYOUT_TOKENS.transitionMs}ms ${COLUMN_STYLE_TOKENS.transitionEasing}, border-color ${COLUMN_LAYOUT_TOKENS.transitionMs}ms ${COLUMN_STYLE_TOKENS.transitionEasing}`,
           cursor: drag.canDrag ? (drag.isDragging ? 'grabbing' : 'grab') : 'default'
         }}
       >
-        <CardContent sx={{ pb: '12px !important', px: 2.2 }}>
-          <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.25 }}>
+        <CardContent sx={{ pb: COLUMN_LAYOUT_TOKENS.cardContentPaddingBottom, px: COLUMN_LAYOUT_TOKENS.cardContentPaddingX }}>
+          <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: COLUMN_LAYOUT_TOKENS.columnHeaderMarginBottom }}>
             <Typography
               variant="h6"
               sx={{
-                fontSize: `${18 * fontScale}px`,
+                fontSize: `${COLUMN_LAYOUT_TOKENS.columnTitleFontSizePx * fontScale}px`,
                 fontWeight: 800,
-                lineHeight: 1.2,
+                lineHeight: COLUMN_LAYOUT_TOKENS.columnTitleLineHeight,
                 pr: 1,
-                pl: 0.3,
-                color: 'rgba(232,243,255,0.97)',
+                pl: COLUMN_LAYOUT_TOKENS.columnTitlePaddingLeft,
+                color: COLUMN_COLOR_TOKENS.textTitle,
                 fontFamily: 'var(--news-title-font-family, var(--font-family))'
               }}
             >
               {feed.label}
             </Typography>
             <Stack direction="row" spacing={1} alignItems="center">
-              <Chip size="small" label={itemsVisible.length} sx={{ color: 'rgba(231,242,255,0.96)', bgcolor: 'rgba(79, 114, 168, 0.24)', borderColor: accent }} />
+              <Chip size="small" label={itemsVisible.length} sx={{ color: COLUMN_COLOR_TOKENS.textChip, bgcolor: COLUMN_COLOR_TOKENS.chipBg, borderColor: accent }} />
               <Chip
                 size="small"
                 variant="outlined"
                 icon={feed.kind === 'youtube' ? <SmartDisplayIcon /> : feed.kind === 'reddit' ? <RedditIcon /> : <RssFeedIcon />}
                 label=""
                 sx={{
-                  color: 'rgba(231,242,255,0.96)',
+                  color: COLUMN_COLOR_TOKENS.textChip,
                   borderColor: accent,
                   '& .MuiChip-label': { px: 0.2 },
-                  '& .MuiChip-icon': { color: 'rgba(231,242,255,0.96)', ml: 0.5, mr: 0.1, fontSize: 16 }
+                  '& .MuiChip-icon': { color: COLUMN_COLOR_TOKENS.textChip, ml: 0.5, mr: 0.1, fontSize: COLUMN_LAYOUT_TOKENS.streamTypeIconFontSizePx }
                 }}
               />
             </Stack>

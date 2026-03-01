@@ -4,6 +4,7 @@ import type { ElementType } from 'react';
 import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
 import { Button, Chip, Stack, Tooltip } from '@mui/material';
 import type { NewsCardProps } from '../reactColumns.types';
+import { NEWS_CARD_COLOR_TOKENS } from '../designTokens';
 
 type Props = {
   item: NewsCardProps['item'];
@@ -12,7 +13,6 @@ type Props = {
   iconOnly: boolean;
   actionSx: Record<string, unknown>;
   matchActionSx: Record<string, unknown>;
-  accent: string;
   aiAvailable: boolean;
   connected: boolean;
   summaryPending: boolean;
@@ -125,7 +125,12 @@ export function NewsCardActions({
           </Tooltip>
         </>
       ) : (
-        <Chip size="small" variant="outlined" label={labels.aiUnavailable} sx={{ color: 'rgba(199,214,238,0.88)', borderColor: 'rgba(122,149,194,0.44)' }} />
+        <Chip
+          size="small"
+          variant="outlined"
+          label={labels.aiUnavailable}
+          sx={{ color: NEWS_CARD_COLOR_TOKENS.aiUnavailableText, borderColor: NEWS_CARD_COLOR_TOKENS.aiUnavailableBorder }}
+        />
       )}
       {hasSummaryBlock ? (
         <Tooltip title={summaryVisible ? labels.hideSummary : labels.showSummary}>

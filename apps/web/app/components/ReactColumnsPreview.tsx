@@ -43,6 +43,7 @@ import { useDesktopNewsNotifications } from './columns/hooks/useDesktopNewsNotif
 import { useAllColumnControlsSync } from './columns/hooks/useAllColumnControlsSync';
 import { useColumnHydration } from './columns/hooks/useColumnHydration';
 import { FeedColumnsGrid } from './columns/FeedColumnsGrid';
+import { COLUMN_LAYOUT_TOKENS } from './columns/designTokens';
 
 type Props = {
   wsUrl: string;
@@ -222,7 +223,7 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
     pendingTimeoutsRef.current[it.id] = window.setTimeout(() => {
       dispatch(clearSummaryPending(it.id));
       delete pendingTimeoutsRef.current[it.id];
-    }, 30000);
+    }, COLUMN_LAYOUT_TOKENS.summaryPendingTimeoutMs);
 
     const ok = sendWsMessage({
       type: 'run_summary_item',
@@ -244,7 +245,7 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
     researchTimeoutsRef.current[it.id] = window.setTimeout(() => {
       dispatch(clearResearchPending(it.id));
       delete researchTimeoutsRef.current[it.id];
-    }, 45000);
+    }, COLUMN_LAYOUT_TOKENS.researchPendingTimeoutMs);
 
     const ok = sendWsMessage({
       type: 'run_research_item',
@@ -318,7 +319,7 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
     if (!connected) return;
     const k = askKey(it);
     const askState = askByItem[k] || { used: 0, remaining: 5, draft: '', pending: false };
-    const question = String(askState.draft || '').trim().slice(0, 400);
+    const question = String(askState.draft || '').trim().slice(0, COLUMN_LAYOUT_TOKENS.askQuestionMaxLength);
     if (!question || askState.pending || askState.remaining <= 0) return;
 
     const usedBefore = askState.used;
@@ -366,7 +367,7 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
 
   const setFeedInterval = (feed: FeedInfo, intervalSec: number) => {
     if (!connected) return;
-    const next = Math.max(20, Math.min(3600, Math.floor(intervalSec)));
+    const next = Math.max(COLUMN_LAYOUT_TOKENS.minFeedIntervalSec, Math.min(COLUMN_LAYOUT_TOKENS.maxFeedIntervalSec, Math.floor(intervalSec)));
     const ok = sendWsMessage({ type: 'set_feed_interval', feedUrl: feed.url, intervalSec: next });
     if (ok) dispatch(setFeedIntervalSetting({ feedUrl: feed.url, intervalSec: next }));
   };
@@ -411,21 +412,21 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
   const palette = useMemo(() => buildColumnPalette(resolvedVibe, resolvedScheme), [resolvedVibe, resolvedScheme]);
   const vibeIcons = useMemo(() => getVibeIcons(resolvedVibe), [resolvedVibe]);
   const compactBtnSx = useMemo(() => ({
-    minHeight: 34,
+    minHeight: COLUMN_LAYOUT_TOKENS.compactControlHeight,
     px: 1.2,
     py: 0.18,
     fontSize: `${0.82 * fontScale}rem`,
     lineHeight: 1.15,
-    borderRadius: performanceMode ? 1.2 : 999,
+    borderRadius: performanceMode ? COLUMN_LAYOUT_TOKENS.compactControlRadiusPerformance : COLUMN_LAYOUT_TOKENS.compactControlRadius,
     whiteSpace: 'nowrap'
   }), [fontScale, performanceMode]);
   const compactFormSx = useMemo(() => ({
     '& .MuiOutlinedInput-root': {
-      height: 34,
+      height: COLUMN_LAYOUT_TOKENS.compactControlHeight,
       fontSize: `${0.82 * fontScale}rem`,
       background: performanceMode ? 'rgba(10,16,29,0.98)' : 'rgba(12,20,38,0.92)',
       color: 'rgba(231,240,255,0.96)',
-      borderRadius: performanceMode ? 1.2 : 999
+      borderRadius: performanceMode ? COLUMN_LAYOUT_TOKENS.compactControlRadiusPerformance : COLUMN_LAYOUT_TOKENS.compactControlRadius
     },
     '& .MuiOutlinedInput-notchedOutline': {
       borderColor: 'rgba(122,149,194,0.44)'

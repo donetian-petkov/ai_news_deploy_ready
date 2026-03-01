@@ -3,6 +3,7 @@
 import { memo } from 'react';
 import { Card, CardContent } from '@mui/material';
 import type { NewsCardProps } from './reactColumns.types';
+import { COLUMN_LAYOUT_TOKENS, COLUMN_STYLE_TOKENS, NEWS_CARD_COLOR_TOKENS } from './designTokens';
 import { NewsCardActions } from './news-card/NewsCardActions';
 import { NewsCardAskPanel } from './news-card/NewsCardAskPanel';
 import { NewsCardBody } from './news-card/NewsCardBody';
@@ -63,9 +64,9 @@ export const NewsCard = memo(function NewsCard({
 
   const actionSx = {
     ...compactBtnSx,
-    minWidth: iconOnly ? 36 : 86,
-    px: iconOnly ? 0.85 : 1.2,
-    borderRadius: performanceMode ? 1.2 : 999,
+    minWidth: iconOnly ? COLUMN_LAYOUT_TOKENS.newsCardActionMinWidthIcon : COLUMN_LAYOUT_TOKENS.newsCardActionMinWidthText,
+    px: iconOnly ? COLUMN_LAYOUT_TOKENS.newsCardActionPaddingXIcon : COLUMN_LAYOUT_TOKENS.newsCardActionPaddingXText,
+    borderRadius: performanceMode ? COLUMN_LAYOUT_TOKENS.compactControlRadiusPerformance : COLUMN_LAYOUT_TOKENS.compactControlRadius,
     color: accent,
     borderColor: accent,
     '&:hover': {
@@ -73,7 +74,7 @@ export const NewsCard = memo(function NewsCard({
       backgroundColor: soft
     },
     '&.MuiButton-contained': {
-      color: 'rgba(230, 239, 255, 0.98)',
+      color: NEWS_CARD_COLOR_TOKENS.actionContainedText,
       border: `1px solid ${accent}`,
       backgroundColor: soft
     }
@@ -85,12 +86,12 @@ export const NewsCard = memo(function NewsCard({
     borderColor: matchAccent,
     '&:hover': {
       borderColor: matchAccent,
-      backgroundColor: 'rgba(255, 168, 42, 0.16)'
+      backgroundColor: NEWS_CARD_COLOR_TOKENS.matchHoverBg
     },
     '&.MuiButton-contained': {
-      color: 'rgba(255, 226, 179, 0.98)',
+      color: NEWS_CARD_COLOR_TOKENS.matchContainedText,
       border: `1px solid ${matchAccent}`,
-      backgroundColor: 'rgba(255, 168, 42, 0.2)'
+      backgroundColor: NEWS_CARD_COLOR_TOKENS.matchContainedBg
     }
   };
 
@@ -105,24 +106,23 @@ export const NewsCard = memo(function NewsCard({
         position: 'relative',
         overflow: 'hidden',
         background: performanceMode
-          ? 'rgba(8, 14, 29, 0.98)'
-          : `linear-gradient(155deg, rgba(5, 12, 25, 0.92), rgba(7, 14, 28, 0.86)), radial-gradient(550px 180px at 0% 0%, ${soft}, transparent 72%), var(--news-card-overlay)`,
+          ? NEWS_CARD_COLOR_TOKENS.perfBackground
+          : `linear-gradient(155deg, ${NEWS_CARD_COLOR_TOKENS.gradientStart}, ${NEWS_CARD_COLOR_TOKENS.gradientEnd}), radial-gradient(550px 180px at 0% 0%, ${soft}, transparent 72%), var(--news-card-overlay)`,
         borderColor: item.isMatch ? matchAccent : `${accent}88`,
-        color: 'rgba(234, 242, 255, 0.96)',
+        color: NEWS_CARD_COLOR_TOKENS.textMain,
         contentVisibility: 'auto',
-        containIntrinsicSize: '360px',
-        borderRadius: 'var(--news-card-radius, 14px)',
-        boxShadow: performanceMode ? 'none' : '0 10px 20px rgba(0,0,0,0.24), inset 0 1px 0 rgba(255,255,255,0.03)'
+        containIntrinsicSize: `${COLUMN_LAYOUT_TOKENS.newsCardIntrinsicHeightPx}px`,
+        borderRadius: COLUMN_STYLE_TOKENS.newsCardRadius,
+        boxShadow: performanceMode ? 'none' : `${COLUMN_STYLE_TOKENS.newsCardShadowOffset} ${NEWS_CARD_COLOR_TOKENS.shadowColor}, inset 0 1px 0 ${NEWS_CARD_COLOR_TOKENS.insetHighlight}`
       }}
     >
-      <CardContent sx={{ pb: '12px !important' }}>
+      <CardContent sx={{ pb: COLUMN_LAYOUT_TOKENS.cardContentPaddingBottom }}>
         <NewsCardHeader
           item={item}
           labels={labels}
           iconOnly={iconOnly}
           actionSx={actionSx}
           matchActionSx={matchActionSx}
-          accent={accent}
           matchAccent={matchAccent}
           fontScale={fontScale}
           connected={connected}
@@ -165,7 +165,6 @@ export const NewsCard = memo(function NewsCard({
           iconOnly={iconOnly}
           actionSx={actionSx}
           matchActionSx={matchActionSx}
-          accent={accent}
           aiAvailable={aiAvailable}
           connected={connected}
           summaryPending={summaryPending}
