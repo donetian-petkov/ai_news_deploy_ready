@@ -109,6 +109,10 @@ export function FeedColumn({ feed, columnIdx, drag }: FeedColumnProps) {
           <span className="cornerTR" />
           <span className="cornerBL" />
           <span className="cornerBR" />
+          <span className="glyphTL" />
+          <span className="glyphTR" />
+          <span className="glyphBL" />
+          <span className="glyphBR" />
         </div>
         <CardContent sx={{ pb: COLUMN_LAYOUT_TOKENS.cardContentPaddingBottom, px: COLUMN_LAYOUT_TOKENS.cardContentPaddingX }}>
           <FeedColumnHeader feed={feed} itemsCount={itemsVisible.length} accent={accent} fontScale={fontScale} />

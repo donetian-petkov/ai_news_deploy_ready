@@ -6,6 +6,7 @@
   --orn-top: url('/ornaments/default/top.svg');
   --orn-bottom: url('/ornaments/default/bottom.svg');
   --orn-corner: url('/ornaments/default/corner.svg');
+  --orn-glyph: url('/ornaments/default/glyph.svg');
   --orn-accent: rgba(126, 182, 255, 0.9);
   --orn-accent-soft: rgba(126, 182, 255, 0.28);
 
@@ -83,20 +84,22 @@ body .news-item-card .MuiCardContent-root {
 
 .columnOrnamentLayer .frameTop,
 .cardOrnamentLayer .frameTop {
-  top: 4px;
-  left: 18px;
-  right: 18px;
-  height: 20px;
+  top: 1px;
+  left: 22px;
+  right: 22px;
+  height: 10px;
   background-image: var(--orn-top);
+  opacity: 0.9;
 }
 
 .columnOrnamentLayer .frameBottom,
 .cardOrnamentLayer .frameBottom {
-  bottom: 4px;
-  left: 18px;
-  right: 18px;
-  height: 20px;
+  bottom: 0;
+  left: 22px;
+  right: 22px;
+  height: 10px;
   background-image: var(--orn-bottom);
+  opacity: 0.9;
 }
 
 .columnOrnamentLayer .cornerTL,
@@ -107,36 +110,80 @@ body .news-item-card .MuiCardContent-root {
 .cardOrnamentLayer .cornerTR,
 .cardOrnamentLayer .cornerBL,
 .cardOrnamentLayer .cornerBR {
-  width: 28px;
-  height: 28px;
+  width: 22px;
+  height: 22px;
   background-image: var(--orn-corner);
+  opacity: 0.88;
 }
 
 .columnOrnamentLayer .cornerTL,
 .cardOrnamentLayer .cornerTL {
-  top: 2px;
-  left: 2px;
+  top: 3px;
+  left: 3px;
 }
 
 .columnOrnamentLayer .cornerTR,
 .cardOrnamentLayer .cornerTR {
-  top: 2px;
-  right: 2px;
+  top: 3px;
+  right: 3px;
   transform: scaleX(-1);
 }
 
 .columnOrnamentLayer .cornerBL,
 .cardOrnamentLayer .cornerBL {
-  bottom: 2px;
-  left: 2px;
+  bottom: 3px;
+  left: 3px;
   transform: scaleY(-1);
 }
 
 .columnOrnamentLayer .cornerBR,
 .cardOrnamentLayer .cornerBR {
-  bottom: 2px;
-  right: 2px;
+  bottom: 3px;
+  right: 3px;
   transform: scale(-1);
+}
+
+.columnOrnamentLayer .glyphTL,
+.columnOrnamentLayer .glyphTR,
+.columnOrnamentLayer .glyphBL,
+.columnOrnamentLayer .glyphBR,
+.cardOrnamentLayer .glyphTL,
+.cardOrnamentLayer .glyphTR,
+.cardOrnamentLayer .glyphBL,
+.cardOrnamentLayer .glyphBR {
+  position: absolute;
+  display: block;
+  width: 12px;
+  height: 12px;
+  background-image: var(--orn-glyph);
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: contain;
+  opacity: 0.9;
+}
+
+.columnOrnamentLayer .glyphTL,
+.cardOrnamentLayer .glyphTL {
+  top: 8px;
+  left: 8px;
+}
+
+.columnOrnamentLayer .glyphTR,
+.cardOrnamentLayer .glyphTR {
+  top: 8px;
+  right: 8px;
+}
+
+.columnOrnamentLayer .glyphBL,
+.cardOrnamentLayer .glyphBL {
+  bottom: 8px;
+  left: 8px;
+}
+
+.columnOrnamentLayer .glyphBR,
+.cardOrnamentLayer .glyphBR {
+  bottom: 8px;
+  right: 8px;
 }
 
 .feed-column-shell::after,
@@ -160,6 +207,7 @@ body[data-vibe='anime'] {
   --orn-top: url('/ornaments/anime/top.svg');
   --orn-bottom: url('/ornaments/anime/bottom.svg');
   --orn-corner: url('/ornaments/anime/corner.svg');
+  --orn-glyph: url('/ornaments/anime/glyph.svg');
   --orn-accent: rgba(255, 120, 216, 0.95);
   --orn-accent-soft: rgba(119, 232, 255, 0.28);
   --column-shape-radius: 20px;
@@ -173,6 +221,7 @@ body[data-vibe='arcade'] {
   --orn-top: url('/ornaments/arcade/top.svg');
   --orn-bottom: url('/ornaments/arcade/bottom.svg');
   --orn-corner: url('/ornaments/arcade/corner.svg');
+  --orn-glyph: url('/ornaments/arcade/glyph.svg');
   --orn-accent: rgba(91, 252, 255, 0.96);
   --orn-accent-soft: rgba(255, 95, 243, 0.24);
   --column-shape-radius: 6px;
@@ -186,6 +235,7 @@ body[data-vibe='cinema'] {
   --orn-top: url('/ornaments/cinema/top.svg');
   --orn-bottom: url('/ornaments/cinema/bottom.svg');
   --orn-corner: url('/ornaments/cinema/corner.svg');
+  --orn-glyph: url('/ornaments/cinema/glyph.svg');
   --orn-accent: rgba(242, 195, 122, 0.96);
   --orn-accent-soft: rgba(240, 123, 176, 0.22);
   --column-shape-radius: 12px;
@@ -199,6 +249,7 @@ body[data-vibe='newspaper'] {
   --orn-top: url('/ornaments/newspaper/top.svg');
   --orn-bottom: url('/ornaments/newspaper/bottom.svg');
   --orn-corner: url('/ornaments/newspaper/corner.svg');
+  --orn-glyph: url('/ornaments/newspaper/glyph.svg');
   --orn-accent: rgba(210, 223, 236, 0.95);
   --orn-accent-soft: rgba(156, 168, 183, 0.18);
   --column-shape-radius: 4px;
@@ -212,6 +263,7 @@ body[data-vibe='cyberwitch'] {
   --orn-top: url('/ornaments/cyberwitch/top.svg');
   --orn-bottom: url('/ornaments/cyberwitch/bottom.svg');
   --orn-corner: url('/ornaments/cyberwitch/corner.svg');
+  --orn-glyph: url('/ornaments/cyberwitch/glyph.svg');
   --orn-accent: rgba(99, 221, 255, 0.96);
   --orn-accent-soft: rgba(199, 118, 255, 0.24);
   --column-shape-radius: 16px;
@@ -225,6 +277,7 @@ body[data-vibe='fantasy'] {
   --orn-top: url('/ornaments/fantasy/top.svg');
   --orn-bottom: url('/ornaments/fantasy/bottom.svg');
   --orn-corner: url('/ornaments/fantasy/corner.svg');
+  --orn-glyph: url('/ornaments/fantasy/glyph.svg');
   --orn-accent: rgba(232, 194, 114, 0.95);
   --orn-accent-soft: rgba(128, 228, 182, 0.24);
   --column-shape-radius: 11px;
@@ -238,6 +291,7 @@ body[data-vibe='scifi'] {
   --orn-top: url('/ornaments/scifi/top.svg');
   --orn-bottom: url('/ornaments/scifi/bottom.svg');
   --orn-corner: url('/ornaments/scifi/corner.svg');
+  --orn-glyph: url('/ornaments/scifi/glyph.svg');
   --orn-accent: rgba(116, 229, 255, 0.98);
   --orn-accent-soft: rgba(137, 152, 255, 0.24);
   --column-shape-radius: 8px;

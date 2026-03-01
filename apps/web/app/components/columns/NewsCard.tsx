@@ -109,6 +109,10 @@ export const NewsCard = memo(function NewsCard({ view, state, handlers }: NewsCa
           <span className="cornerTR" />
           <span className="cornerBL" />
           <span className="cornerBR" />
+          <span className="glyphTL" />
+          <span className="glyphTR" />
+          <span className="glyphBL" />
+          <span className="glyphBR" />
         </div>
         <CardContent sx={{ pb: COLUMN_LAYOUT_TOKENS.cardContentPaddingBottom }}>
           <NewsCardHeader />
