@@ -17,7 +17,7 @@ import { ToastStack } from './top-menu/ToastStack';
 import { useTopMenuHotkeys } from './top-menu/useTopMenuHotkeys';
 import { useTopMenuActions } from './top-menu/useTopMenuActions';
 import { type TopMenuDeleteAge, type TopMenuVibe } from './top-menu/topMenu.services';
-import { TopMenuProvider } from './top-menu/context/TopMenuContext';
+import { TopMenuProvider } from './top-menu/context/TopMenuProvider';
 import { FILTERED_FEED_URL } from '../store/constants';
 
 type SoundThemeValue = 'vibe' | TopMenuVibe;

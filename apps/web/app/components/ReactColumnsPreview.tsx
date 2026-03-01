@@ -42,7 +42,7 @@ import { useFeedUiPersistence } from './columns/hooks/useFeedUiPersistence';
 import { useDesktopNewsNotifications } from './columns/hooks/useDesktopNewsNotifications';
 import { useAllColumnControlsSync } from './columns/hooks/useAllColumnControlsSync';
 import { useColumnHydration } from './columns/hooks/useColumnHydration';
-import { FeedColumnsProvider } from './columns/context/FeedColumnsContext';
+import { FeedColumnsProvider } from './columns/context/FeedColumnsProvider';
 import { FeedColumnsGrid } from './columns/FeedColumnsGrid';
 import { COLUMN_LAYOUT_TOKENS } from './columns/designTokens';
 

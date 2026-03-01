@@ -1,6 +1,6 @@
 'use client';
 
-import type { DragEvent, PropsWithChildren } from 'react';
+import type { DragEvent } from 'react';
 import { createContext, useContext } from 'react';
 import type { FeedInfo } from '../../../store/types';
 import type {
@@ -10,7 +10,7 @@ import type {
   FeedColumnViewModel
 } from '../reactColumns.types';
 
-type FeedColumnsContextValue = {
+export type FeedColumnsContextValue = {
   view: FeedColumnViewModel;
   state: FeedColumnStateModel;
   handlers: FeedColumnHandlers;
@@ -19,19 +19,7 @@ type FeedColumnsContextValue = {
   buildDragState: (feed: FeedInfo, canDrag: boolean) => FeedColumnDragState;
 };
 
-const FeedColumnsContext = createContext<FeedColumnsContextValue | null>(null);
-
-type FeedColumnsProviderProps = PropsWithChildren<{
-  value: FeedColumnsContextValue;
-}>;
-
-export function FeedColumnsProvider({ value, children }: FeedColumnsProviderProps) {
-  return (
-    <FeedColumnsContext.Provider value={value}>
-      {children}
-    </FeedColumnsContext.Provider>
-  );
-}
+export const FeedColumnsContext = createContext<FeedColumnsContextValue | null>(null);
 
 export function useFeedColumnsContext(): FeedColumnsContextValue {
   const ctx = useContext(FeedColumnsContext);
@@ -40,4 +28,3 @@ export function useFeedColumnsContext(): FeedColumnsContextValue {
   }
   return ctx;
 }
-
