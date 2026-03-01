@@ -163,8 +163,8 @@ body:not([data-performance='on']) .news-item-card .MuiCardContent-root {
 .cardOrnamentLayer .glyphBR {
   position: absolute;
   display: block;
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
   background-image: var(--orn-glyph);
   background-position: center;
   background-repeat: no-repeat;
@@ -174,26 +174,32 @@ body:not([data-performance='on']) .news-item-card .MuiCardContent-root {
 
 .columnOrnamentLayer .glyphTL,
 .cardOrnamentLayer .glyphTL {
-  top: 10px;
-  left: 10px;
+  top: 8px;
+  left: 8px;
 }
 
 .columnOrnamentLayer .glyphTR,
 .cardOrnamentLayer .glyphTR {
-  top: 10px;
-  right: 10px;
+  top: 8px;
+  right: 8px;
 }
 
 .columnOrnamentLayer .glyphBL,
 .cardOrnamentLayer .glyphBL {
-  bottom: 10px;
-  left: 10px;
+  bottom: 8px;
+  left: 8px;
 }
 
 .columnOrnamentLayer .glyphBR,
 .cardOrnamentLayer .glyphBR {
-  bottom: 10px;
-  right: 10px;
+  bottom: 8px;
+  right: 8px;
+}
+
+/* Keep bottom glyphs away from action rows on cards */
+.cardOrnamentLayer .glyphBL,
+.cardOrnamentLayer .glyphBR {
+  display: none;
 }
 
 .feed-column-shell::after,
