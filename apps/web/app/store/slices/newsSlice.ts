@@ -1,6 +1,7 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import { MAX_ITEMS_PER_COLUMN } from '../constants';
 import type { NewsItem } from '../types';
+import { isNumber } from '../valueEnums';
 
 type AskMessage = {
   q: string;
@@ -212,8 +213,8 @@ const newsSlice = createSlice({
       const { id, feedUrl, question, answer, error, used, remaining } = action.payload;
       const a = ensureAskState(state, id, feedUrl);
       a.pending = false;
-      if (typeof used === 'number') a.used = Math.max(0, Math.min(5, Math.floor(used)));
-      if (typeof remaining === 'number') a.remaining = Math.max(0, Math.min(5, Math.floor(remaining)));
+      if (isNumber(used)) a.used = Math.max(0, Math.min(5, Math.floor(used)));
+      if (isNumber(remaining)) a.remaining = Math.max(0, Math.min(5, Math.floor(remaining)));
 
       const q = String(question || '').trim();
       let idx = -1;

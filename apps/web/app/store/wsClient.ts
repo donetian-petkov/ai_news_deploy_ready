@@ -3,6 +3,27 @@
 import type { AppDispatch } from './store';
 import type { BudgetMode, FeedInfo, NewsItem, SortMode } from './types';
 import { FILTERED_FEED_URL } from './constants';
+import {
+  AiProviderValue,
+  BudgetModeValue,
+  FeedKindValue,
+  isAiProvider,
+  isBoolean,
+  isBudgetMode,
+  isFeedKind,
+  isNewsMood,
+  isNewsType,
+  isNumber,
+  isRecord,
+  isResearchLang,
+  isSortMode,
+  isString,
+  isSummaryLang,
+  ResearchLangValue,
+  SortModeValue,
+  SummaryLangValue,
+  WsMessageType
+} from './valueEnums';
 import { setStatus } from './slices/connectionSlice';
 import { setFeeds } from './slices/feedsSlice';
 import { receiveAskReply, setHiddenIds, upsertNewsBatch } from './slices/newsSlice';
@@ -28,36 +49,36 @@ type FeedSettingsWire = {
 
 function parseFeedInfos(v: unknown, feedSettingsRaw: unknown): FeedInfo[] {
   if (!Array.isArray(v)) return [];
-  const feedSettings = (feedSettingsRaw && typeof feedSettingsRaw === 'object')
+  const feedSettings = isRecord(feedSettingsRaw)
     ? (feedSettingsRaw as Record<string, FeedSettingsWire>)
     : {};
   const out: FeedInfo[] = [];
   for (const x of v) {
-    if (!x || typeof x !== 'object') continue;
+    if (!isRecord(x)) continue;
     const m = x as Record<string, unknown>;
-    const url = typeof m.url === 'string' ? m.url : '';
+    const url = isString(m.url) ? m.url : '';
     if (!url || url === FILTERED_FEED_URL) continue;
 
-    const rawSettings = (feedSettings[url] && typeof feedSettings[url] === 'object')
+    const rawSettings = isRecord(feedSettings[url])
       ? feedSettings[url]
       : {};
-    const budget = rawSettings.budget === 'low' || rawSettings.budget === 'standard' || rawSettings.budget === 'high'
+    const budget = isBudgetMode(rawSettings.budget)
       ? rawSettings.budget as BudgetMode
-      : 'standard';
-    const sortMode = rawSettings.sortMode === 'newest' || rawSettings.sortMode === 'oldest' || rawSettings.sortMode === 'matched'
+      : BudgetModeValue.Standard;
+    const sortMode = isSortMode(rawSettings.sortMode)
       ? rawSettings.sortMode as SortMode
-      : 'newest';
-    const filtersRaw = (rawSettings.filters && typeof rawSettings.filters === 'object')
+      : SortModeValue.Newest;
+    const filtersRaw = isRecord(rawSettings.filters)
       ? rawSettings.filters as Record<string, unknown>
       : {};
 
     out.push({
       url,
-      label: typeof m.label === 'string' && m.label.trim() ? m.label : url,
-      kind: m.kind === 'reddit' || m.kind === 'youtube' ? m.kind : 'rss',
-      intervalSec: typeof m.intervalSec === 'number' ? m.intervalSec : 120,
-      summaryEnabled: typeof rawSettings.summaryEnabled === 'boolean' ? rawSettings.summaryEnabled : false,
-      researchEnabled: typeof rawSettings.researchEnabled === 'boolean' ? rawSettings.researchEnabled : false,
+      label: isString(m.label) && m.label.trim() ? m.label : url,
+      kind: isFeedKind(m.kind) && m.kind !== FeedKindValue.Rss ? m.kind : FeedKindValue.Rss,
+      intervalSec: isNumber(m.intervalSec) ? m.intervalSec : 120,
+      summaryEnabled: isBoolean(rawSettings.summaryEnabled) ? rawSettings.summaryEnabled : false,
+      researchEnabled: isBoolean(rawSettings.researchEnabled) ? rawSettings.researchEnabled : false,
       budget,
       sortMode,
       filters: {
@@ -68,30 +89,30 @@ function parseFeedInfos(v: unknown, feedSettingsRaw: unknown): FeedInfo[] {
     });
   }
 
-  const filteredSettings = (feedSettings[FILTERED_FEED_URL] && typeof feedSettings[FILTERED_FEED_URL] === 'object')
+  const filteredSettings = isRecord(feedSettings[FILTERED_FEED_URL])
     ? feedSettings[FILTERED_FEED_URL]
     : null;
   if (filteredSettings && !out.some(f => f.url === FILTERED_FEED_URL)) {
-    const budget = filteredSettings.budget === 'low' || filteredSettings.budget === 'standard' || filteredSettings.budget === 'high'
+    const budget = isBudgetMode(filteredSettings.budget)
       ? filteredSettings.budget as BudgetMode
-      : 'standard';
-    const sortMode = filteredSettings.sortMode === 'newest' || filteredSettings.sortMode === 'oldest' || filteredSettings.sortMode === 'matched'
+      : BudgetModeValue.Standard;
+    const sortMode = isSortMode(filteredSettings.sortMode)
       ? filteredSettings.sortMode as SortMode
-      : 'newest';
-    const filtersRaw = (filteredSettings.filters && typeof filteredSettings.filters === 'object')
+      : SortModeValue.Newest;
+    const filtersRaw = isRecord(filteredSettings.filters)
       ? filteredSettings.filters as Record<string, unknown>
       : {};
     out.unshift({
       url: FILTERED_FEED_URL,
       label: 'Filtered',
-      kind: 'rss',
+      kind: FeedKindValue.Rss,
       intervalSec: 0,
-      summaryEnabled: typeof filteredSettings.summaryEnabled === 'boolean' ? filteredSettings.summaryEnabled : false,
-      researchEnabled: typeof filteredSettings.researchEnabled === 'boolean' ? filteredSettings.researchEnabled : false,
+      summaryEnabled: isBoolean(filteredSettings.summaryEnabled) ? filteredSettings.summaryEnabled : false,
+      researchEnabled: isBoolean(filteredSettings.researchEnabled) ? filteredSettings.researchEnabled : false,
       budget,
       sortMode,
       filters: {
-        onlyMatches: typeof filtersRaw.onlyMatches === 'boolean' ? !!filtersRaw.onlyMatches : true,
+        onlyMatches: isBoolean(filtersRaw.onlyMatches) ? !!filtersRaw.onlyMatches : true,
         onlyResearched: !!filtersRaw.onlyResearched,
         onlySummaries: !!filtersRaw.onlySummaries
       }
@@ -111,58 +132,31 @@ function deriveAllBudget(feeds: FeedInfo[]): 'mixed' | 'low' | 'standard' | 'hig
 }
 
 function parseNews(v: unknown): NewsItem | null {
-  if (!v || typeof v !== 'object') return null;
+  if (!isRecord(v)) return null;
   const m = v as Record<string, unknown>;
-  if (m.type !== 'news') return null;
-  const id = typeof m.id === 'string' ? m.id : '';
-  const title = typeof m.title === 'string' ? m.title : '';
-  const feedUrl = typeof m.feedUrl === 'string' ? m.feedUrl : '';
+  if (m.type !== WsMessageType.News) return null;
+  const id = isString(m.id) ? m.id : '';
+  const title = isString(m.title) ? m.title : '';
+  const feedUrl = isString(m.feedUrl) ? m.feedUrl : '';
   if (!id || !title || !feedUrl) return null;
-  const mood = typeof m.mood === 'string'
-    && (
-      m.mood === 'pesimistic'
-      || m.mood === 'optimistic'
-      || m.mood === 'realistic'
-      || m.mood === 'melancholy'
-      || m.mood === 'happiness'
-      || m.mood === 'sadness'
-      || m.mood === 'rage'
-      || m.mood === 'uncertainty'
-      || m.mood === 'neutral'
-      || m.mood === 'curios'
-    )
+  const mood = isNewsMood(m.mood)
     ? m.mood
     : undefined;
-  const newsType = typeof m.newsType === 'string'
-    && (
-      m.newsType === 'science'
-      || m.newsType === 'movies'
-      || m.newsType === 'politics'
-      || m.newsType === 'business'
-      || m.newsType === 'technology'
-      || m.newsType === 'sports'
-      || m.newsType === 'health'
-      || m.newsType === 'world'
-      || m.newsType === 'culture'
-      || m.newsType === 'environment'
-      || m.newsType === 'crime'
-      || m.newsType === 'education'
-      || m.newsType === 'other'
-    )
+  const newsType = isNewsType(m.newsType)
     ? m.newsType
     : undefined;
   return {
     id,
     title,
-    link: typeof m.link === 'string' && m.link ? m.link : '#',
+    link: isString(m.link) && m.link ? m.link : '#',
     feedUrl,
-    publishedMs: typeof m.publishedMs === 'number' ? m.publishedMs : Date.now(),
+    publishedMs: isNumber(m.publishedMs) ? m.publishedMs : Date.now(),
     isMatch: !!m.isMatch,
-    summary: typeof m.summary === 'string' ? m.summary : '',
-    research: typeof m.research === 'string' ? m.research : '',
+    summary: isString(m.summary) ? m.summary : '',
+    research: isString(m.research) ? m.research : '',
     mood,
     newsType,
-    filteredOk: typeof m.filteredOk === 'boolean' ? m.filteredOk : true
+    filteredOk: isBoolean(m.filteredOk) ? m.filteredOk : true
   };
 }
 
@@ -235,90 +229,90 @@ export function startWsConnection(dispatch: AppDispatch, explicitUrl: string) {
     } catch {
       return;
     }
-    if (!raw || typeof raw !== 'object') return;
+    if (!isRecord(raw)) return;
     const msg = raw as Record<string, unknown>;
 
-    if (msg.type === 'config') {
+    if (msg.type === WsMessageType.Config) {
       const parsedFeeds = parseFeedInfos(msg.feeds, msg.feedSettings);
       dispatch(setFeeds(parsedFeeds));
       dispatch(setAiSettings({
         aiAvailable: !!msg.aiAvailable,
         aiEnabled: !!msg.aiEnabled,
-        aiProvider: msg.aiProvider === 'claude' || msg.aiProvider === 'openrouter' || msg.aiProvider === 'openai'
+        aiProvider: isAiProvider(msg.aiProvider)
           ? msg.aiProvider
-          : 'openai',
-        summaryLang: msg.summaryLang === 'bg' || msg.summaryLang === 'en' || msg.summaryLang === 'bilingual'
+          : AiProviderValue.OpenAI,
+        summaryLang: isSummaryLang(msg.summaryLang)
           ? msg.summaryLang
-          : 'bilingual',
-        researchLang: msg.researchLang === 'bg' || msg.researchLang === 'en'
+          : SummaryLangValue.Bilingual,
+        researchLang: isResearchLang(msg.researchLang)
           ? msg.researchLang
-          : 'bg',
+          : ResearchLangValue.Bg,
         allBudget: deriveAllBudget(parsedFeeds)
       }));
 
       const hidden: string[] = [];
       if (Array.isArray(msg.hiddenIds)) {
         for (const id of msg.hiddenIds) {
-          if (typeof id === 'string' && id) hidden.push(id);
+          if (isString(id) && id) hidden.push(id);
         }
       }
       hiddenIds = new Set(hidden);
       dispatch(setHiddenIds(hidden));
 
       dispatch(setUsage({
-        inputTokens: typeof msg.aiUsageInputTokens === 'number' ? msg.aiUsageInputTokens : 0,
-        outputTokens: typeof msg.aiUsageOutputTokens === 'number' ? msg.aiUsageOutputTokens : 0,
-        totalTokens: typeof msg.aiUsageTotalTokens === 'number' ? msg.aiUsageTotalTokens : 0
+        inputTokens: isNumber(msg.aiUsageInputTokens) ? msg.aiUsageInputTokens : 0,
+        outputTokens: isNumber(msg.aiUsageOutputTokens) ? msg.aiUsageOutputTokens : 0,
+        totalTokens: isNumber(msg.aiUsageTotalTokens) ? msg.aiUsageTotalTokens : 0
       }));
       return;
     }
 
-    if (msg.type === 'ai_usage') {
+    if (msg.type === WsMessageType.AiUsage) {
       dispatch(setUsage({
-        inputTokens: typeof msg.inputTokens === 'number' ? msg.inputTokens : 0,
-        outputTokens: typeof msg.outputTokens === 'number' ? msg.outputTokens : 0,
-        totalTokens: typeof msg.totalTokens === 'number' ? msg.totalTokens : 0
+        inputTokens: isNumber(msg.inputTokens) ? msg.inputTokens : 0,
+        outputTokens: isNumber(msg.outputTokens) ? msg.outputTokens : 0,
+        totalTokens: isNumber(msg.totalTokens) ? msg.totalTokens : 0
       }));
       return;
     }
 
-    if (msg.type === 'ask_agent_reply') {
-      const id = typeof msg.id === 'string' ? msg.id : '';
-      const feedUrl = typeof msg.feedUrl === 'string' ? msg.feedUrl : '';
+    if (msg.type === WsMessageType.AskAgentReply) {
+      const id = isString(msg.id) ? msg.id : '';
+      const feedUrl = isString(msg.feedUrl) ? msg.feedUrl : '';
       if (!id || !feedUrl) return;
       dispatch(receiveAskReply({
         id,
         feedUrl,
-        question: typeof msg.question === 'string' ? msg.question : '',
-        answer: typeof msg.answer === 'string' ? msg.answer : undefined,
-        error: typeof msg.error === 'string' ? msg.error : undefined,
-        used: typeof msg.used === 'number' ? msg.used : undefined,
-        remaining: typeof msg.remaining === 'number' ? msg.remaining : undefined
+        question: isString(msg.question) ? msg.question : '',
+        answer: isString(msg.answer) ? msg.answer : undefined,
+        error: isString(msg.error) ? msg.error : undefined,
+        used: isNumber(msg.used) ? msg.used : undefined,
+        remaining: isNumber(msg.remaining) ? msg.remaining : undefined
       }));
       return;
     }
 
-    if (msg.type === 'error') {
+    if (msg.type === WsMessageType.Error) {
       dispatch(enqueueToast({
         kind: 'error',
-        message: typeof msg.message === 'string' ? msg.message : 'Server error'
+        message: isString(msg.message) ? msg.message : 'Server error'
       }));
       return;
     }
 
-    if (msg.type === 'ok') {
+    if (msg.type === WsMessageType.Ok) {
       dispatch(enqueueToast({
         kind: 'success',
-        message: typeof msg.message === 'string' ? msg.message : 'Done'
+        message: isString(msg.message) ? msg.message : 'Done'
       }));
       return;
     }
 
-    if (msg.type === 'feed_error') {
-      const label = typeof msg.feedLabel === 'string' && msg.feedLabel.trim()
+    if (msg.type === WsMessageType.FeedError) {
+      const label = isString(msg.feedLabel) && msg.feedLabel.trim()
         ? msg.feedLabel.trim()
-        : (typeof msg.feedUrl === 'string' ? msg.feedUrl : 'feed');
-      const reason = typeof msg.error === 'string' && msg.error.trim()
+        : (isString(msg.feedUrl) ? msg.feedUrl : 'feed');
+      const reason = isString(msg.error) && msg.error.trim()
         ? msg.error.trim()
         : 'poll failed';
       dispatch(enqueueToast({
