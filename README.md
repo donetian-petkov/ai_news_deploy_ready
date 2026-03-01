@@ -61,6 +61,51 @@ A real-time, multi-column news intelligence dashboard with AI summaries, AI rese
   - `NewsCard` presenter
   - extracted `top-menu/*` sections
 
+## Visual Walkthrough
+
+### Vibe Modes (same structure, different frame language)
+Video Game vibe:
+
+![Video Game vibe columns](./docs/screenshots/vibe-video-game-columns.png)
+
+Sci-Fi vibe:
+
+![Sci-Fi vibe columns](./docs/screenshots/vibe-scifi-columns.png)
+
+Fantasy vibe:
+
+![Fantasy vibe columns](./docs/screenshots/vibe-fantasy-columns.png)
+
+### Top Controls (expanded settings)
+Expanded top controls panel with AI/appearance sections:
+
+![Top controls expanded](./docs/screenshots/top-controls-expanded.png)
+
+### News Card (ornamented frame + actions + research/summary body)
+Example card in Cyber Witch with top/bottom action rows and research text:
+
+![News card with research](./docs/screenshots/news-card-research-cyberwitch.png)
+
+### Ask Agent (per-news contextual chat)
+Ask Agent panel below a news card:
+
+![Ask Agent panel](./docs/screenshots/news-card-ask-agent.png)
+
+### Column Controls (mobile layout)
+Per-column controls and card preview in mobile view:
+
+![Mobile column controls](./docs/screenshots/mobile-column-controls.png)
+
+### Screenshot File Map
+Store screenshots in `docs/screenshots/` with these exact names:
+- `vibe-video-game-columns.png`
+- `vibe-scifi-columns.png`
+- `vibe-fantasy-columns.png`
+- `top-controls-expanded.png`
+- `news-card-research-cyberwitch.png`
+- `news-card-ask-agent.png`
+- `mobile-column-controls.png`
+
 ## Architecture
 
 ```mermaid
