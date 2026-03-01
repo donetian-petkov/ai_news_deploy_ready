@@ -1,58 +1,46 @@
 'use client';
 
 import { Box, Button, Chip, CircularProgress, Typography } from '@mui/material';
-import type { NewsCardProps } from '../reactColumns.types';
 import { NEWS_CARD_COLOR_TOKENS } from '../designTokens';
+import { useNewsCardContext } from './context/NewsCardContext';
 
-type Props = {
-  item: NewsCardProps['item'];
-  labels: NewsCardProps['labels'];
-  fontScale: number;
-  accent: string;
-  hideAllSummaries: boolean;
-  hideAllResearch: boolean;
-  showAutoResearching: boolean;
-  performanceMode: boolean;
-  summaryMode: NewsCardProps['summaryMode'];
-  summaryLong: boolean;
-  summaryText: string;
-  researchMode: NewsCardProps['researchMode'];
-  researchLong: boolean;
-  researchText: string;
-  researchConfidence: string;
-  onSetSummaryMode: NewsCardProps['onSetSummaryMode'];
-  onSetResearchMode: NewsCardProps['onSetResearchMode'];
-};
+export function NewsCardBody() {
+  const {
+    view,
+    state,
+    handlers,
+    ui
+  } = useNewsCardContext();
 
-export function NewsCardBody({
-  item,
-  labels,
-  fontScale,
-  accent,
-  hideAllSummaries,
-  hideAllResearch,
-  showAutoResearching,
-  performanceMode,
-  summaryMode,
-  summaryLong,
-  summaryText,
-  researchMode,
-  researchLong,
-  researchText,
-  researchConfidence,
-  onSetSummaryMode,
-  onSetResearchMode
-}: Props) {
-  const summaryVisible = !hideAllSummaries && summaryMode !== 'hidden';
-  const researchVisible = researchMode !== 'hidden';
-  const hasSummaryBlock = !!item.summary && !hideAllSummaries;
-  const hasResearchBlock = !!item.research && !hideAllResearch;
+  const {
+    labels,
+    fontScale,
+    accent,
+    hideAllSummaries,
+    hideAllResearch,
+    performanceMode
+  } = view;
+
+  const {
+    item,
+    showAutoResearching,
+    summaryMode,
+    summaryLong,
+    summaryText,
+    researchMode,
+    researchLong,
+    researchText,
+    researchConfidence
+  } = state;
+
+  const { onSetSummaryMode, onSetResearchMode } = handlers;
+  const { hasSummaryBlock, hasResearchBlock, summaryVisible, researchVisible } = ui;
 
   return (
     <>
       {hasSummaryBlock ? (
         <Box>
-          {summaryVisible ? (
+          {summaryVisible && !hideAllSummaries ? (
             <Typography
               variant="body2"
               sx={{
@@ -89,7 +77,7 @@ export function NewsCardBody({
         />
       ) : null}
 
-      {hasResearchBlock ? (
+      {hasResearchBlock && !hideAllResearch ? (
         <Box sx={{ mt: 1 }}>
           {researchVisible ? (
             <>

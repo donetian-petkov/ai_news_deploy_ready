@@ -1,0 +1,109 @@
+'use client';
+
+import { useMemo } from 'react';
+import type { FeedColumnViewModel, CardLabels, SchemeValue, VibeValue } from '../reactColumns.types';
+import { buildColumnPalette, getVibeIcons, SCHEME_LIST, VIBE_LIST } from '../reactColumns.utils';
+import { COLUMN_LAYOUT_TOKENS } from '../designTokens';
+
+type Args = {
+  ui: {
+    vibe: string;
+    scheme: string;
+    buttonMode: 'icons' | 'text';
+    performanceMode: boolean;
+    fontSize: 'sm' | 'md' | 'lg' | 'xl';
+    moodFilter: FeedColumnViewModel['moodFilter'];
+    typeFilter: FeedColumnViewModel['typeFilter'];
+    searchQuery: string;
+    hideAllResearch: boolean;
+    hideAllSummaries: boolean;
+    aiEnabled: boolean;
+    aiAvailable: boolean;
+  };
+  labels: Record<string, string>;
+  connected: boolean;
+};
+
+export function useFeedColumnViewModel({ ui, labels, connected }: Args) {
+  const fontScale = ui.fontSize === 'xl' ? 1.17 : ui.fontSize === 'lg' ? 1.09 : ui.fontSize === 'sm' ? 0.93 : 1;
+  const resolvedVibe: VibeValue = (VIBE_LIST.includes(ui.vibe as VibeValue) ? ui.vibe : 'default') as VibeValue;
+  const resolvedScheme: SchemeValue = (SCHEME_LIST.includes(ui.scheme as SchemeValue) ? ui.scheme : 'classic') as SchemeValue;
+
+  const palette = useMemo(() => buildColumnPalette(resolvedVibe, resolvedScheme), [resolvedVibe, resolvedScheme]);
+  const vibeIcons = useMemo(() => getVibeIcons(resolvedVibe), [resolvedVibe]);
+
+  const compactBtnSx = useMemo(() => ({
+    minHeight: COLUMN_LAYOUT_TOKENS.compactControlHeight,
+    px: 1.2,
+    py: 0.18,
+    fontSize: `${0.82 * fontScale}rem`,
+    lineHeight: 1.15,
+    borderRadius: ui.performanceMode ? COLUMN_LAYOUT_TOKENS.compactControlRadiusPerformance : COLUMN_LAYOUT_TOKENS.compactControlRadius,
+    whiteSpace: 'nowrap'
+  }), [fontScale, ui.performanceMode]);
+
+  const compactFormSx = useMemo(() => ({
+    '& .MuiOutlinedInput-root': {
+      height: COLUMN_LAYOUT_TOKENS.compactControlHeight,
+      fontSize: `${0.82 * fontScale}rem`,
+      background: ui.performanceMode ? 'rgba(10,16,29,0.98)' : 'rgba(12,20,38,0.92)',
+      color: 'rgba(231,240,255,0.96)',
+      borderRadius: ui.performanceMode ? COLUMN_LAYOUT_TOKENS.compactControlRadiusPerformance : COLUMN_LAYOUT_TOKENS.compactControlRadius
+    },
+    '& .MuiOutlinedInput-notchedOutline': {
+      borderColor: 'rgba(122,149,194,0.44)'
+    },
+    '& .MuiSvgIcon-root': {
+      color: 'rgba(203,217,243,0.9)'
+    }
+  }), [fontScale, ui.performanceMode]);
+
+  const cardLabels = useMemo<CardLabels>(() => ({
+    pinNews: labels.pinNews,
+    unpinNews: labels.unpinNews,
+    match: labels.match,
+    shareLink: labels.shareLink,
+    copyNews: labels.copyNews,
+    hideNews: labels.hideNews,
+    generatingSummary: labels.generatingSummary,
+    summary: labels.summary,
+    researching: labels.researching,
+    research: labels.research,
+    askAgent: labels.askAgent,
+    showSummary: labels.showSummary,
+    hideSummary: labels.hideSummary,
+    showMore: labels.showMore,
+    showLess: labels.showLess,
+    aiUnavailable: labels.aiUnavailable,
+    autoResearching: labels.autoResearching,
+    confidence: labels.confidence,
+    showResearch: labels.showResearch,
+    hideResearch: labels.hideResearch,
+    questionsLeft: labels.questionsLeft,
+    askPlaceholder: labels.askPlaceholder,
+    thinking: labels.thinking,
+    send: labels.send
+  }), [labels]);
+
+  const viewModel = useMemo<FeedColumnViewModel>(() => ({
+    palette,
+    performanceMode: ui.performanceMode,
+    moodFilter: ui.moodFilter,
+    typeFilter: ui.typeFilter,
+    searchQuery: ui.searchQuery,
+    hideAllResearch: ui.hideAllResearch,
+    hideAllSummaries: ui.hideAllSummaries,
+    aiEnabled: ui.aiEnabled,
+    aiAvailable: ui.aiAvailable,
+    buttonMode: ui.buttonMode,
+    fontScale,
+    connected,
+    compactBtnSx,
+    compactFormSx,
+    labels,
+    cardLabels,
+    vibeIcons
+  }), [cardLabels, compactBtnSx, compactFormSx, connected, fontScale, labels, palette, ui.aiAvailable, ui.aiEnabled, ui.buttonMode, ui.hideAllResearch, ui.hideAllSummaries, ui.moodFilter, ui.performanceMode, ui.searchQuery, ui.typeFilter, vibeIcons]);
+
+  return viewModel;
+}

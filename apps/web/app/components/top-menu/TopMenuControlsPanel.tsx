@@ -70,7 +70,7 @@ export function TopMenuControlsPanel({
   onToggleSoundEnabled
 }: TopMenuControlsPanelProps) {
   return (
-    <div className="controls" style={ui.controlsCollapsed ? { display: 'none' } : undefined}>
+    <div className={`controls${ui.controlsCollapsed ? ' controlsHidden' : ''}`}>
       <TopMenuControlsQuickRow
         labels={labels}
         aiAvailable={ui.aiAvailable}

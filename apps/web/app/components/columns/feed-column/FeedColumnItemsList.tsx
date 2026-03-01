@@ -1,5 +1,6 @@
 'use client';
 
+import { useMemo } from 'react';
 import { Alert, Button, Skeleton, Stack } from '@mui/material';
 import type { FeedInfo, NewsItem } from '../../../store/types';
 import type { BodyMode, FeedAskState } from '../reactColumns.types';
@@ -7,6 +8,7 @@ import { collapseText, compactResearch, extractConfidence } from '../reactColumn
 import { NewsCard } from '../NewsCard';
 import { useFeedColumnsContext } from '../context/FeedColumnsContext';
 import { COLUMN_COLOR_TOKENS, COLUMN_LAYOUT_TOKENS } from '../designTokens';
+import type { NewsCardHandlers, NewsCardStateModel, NewsCardViewModel } from '../news-card/newsCard.types';
 
 type Props = {
   feed: FeedInfo;
@@ -27,6 +29,16 @@ function bodyKey(it: NewsItem, kind: 'summary' | 'research'): string {
   return `${it.feedUrl}::${it.id}::${kind}`;
 }
 
+function getDefaultAskState(): FeedAskState {
+  return {
+    open: false,
+    draft: '',
+    pending: false,
+    remaining: 5,
+    messages: []
+  };
+}
+
 export function FeedColumnItemsList({
   feed,
   items,
@@ -37,11 +49,7 @@ export function FeedColumnItemsList({
   soft,
   isHydrated
 }: Props) {
-  const {
-    view,
-    state,
-    handlers
-  } = useFeedColumnsContext();
+  const { view, state, handlers } = useFeedColumnsContext();
 
   const {
     aiAvailable,
@@ -58,6 +66,7 @@ export function FeedColumnItemsList({
     palette,
     connected
   } = view;
+
   const {
     summaryPendingById,
     researchPendingById,
@@ -65,6 +74,7 @@ export function FeedColumnItemsList({
     askByItem,
     bodyModes
   } = state;
+
   const {
     getBodyMode,
     getDefaultBodyMode,
@@ -81,6 +91,36 @@ export function FeedColumnItemsList({
     onShowMoreNews,
     onResetNewsToTen
   } = handlers;
+
+  const sharedCardView = useMemo<NewsCardViewModel>(() => ({
+    labels: cardLabels,
+    vibeIcons,
+    compactBtnSx,
+    buttonMode,
+    aiAvailable,
+    performanceMode,
+    fontScale,
+    connected,
+    hideAllResearch,
+    hideAllSummaries,
+    accent,
+    soft,
+    matchAccent: palette.m
+  }), [accent, aiAvailable, buttonMode, cardLabels, compactBtnSx, connected, fontScale, hideAllResearch, hideAllSummaries, palette.m, performanceMode, soft, vibeIcons]);
+
+  const sharedCardHandlers = useMemo<NewsCardHandlers>(() => ({
+    onTogglePinnedNews,
+    onCopyLink,
+    onCopyNews: onCopyNewsPayload,
+    onHideItem,
+    onRequestSummary,
+    onRequestResearch,
+    onToggleAsk,
+    onAskDraft: onSetAskDraft,
+    onAskSubmit,
+    onSetSummaryMode: () => {},
+    onSetResearchMode: () => {}
+  }), [onAskSubmit, onCopyLink, onCopyNewsPayload, onHideItem, onRequestResearch, onRequestSummary, onSetAskDraft, onToggleAsk, onTogglePinnedNews]);
 
   if (!isHydrated) {
     return (
@@ -99,13 +139,7 @@ export function FeedColumnItemsList({
           {items.length === 0 ? (isMatchColumn ? labels.waitingMatches : labels.waiting) : labels.noMatches}
         </Alert>
       ) : shownItems.map(it => {
-        const askState: FeedAskState = askByItem[askKey(it)] || {
-          open: false,
-          draft: '',
-          pending: false,
-          remaining: 5,
-          messages: []
-        };
+        const askState: FeedAskState = askByItem[askKey(it)] || getDefaultAskState();
         const summaryKey = bodyKey(it, 'summary');
         const researchKey = bodyKey(it, 'research');
         const summaryResearchHidden = hideAllResearch || bodyModes[researchKey] === 'hidden';
@@ -113,52 +147,46 @@ export function FeedColumnItemsList({
         const summaryMode = summaryResearchHidden && savedSummaryMode === 'hidden'
           ? getDefaultBodyMode(it.summary || '', COLUMN_LAYOUT_TOKENS.summaryCollapseThreshold)
           : getBodyMode(summaryKey, it.summary || '', COLUMN_LAYOUT_TOKENS.summaryCollapseThreshold);
+
         const summaryLong = String(it.summary || '').trim().length > COLUMN_LAYOUT_TOKENS.summaryCollapseThreshold;
-        const summaryText = summaryMode === 'collapsed' ? collapseText(it.summary || '', COLUMN_LAYOUT_TOKENS.summaryCollapseThreshold) : String(it.summary || '');
+        const summaryText = summaryMode === 'collapsed'
+          ? collapseText(it.summary || '', COLUMN_LAYOUT_TOKENS.summaryCollapseThreshold)
+          : String(it.summary || '');
+
         const researchMode = getBodyMode(researchKey, it.research || '', COLUMN_LAYOUT_TOKENS.researchCollapseThreshold);
         const researchLong = String(it.research || '').trim().length > COLUMN_LAYOUT_TOKENS.researchCollapseThreshold;
-        const researchText = researchMode === 'collapsed' ? compactResearch(it.research || '') : String(it.research || '');
-        const researchConfidence = extractConfidence(it.research || '');
+        const researchText = researchMode === 'collapsed'
+          ? compactResearch(it.research || '')
+          : String(it.research || '');
+
+        const cardState: NewsCardStateModel = {
+          item: it,
+          askState,
+          summaryPending: !!summaryPendingById[it.id],
+          researchPending: !!researchPendingById[it.id],
+          isPinnedNews: !!pinnedNewsById[it.id],
+          showAutoResearching: aiAvailable && feed.researchEnabled && aiEnabled && !it.research && !researchPendingById[it.id] && !hideAllResearch,
+          summaryMode,
+          summaryLong,
+          summaryText,
+          researchMode,
+          researchLong,
+          researchText,
+          researchConfidence: extractConfidence(it.research || '')
+        };
+
+        const cardHandlers: NewsCardHandlers = {
+          ...sharedCardHandlers,
+          onSetSummaryMode: (mode: BodyMode) => setBodyMode(summaryKey, mode),
+          onSetResearchMode: (mode: BodyMode) => setBodyMode(researchKey, mode)
+        };
+
         return (
           <NewsCard
             key={it.id}
-            item={it}
-            askState={askState}
-            labels={cardLabels}
-            vibeIcons={vibeIcons}
-            compactBtnSx={compactBtnSx}
-            buttonMode={buttonMode}
-            aiAvailable={aiAvailable}
-            performanceMode={performanceMode}
-            fontScale={fontScale}
-            connected={connected}
-            hideAllResearch={hideAllResearch}
-            hideAllSummaries={hideAllSummaries}
-            summaryPending={!!summaryPendingById[it.id]}
-            researchPending={!!researchPendingById[it.id]}
-            isPinnedNews={!!pinnedNewsById[it.id]}
-            accent={accent}
-            soft={soft}
-            matchAccent={palette.m}
-            showAutoResearching={aiAvailable && feed.researchEnabled && aiEnabled && !it.research && !researchPendingById[it.id] && !hideAllResearch}
-            summaryMode={summaryMode}
-            summaryLong={summaryLong}
-            summaryText={summaryText}
-            researchMode={researchMode}
-            researchLong={researchLong}
-            researchText={researchText}
-            researchConfidence={researchConfidence}
-            onTogglePinnedNews={onTogglePinnedNews}
-            onCopyLink={onCopyLink}
-            onCopyNews={onCopyNewsPayload}
-            onHideItem={onHideItem}
-            onRequestSummary={onRequestSummary}
-            onRequestResearch={onRequestResearch}
-            onToggleAsk={onToggleAsk}
-            onSetSummaryMode={(mode: BodyMode) => setBodyMode(summaryKey, mode)}
-            onSetResearchMode={(mode: BodyMode) => setBodyMode(researchKey, mode)}
-            onAskDraft={onSetAskDraft}
-            onAskSubmit={onAskSubmit}
+            view={sharedCardView}
+            state={cardState}
+            handlers={cardHandlers}
           />
         );
       })}

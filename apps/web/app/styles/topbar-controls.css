@@ -88,6 +88,10 @@
   box-shadow: var(--panel-shadow);
 }
 
+.controlsHidden {
+  display: none;
+}
+
 .controlsRow {
   display: flex;
   flex-wrap: wrap;

@@ -1,0 +1,145 @@
+'use client';
+
+import type { AppDispatch } from '../../../store/store';
+import type { FeedColumnHandlers, FeedColumnStateModel, FeedColumnViewModel } from '../reactColumns.types';
+import { useFeedColumnHandlers } from './useFeedColumnHandlers';
+import { useFeedColumnStateModel } from './useFeedColumnStateModel';
+import { useFeedColumnViewModel } from './useFeedColumnViewModel';
+
+type Args = {
+  dispatch: AppDispatch;
+  ui: {
+    vibe: string;
+    scheme: string;
+    buttonMode: 'icons' | 'text';
+    performanceMode: boolean;
+    fontSize: 'sm' | 'md' | 'lg' | 'xl';
+    moodFilter: FeedColumnViewModel['moodFilter'];
+    typeFilter: FeedColumnViewModel['typeFilter'];
+    searchQuery: string;
+    hideAllResearch: boolean;
+    hideAllSummaries: boolean;
+    aiEnabled: boolean;
+    aiAvailable: boolean;
+  };
+  labels: Record<string, string>;
+  connected: boolean;
+  filteredColumnItems: FeedColumnStateModel['filteredColumnItems'];
+  itemsByFeed: FeedColumnStateModel['itemsByFeed'];
+  visibleByFeed: FeedColumnStateModel['visibleByFeed'];
+  hydratedColumns: FeedColumnStateModel['hydratedColumns'];
+  pinnedByUrl: FeedColumnStateModel['pinnedByUrl'];
+  controlsOpenByUrl: FeedColumnStateModel['controlsOpenByUrl'];
+  advancedControlsByUrl: FeedColumnStateModel['advancedControlsByUrl'];
+  deleteAgeByUrl: FeedColumnStateModel['deleteAgeByUrl'];
+  summaryPendingById: FeedColumnStateModel['summaryPendingById'];
+  researchPendingById: FeedColumnStateModel['researchPendingById'];
+  pinnedNewsById: FeedColumnStateModel['pinnedNewsById'];
+  askByItem: FeedColumnStateModel['askByItem'];
+  bodyModes: FeedColumnStateModel['bodyModes'];
+  setAdvancedControlsByUrl: React.Dispatch<React.SetStateAction<Record<string, boolean>>>;
+  setVisibleByFeed: React.Dispatch<React.SetStateAction<Record<string, number>>>;
+  getBodyMode: FeedColumnHandlers['getBodyMode'];
+  getDefaultBodyMode: FeedColumnHandlers['getDefaultBodyMode'];
+  setBodyMode: FeedColumnHandlers['setBodyMode'];
+  removeFeed: FeedColumnHandlers['onRemoveFeed'];
+  toggleFeedSummary: FeedColumnHandlers['onToggleFeedSummary'];
+  toggleFeedResearch: FeedColumnHandlers['onToggleFeedResearch'];
+  setFeedBudget: FeedColumnHandlers['onSetFeedBudget'];
+  setFeedInterval: FeedColumnHandlers['onSetFeedInterval'];
+  setFeedSortMode: FeedColumnHandlers['onSetFeedSortMode'];
+  setFeedFilterPreset: FeedColumnHandlers['onSetFeedFilterPreset'];
+  removeOldInFeed: FeedColumnHandlers['onRemoveOldInFeed'];
+  copyLink: FeedColumnHandlers['onCopyLink'];
+  copyNewsPayload: FeedColumnHandlers['onCopyNewsPayload'];
+  hideItem: FeedColumnHandlers['onHideItem'];
+  requestSummary: FeedColumnHandlers['onRequestSummary'];
+  requestResearch: FeedColumnHandlers['onRequestResearch'];
+  requestAsk: FeedColumnHandlers['onAskSubmit'];
+};
+
+export function useColumnsPresentation({
+  dispatch,
+  ui,
+  labels,
+  connected,
+  filteredColumnItems,
+  itemsByFeed,
+  visibleByFeed,
+  hydratedColumns,
+  pinnedByUrl,
+  controlsOpenByUrl,
+  advancedControlsByUrl,
+  deleteAgeByUrl,
+  summaryPendingById,
+  researchPendingById,
+  pinnedNewsById,
+  askByItem,
+  bodyModes,
+  setAdvancedControlsByUrl,
+  setVisibleByFeed,
+  getBodyMode,
+  getDefaultBodyMode,
+  setBodyMode,
+  removeFeed,
+  toggleFeedSummary,
+  toggleFeedResearch,
+  setFeedBudget,
+  setFeedInterval,
+  setFeedSortMode,
+  setFeedFilterPreset,
+  removeOldInFeed,
+  copyLink,
+  copyNewsPayload,
+  hideItem,
+  requestSummary,
+  requestResearch,
+  requestAsk
+}: Args) {
+  const viewModel = useFeedColumnViewModel({ ui, labels, connected });
+
+  const stateModel = useFeedColumnStateModel({
+    filteredColumnItems,
+    itemsByFeed,
+    visibleByFeed,
+    hydratedColumns,
+    pinnedByUrl,
+    controlsOpenByUrl,
+    advancedControlsByUrl,
+    deleteAgeByUrl,
+    summaryPendingById,
+    researchPendingById,
+    pinnedNewsById,
+    askByItem,
+    bodyModes
+  });
+
+  const handlersModel = useFeedColumnHandlers({
+    dispatch,
+    getBodyMode,
+    getDefaultBodyMode,
+    setBodyMode,
+    setAdvancedControlsByUrl,
+    setVisibleByFeed,
+    removeFeed,
+    toggleFeedSummary,
+    toggleFeedResearch,
+    setFeedBudget,
+    setFeedInterval,
+    setFeedSortMode,
+    setFeedFilterPreset,
+    removeOldInFeed,
+    copyLink,
+    copyNewsPayload,
+    hideItem,
+    requestSummary,
+    requestResearch,
+    requestAsk
+  });
+
+  return {
+    viewModel,
+    stateModel,
+    handlersModel
+  };
+}

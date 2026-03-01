@@ -1,54 +1,29 @@
 'use client';
 
-import type { ElementType } from 'react';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import PushPinIcon from '@mui/icons-material/PushPin';
 import { Box, Button, Chip, Link as MuiLink, Stack, Tooltip, Typography } from '@mui/material';
-import type { NewsCardProps } from '../reactColumns.types';
 import { formatTime } from '../reactColumns.utils';
 import { NEWS_CARD_COLOR_TOKENS } from '../designTokens';
+import { useNewsCardContext } from './context/NewsCardContext';
 
-type Props = {
-  item: NewsCardProps['item'];
-  labels: NewsCardProps['labels'];
-  iconOnly: boolean;
-  actionSx: Record<string, unknown>;
-  matchActionSx: Record<string, unknown>;
-  matchAccent: string;
-  fontScale: number;
-  connected: boolean;
-  isPinnedNews: boolean;
-  hasBodyBlock: boolean;
-  performanceMode: boolean;
-  ShareIconComp: ElementType;
-  CopyIconComp: ElementType;
-  HideIconComp: ElementType;
-  onTogglePinnedNews: NewsCardProps['onTogglePinnedNews'];
-  onCopyLink: NewsCardProps['onCopyLink'];
-  onCopyNews: NewsCardProps['onCopyNews'];
-  onHideItem: NewsCardProps['onHideItem'];
-};
+export function NewsCardHeader() {
+  const {
+    view,
+    state,
+    handlers,
+    ui
+  } = useNewsCardContext();
 
-export function NewsCardHeader({
-  item,
-  labels,
-  iconOnly,
-  actionSx,
-  matchActionSx,
-  matchAccent,
-  fontScale,
-  connected,
-  isPinnedNews,
-  hasBodyBlock,
-  performanceMode,
-  ShareIconComp,
-  CopyIconComp,
-  HideIconComp,
-  onTogglePinnedNews,
-  onCopyLink,
-  onCopyNews,
-  onHideItem
-}: Props) {
+  const { labels, vibeIcons, connected, fontScale, matchAccent } = view;
+  const { item, isPinnedNews } = state;
+  const { onTogglePinnedNews, onCopyLink, onCopyNews, onHideItem } = handlers;
+  const { iconOnly, hasBodyBlock, actionSx, matchActionSx } = ui;
+
+  const ShareIconComp = vibeIcons.share;
+  const HideIconComp = vibeIcons.hide;
+  const CopyIconComp = vibeIcons.copy;
+
   return (
     <>
       <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 0.9 }}>
@@ -127,7 +102,7 @@ export function NewsCardHeader({
       {hasBodyBlock ? (
         <Box
           sx={{
-            borderTop: performanceMode
+            borderTop: view.performanceMode
               ? `1px solid ${NEWS_CARD_COLOR_TOKENS.dividerSoft}`
               : `1px solid ${NEWS_CARD_COLOR_TOKENS.dividerStrong}`,
             mb: 1.1

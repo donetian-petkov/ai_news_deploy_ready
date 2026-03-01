@@ -1,68 +1,26 @@
 'use client';
 
-import type { ElementType } from 'react';
 import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
 import { Button, Chip, Stack, Tooltip } from '@mui/material';
-import type { NewsCardProps } from '../reactColumns.types';
 import { NEWS_CARD_COLOR_TOKENS } from '../designTokens';
+import { useNewsCardContext } from './context/NewsCardContext';
 
-type Props = {
-  item: NewsCardProps['item'];
-  askState: NewsCardProps['askState'];
-  labels: NewsCardProps['labels'];
-  iconOnly: boolean;
-  actionSx: Record<string, unknown>;
-  matchActionSx: Record<string, unknown>;
-  aiAvailable: boolean;
-  connected: boolean;
-  summaryPending: boolean;
-  researchPending: boolean;
-  summaryMode: NewsCardProps['summaryMode'];
-  summaryLong: boolean;
-  researchMode: NewsCardProps['researchMode'];
-  researchLong: boolean;
-  hasSummaryBlock: boolean;
-  hasResearchBlock: boolean;
-  researchToggleActive: boolean;
-  SummaryIconComp: ElementType;
-  ResearchIconComp: ElementType;
-  AskIconComp: ElementType;
-  onRequestSummary: NewsCardProps['onRequestSummary'];
-  onRequestResearch: NewsCardProps['onRequestResearch'];
-  onToggleAsk: NewsCardProps['onToggleAsk'];
-  onSetSummaryMode: NewsCardProps['onSetSummaryMode'];
-  onSetResearchMode: NewsCardProps['onSetResearchMode'];
-};
+export function NewsCardActions() {
+  const {
+    view,
+    state,
+    handlers,
+    ui
+  } = useNewsCardContext();
 
-export function NewsCardActions({
-  item,
-  askState,
-  labels,
-  iconOnly,
-  actionSx,
-  matchActionSx,
-  aiAvailable,
-  connected,
-  summaryPending,
-  researchPending,
-  summaryMode,
-  summaryLong,
-  researchMode,
-  researchLong,
-  hasSummaryBlock,
-  hasResearchBlock,
-  researchToggleActive,
-  SummaryIconComp,
-  ResearchIconComp,
-  AskIconComp,
-  onRequestSummary,
-  onRequestResearch,
-  onToggleAsk,
-  onSetSummaryMode,
-  onSetResearchMode
-}: Props) {
-  const summaryVisible = summaryMode !== 'hidden';
-  const researchVisible = researchMode !== 'hidden';
+  const { labels, vibeIcons, aiAvailable, connected } = view;
+  const { item, askState, summaryPending, researchPending, summaryMode, summaryLong, researchLong } = state;
+  const { onRequestSummary, onRequestResearch, onToggleAsk, onSetSummaryMode, onSetResearchMode } = handlers;
+  const { iconOnly, actionSx, matchActionSx, hasSummaryBlock, hasResearchBlock, researchToggleActive, summaryVisible, researchVisible } = ui;
+
+  const SummaryIconComp = vibeIcons.summary;
+  const ResearchIconComp = vibeIcons.research;
+  const AskIconComp = vibeIcons.ask;
 
   return (
     <Stack direction="row" spacing={0.8} sx={{ mt: 0.3 }} flexWrap="wrap">

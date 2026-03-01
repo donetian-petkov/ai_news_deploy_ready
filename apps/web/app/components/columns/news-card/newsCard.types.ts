@@ -1,0 +1,55 @@
+import type { SxProps, Theme } from '@mui/material';
+import type { NewsItem } from '../../../store/types';
+import type { BodyMode, CardLabels, FeedAskState, VibeIcons } from '../reactColumns.types';
+
+export type NewsCardViewModel = {
+  labels: CardLabels;
+  vibeIcons: VibeIcons;
+  compactBtnSx: SxProps<Theme>;
+  buttonMode: 'icons' | 'text';
+  aiAvailable: boolean;
+  performanceMode: boolean;
+  fontScale: number;
+  connected: boolean;
+  hideAllResearch: boolean;
+  hideAllSummaries: boolean;
+  accent: string;
+  soft: string;
+  matchAccent: string;
+};
+
+export type NewsCardStateModel = {
+  item: NewsItem;
+  askState: FeedAskState;
+  summaryPending: boolean;
+  researchPending: boolean;
+  isPinnedNews: boolean;
+  showAutoResearching: boolean;
+  summaryMode: BodyMode;
+  summaryLong: boolean;
+  summaryText: string;
+  researchMode: BodyMode;
+  researchLong: boolean;
+  researchText: string;
+  researchConfidence: string;
+};
+
+export type NewsCardHandlers = {
+  onTogglePinnedNews: (id: string) => void;
+  onCopyLink: (url: string) => void;
+  onCopyNews: (it: NewsItem) => void;
+  onHideItem: (it: NewsItem) => void;
+  onRequestSummary: (it: NewsItem) => void;
+  onRequestResearch: (it: NewsItem) => void;
+  onToggleAsk: (id: string, feedUrl: string) => void;
+  onSetSummaryMode: (mode: BodyMode) => void;
+  onSetResearchMode: (mode: BodyMode) => void;
+  onAskDraft: (id: string, feedUrl: string, draft: string) => void;
+  onAskSubmit: (it: NewsItem) => void;
+};
+
+export type NewsCardProps = {
+  view: NewsCardViewModel;
+  state: NewsCardStateModel;
+  handlers: NewsCardHandlers;
+};

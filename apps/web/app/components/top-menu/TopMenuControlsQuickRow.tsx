@@ -1,6 +1,8 @@
 'use client';
 
 import type { ChangeEvent } from 'react';
+import { UiButton } from '../design-system/UiButton';
+import { UiSelect } from '../design-system/UiSelect';
 
 type DeleteAge = 'yesterday' | 'week' | 'month' | 'year';
 
@@ -36,23 +38,27 @@ export function TopMenuControlsQuickRow({
   return (
     <div className="controlsCompactRow controlsRow">
       <div className="controlGroup">
-        <button id="resetBtn" className="btn" type="button" onClick={onResetAllNewest}>{labels.resetAllToNewestTen}</button>
-        <button id="showMoreNewsAllBtn" className="btn" type="button" onClick={onShowMoreNewsAll}>
+        <UiButton id="resetBtn" onClick={onResetAllNewest}>{labels.resetAllToNewestTen}</UiButton>
+        <UiButton id="showMoreNewsAllBtn" onClick={onShowMoreNewsAll}>
           {labels.showMoreNewsAll}
-        </button>
-        <button id="resetNewsShownAllBtn" className="btn" type="button" onClick={onResetNewsShownAll}>
+        </UiButton>
+        <UiButton id="resetNewsShownAllBtn" onClick={onResetNewsShownAll}>
           {labels.resetNewsShownAll}
-        </button>
-        <label className="checkbox" title="Delete old news by age from all columns">
-          <span id="deleteAgePrefix">{labels.deleteAgePrefix}</span>
-          <select id="deleteAgeSelect" className="select" value={deleteAgeAll} onChange={onDeleteAgeChange}>
+        </UiButton>
+        <UiSelect
+          id="deleteAgeSelect"
+          label={labels.deleteAgePrefix}
+          labelId="deleteAgePrefix"
+          title="Delete old news by age from all columns"
+          value={deleteAgeAll}
+          onChange={onDeleteAgeChange}
+        >
             <option value="yesterday">{labels.ageYesterday}</option>
             <option value="week">{labels.agePastWeek}</option>
             <option value="month">{labels.agePastMonth}</option>
             <option value="year">{labels.agePastYear}</option>
-          </select>
-        </label>
-        <button id="deleteAgeAllBtn" className="btn danger" type="button" onClick={onDeleteOldAllColumns}>{labels.deleteOldAllColumns}</button>
+        </UiSelect>
+        <UiButton id="deleteAgeAllBtn" variant="danger" onClick={onDeleteOldAllColumns}>{labels.deleteOldAllColumns}</UiButton>
         <label className="checkbox" title="Embeddings matching, AI dedupe, summaries, research">
           {aiAvailable ? (
             <>
@@ -69,7 +75,7 @@ export function TopMenuControlsQuickRow({
             <span id="aiUnavailableLabel">{labels.aiUnavailable}</span>
           )}
         </label>
-        <button id="helpBtn" className="btn" type="button" onClick={onOpenHelp}>{labels.helpTitle}</button>
+        <UiButton id="helpBtn" onClick={onOpenHelp}>{labels.helpTitle}</UiButton>
       </div>
     </div>
   );

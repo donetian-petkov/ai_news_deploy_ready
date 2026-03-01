@@ -1,30 +1,20 @@
 'use client';
 
 import { Box, Button, Stack, TextField, Typography } from '@mui/material';
-import type { NewsCardProps } from '../reactColumns.types';
-import { NEWS_CARD_COLOR_TOKENS } from '../designTokens';
+import { COLUMN_LAYOUT_TOKENS, NEWS_CARD_COLOR_TOKENS } from '../designTokens';
+import { useNewsCardContext } from './context/NewsCardContext';
 
-type Props = {
-  item: NewsCardProps['item'];
-  askState: NewsCardProps['askState'];
-  labels: NewsCardProps['labels'];
-  aiAvailable: boolean;
-  performanceMode: boolean;
-  connected: boolean;
-  onAskDraft: NewsCardProps['onAskDraft'];
-  onAskSubmit: NewsCardProps['onAskSubmit'];
-};
+export function NewsCardAskPanel() {
+  const {
+    view,
+    state,
+    handlers
+  } = useNewsCardContext();
 
-export function NewsCardAskPanel({
-  item,
-  askState,
-  labels,
-  aiAvailable,
-  performanceMode,
-  connected,
-  onAskDraft,
-  onAskSubmit
-}: Props) {
+  const { labels, aiAvailable, performanceMode, connected } = view;
+  const { item, askState } = state;
+  const { onAskDraft, onAskSubmit } = handlers;
+
   if (!askState.open || !aiAvailable) return null;
 
   return (
@@ -58,7 +48,7 @@ export function NewsCardAskPanel({
           fullWidth
           placeholder={labels.askPlaceholder}
           value={askState.draft}
-          onChange={e => onAskDraft(item.id, item.feedUrl, e.target.value.slice(0, 400))}
+          onChange={e => onAskDraft(item.id, item.feedUrl, e.target.value.slice(0, COLUMN_LAYOUT_TOKENS.askQuestionMaxLength))}
           onKeyDown={e => {
             if (e.key === 'Enter') {
               e.preventDefault();

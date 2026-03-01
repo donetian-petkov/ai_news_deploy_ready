@@ -8,9 +8,7 @@ import { setAiSettings, setAppearanceSettings, setTopUiState, enqueueToast } fro
 import { setFeedBudgetSetting } from '../../store/slices/feedsSlice';
 import { removeOldItemsInFeed, resetAllToNewestLimit } from '../../store/slices/newsSlice';
 import { cutoffFromAge, getNextColorMode, getNextVibe, getProviderKeyLabel, type TopMenuAiProvider, type TopMenuDeleteAge } from './topMenu.services';
-
-type AddStatus = { kind: 'info' | 'success' | 'error'; message: string } | null;
-type FeedType = 'rss' | 'reddit' | 'youtube';
+import type { AddStatus, FeedType } from './types';
 
 type UseTopMenuActionsArgs = {
   dispatch: AppDispatch;
@@ -202,4 +200,3 @@ export function useTopMenuActions({
     deleteOldAllColumns
   };
 }
-

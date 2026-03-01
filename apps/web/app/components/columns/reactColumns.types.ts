@@ -67,46 +67,6 @@ export type VibeIcons = {
   copy: React.ElementType;
 };
 
-export type NewsCardProps = {
-  item: NewsItem;
-  askState: AskCardState;
-  labels: CardLabels;
-  vibeIcons: VibeIcons;
-  compactBtnSx: Record<string, unknown>;
-  buttonMode: 'icons' | 'text';
-  aiAvailable: boolean;
-  performanceMode: boolean;
-  fontScale: number;
-  connected: boolean;
-  hideAllResearch: boolean;
-  hideAllSummaries: boolean;
-  summaryPending: boolean;
-  researchPending: boolean;
-  isPinnedNews: boolean;
-  accent: string;
-  soft: string;
-  matchAccent: string;
-  showAutoResearching: boolean;
-  summaryMode: BodyMode;
-  summaryLong: boolean;
-  summaryText: string;
-  researchMode: BodyMode;
-  researchLong: boolean;
-  researchText: string;
-  researchConfidence: string;
-  onTogglePinnedNews: (id: string) => void;
-  onCopyLink: (url: string) => void;
-  onCopyNews: (it: NewsItem) => void;
-  onHideItem: (it: NewsItem) => void;
-  onRequestSummary: (it: NewsItem) => void;
-  onRequestResearch: (it: NewsItem) => void;
-  onToggleAsk: (id: string, feedUrl: string) => void;
-  onSetSummaryMode: (mode: BodyMode) => void;
-  onSetResearchMode: (mode: BodyMode) => void;
-  onAskDraft: (id: string, feedUrl: string, draft: string) => void;
-  onAskSubmit: (it: NewsItem) => void;
-};
-
 export type FeedFilters = FeedInfo['filters'];
 
 export type FeedAskState = {
