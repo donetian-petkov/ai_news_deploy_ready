@@ -102,6 +102,14 @@ export const NewsCard = memo(function NewsCard({ view, state, handlers }: NewsCa
           boxShadow: performanceMode ? 'none' : `${COLUMN_STYLE_TOKENS.newsCardShadowOffset} ${NEWS_CARD_COLOR_TOKENS.shadowColor}, inset 0 1px 0 ${NEWS_CARD_COLOR_TOKENS.insetHighlight}`
         }}
       >
+        <div className="cardOrnamentLayer" aria-hidden="true">
+          <span className="frameTop" />
+          <span className="frameBottom" />
+          <span className="cornerTL" />
+          <span className="cornerTR" />
+          <span className="cornerBL" />
+          <span className="cornerBR" />
+        </div>
         <CardContent sx={{ pb: COLUMN_LAYOUT_TOKENS.cardContentPaddingBottom }}>
           <NewsCardHeader />
           <NewsCardBody />

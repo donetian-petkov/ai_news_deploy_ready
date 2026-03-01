@@ -102,6 +102,14 @@ export function FeedColumn({ feed, columnIdx, drag }: FeedColumnProps) {
           cursor: drag.canDrag ? (drag.isDragging ? 'grabbing' : 'grab') : 'default'
         }}
       >
+        <div className="columnOrnamentLayer" aria-hidden="true">
+          <span className="frameTop" />
+          <span className="frameBottom" />
+          <span className="cornerTL" />
+          <span className="cornerTR" />
+          <span className="cornerBL" />
+          <span className="cornerBR" />
+        </div>
         <CardContent sx={{ pb: COLUMN_LAYOUT_TOKENS.cardContentPaddingBottom, px: COLUMN_LAYOUT_TOKENS.cardContentPaddingX }}>
           <FeedColumnHeader feed={feed} itemsCount={itemsVisible.length} accent={accent} fontScale={fontScale} />
 
