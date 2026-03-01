@@ -69,14 +69,14 @@ export function TopMenuMobileDrawer({
   return (
     <Drawer anchor="left" open={open} onClose={onClose} PaperProps={{ className: 'mobileDrawerPaper' }}>
       <Box className="mobileDrawerHeader">
-        <Typography variant="h6" sx={{ fontWeight: 800 }}>{labels.title}</Typography>
-        <IconButton onClick={onClose} sx={{ color: 'var(--text-main)' }}>
+        <Typography className="mobileDrawerTitle" variant="h6">{labels.title}</Typography>
+        <IconButton className="mobileDrawerCloseBtn" onClick={onClose}>
           <CloseIcon />
         </IconButton>
       </Box>
-      <Divider sx={{ borderColor: 'var(--panel-border)' }} />
-      <Box sx={{ p: 1.4, overflowY: 'auto' }}>
-        <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
+      <Divider className="mobileDrawerDivider" />
+      <Box className="mobileDrawerBody">
+        <Stack className="mobileDrawerVibeRow" direction="row" spacing={1} alignItems="center">
           <QuickVibeSelect value={vibe} labels={labels} fullWidth onChange={onChangeVibe} />
         </Stack>
         <Stack spacing={1}>
@@ -99,8 +99,8 @@ export function TopMenuMobileDrawer({
             {hideAllSummariesLabel}
           </Button>
         </Stack>
-        <Box sx={{ mt: 1.4, mb: 1 }}>
-          <Typography variant="subtitle2" sx={{ mb: 0.8, color: 'var(--text-muted)', fontWeight: 800 }}>
+        <Box className="mobileDrawerReorderSection">
+          <Typography variant="subtitle2" className="mobileDrawerReorderTitle">
             {labels.reorderColumns}
           </Typography>
           <Stack spacing={0.7}>
@@ -113,17 +113,12 @@ export function TopMenuMobileDrawer({
               return (
                 <Stack
                   key={`mobile-order-${feed.url}`}
+                  className="mobileDrawerReorderItem"
                   direction="row"
                   alignItems="center"
                   justifyContent="space-between"
-                  sx={{
-                    p: 0.8,
-                    border: '1px solid var(--panel-border)',
-                    borderRadius: '12px',
-                    background: 'var(--field-bg)'
-                  }}
                 >
-                  <Typography variant="body2" sx={{ fontWeight: 700, pr: 1 }}>
+                  <Typography variant="body2" className="mobileDrawerReorderLabel">
                     {feed.label}
                   </Typography>
                   <Stack direction="row" spacing={0.4}>
@@ -135,7 +130,7 @@ export function TopMenuMobileDrawer({
                       }}
                       disabled={!canMoveUp}
                       aria-label={labels.moveUp}
-                      sx={{ border: '1px solid var(--panel-border)', borderRadius: '10px' }}
+                      className="mobileDrawerArrowBtn"
                     >
                       <ArrowUpwardIcon fontSize="inherit" />
                     </IconButton>
@@ -147,7 +142,7 @@ export function TopMenuMobileDrawer({
                       }}
                       disabled={!canMoveDown}
                       aria-label={labels.moveDown}
-                      sx={{ border: '1px solid var(--panel-border)', borderRadius: '10px' }}
+                      className="mobileDrawerArrowBtn"
                     >
                       <ArrowDownwardIcon fontSize="inherit" />
                     </IconButton>

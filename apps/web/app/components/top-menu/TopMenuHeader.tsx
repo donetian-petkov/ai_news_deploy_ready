@@ -74,7 +74,7 @@ export function TopMenuHeader({
   return (
     <div className="headerRow">
       <Box className="headerLeft">
-        <Typography id="appTitle" component="h1" sx={{ margin: 0, fontSize: 28, fontWeight: 900, lineHeight: 1.1 }}>
+        <Typography id="appTitle" className="appTitleText" component="h1">
           {labels.title}
         </Typography>
         {topHintAsButtons ? (
@@ -100,16 +100,16 @@ export function TopMenuHeader({
       </Box>
 
       {isMobile ? (
-        <Stack className="headerRight mobileTopActions" spacing={1.1} sx={{ width: '100%' }}>
-          <Stack direction="row" spacing={1} alignItems="center" justifyContent="space-between">
-            <Stack direction="row" spacing={0.8} sx={{ flexWrap: 'wrap' }}>
+        <Stack className="headerRight mobileTopActions mobileTopActionsStack" spacing={1.1}>
+          <Stack className="mobileStatusRow" direction="row" spacing={1} alignItems="center" justifyContent="space-between">
+            <Stack className="mobileStatusPills" direction="row" spacing={0.8}>
               <StatusPills connected={connected} status={status} totalTokens={totalTokens} />
             </Stack>
             <IconButton
               id="menuToggle"
+              className="mobileMenuToggleBtn"
               size="small"
               onClick={onToggleMenu}
-              sx={{ border: '1px solid var(--panel-border)', bgcolor: 'var(--field-bg)', color: 'var(--text-main)' }}
             >
               <MenuIcon fontSize="small" />
             </IconButton>

@@ -33,6 +33,13 @@
   letter-spacing: 0.01em;
 }
 
+.appTitleText {
+  margin: 0 !important;
+  font-size: 28px !important;
+  font-weight: 900 !important;
+  line-height: 1.1 !important;
+}
+
 .subHint {
   color: var(--text-muted);
   margin-top: 4px;
@@ -169,14 +176,85 @@
   box-shadow: var(--button-hover-shadow);
 }
 
+.topbar .MuiButton-root.topMenuActionBtnIconOnly {
+  min-width: 38px !important;
+  padding-left: 7.6px !important;
+  padding-right: 7.6px !important;
+}
+
 .topbar .MuiOutlinedInput-root,
 .topbar .MuiInputBase-root {
   border-radius: 12px !important;
   background: var(--field-bg) !important;
 }
 
+.mobileTopActionsStack {
+  width: 100%;
+}
+
+.mobileStatusRow {
+  width: 100%;
+}
+
+.mobileStatusPills {
+  flex-wrap: wrap;
+}
+
+.mobileMenuToggleBtn {
+  border: 1px solid var(--panel-border) !important;
+  background: var(--field-bg) !important;
+  color: var(--text-main) !important;
+}
+
 .mobileTopActions .MuiChip-root {
   backdrop-filter: blur(6px);
+}
+
+.topMenuSearchSection {
+  margin-top: 8.8px;
+  margin-bottom: 7.2px;
+}
+
+.topMenuSearchClearBtnFull {
+  width: 100%;
+}
+
+.topMenuAddStreamSection {
+  margin-top: 2.4px;
+  margin-bottom: 8px;
+}
+
+.topMenuAddStreamTypeControl {
+  min-width: 150px;
+}
+
+.topMenuAddStreamLabelInput {
+  min-width: 180px;
+}
+
+.topMenuAddStreamIntervalControl {
+  min-width: 110px;
+}
+
+.topMenuAddStreamBtn {
+  white-space: nowrap !important;
+  min-width: 124px !important;
+  border-radius: 12px !important;
+  align-self: center;
+}
+
+.topMenuAddStreamBtnMobile {
+  width: 100%;
+  min-width: 100% !important;
+  align-self: stretch;
+  padding-top: 8.8px !important;
+  padding-bottom: 8.8px !important;
+}
+
+.topMenuAddStreamStatusAlert {
+  margin-top: 8px;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
 }
 
 .mobileDrawerPaper {
@@ -196,6 +274,55 @@
   align-items: center;
   justify-content: space-between;
   padding: 12px 14px;
+}
+
+.mobileDrawerTitle {
+  font-weight: 800 !important;
+}
+
+.mobileDrawerCloseBtn {
+  color: var(--text-main) !important;
+}
+
+.mobileDrawerDivider {
+  border-color: var(--panel-border) !important;
+}
+
+.mobileDrawerBody {
+  padding: 11.2px;
+  overflow-y: auto;
+}
+
+.mobileDrawerVibeRow {
+  margin-bottom: 8px;
+}
+
+.mobileDrawerReorderSection {
+  margin-top: 11.2px;
+  margin-bottom: 8px;
+}
+
+.mobileDrawerReorderTitle {
+  margin-bottom: 6.4px !important;
+  color: var(--text-muted);
+  font-weight: 800 !important;
+}
+
+.mobileDrawerReorderItem {
+  padding: 6.4px;
+  border: 1px solid var(--panel-border);
+  border-radius: 12px;
+  background: var(--field-bg);
+}
+
+.mobileDrawerReorderLabel {
+  font-weight: 700 !important;
+  padding-right: 8px;
+}
+
+.mobileDrawerArrowBtn {
+  border: 1px solid var(--panel-border) !important;
+  border-radius: 10px !important;
 }
 
 @media (max-width: 900px) {
@@ -245,6 +372,10 @@
     font-size: calc(1.35rem * var(--ui-font-scale));
   }
 
+  .appTitleText {
+    font-size: calc(1.35rem * var(--ui-font-scale)) !important;
+  }
+
   .subHint {
     font-size: calc(0.86rem * var(--ui-font-scale));
   }
@@ -288,5 +419,12 @@
 
   .mobileDrawerPaper .MuiTypography-root {
     color: var(--text-main);
+  }
+
+  .topMenuAddStreamTypeControl,
+  .topMenuAddStreamLabelInput,
+  .topMenuAddStreamIntervalControl,
+  .topMenuAddStreamBtn {
+    min-width: 100% !important;
   }
 }

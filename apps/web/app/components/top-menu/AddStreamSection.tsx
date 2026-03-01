@@ -37,9 +37,9 @@ export function AddStreamSection({
   onAddStream
 }: AddStreamSectionProps) {
   return (
-    <Box sx={{ mt: 0.3, mb: 1 }}>
+    <Box className="topMenuAddStreamSection">
       <Stack direction={isMobile ? 'column' : { xs: 'column', md: 'row' }} spacing={1}>
-        <FormControl size={isMobile ? 'medium' : 'small'} sx={{ minWidth: 150 }}>
+        <FormControl className="topMenuAddStreamTypeControl" size={isMobile ? 'medium' : 'small'}>
           <Select value={feedType} onChange={e => onFeedTypeChange(e.target.value as 'rss' | 'reddit' | 'youtube')}>
             <MenuItem value="rss">{labels.addStreamTypeRss}</MenuItem>
             <MenuItem value="reddit">{labels.addStreamTypeReddit}</MenuItem>
@@ -59,9 +59,9 @@ export function AddStreamSection({
           value={feedLabel}
           onChange={e => onFeedLabelChange(e.target.value)}
           placeholder={labels.addLabelPlaceholder}
-          sx={{ minWidth: 180 }}
+          className="topMenuAddStreamLabelInput"
         />
-        <FormControl size={isMobile ? 'medium' : 'small'} sx={{ minWidth: 110 }}>
+        <FormControl className="topMenuAddStreamIntervalControl" size={isMobile ? 'medium' : 'small'}>
           <Select value={feedInterval} onChange={e => onFeedIntervalChange(String(e.target.value))}>
             <MenuItem value="45">45{labels.intervalSuffix}</MenuItem>
             <MenuItem value="60">60{labels.intervalSuffix}</MenuItem>
@@ -75,19 +75,13 @@ export function AddStreamSection({
           variant="contained"
           size={isMobile ? 'medium' : 'small'}
           onClick={onAddStream}
-          sx={{
-            whiteSpace: 'nowrap',
-            minWidth: { xs: '100%', md: 124 },
-            borderRadius: 1.5,
-            alignSelf: { xs: 'stretch', md: 'center' },
-            py: isMobile ? 1.1 : undefined
-          }}
+          className={isMobile ? 'topMenuAddStreamBtn topMenuAddStreamBtnMobile' : 'topMenuAddStreamBtn'}
         >
           {labels.add}
         </Button>
       </Stack>
       {addStatus ? (
-        <Alert severity={addStatus.kind} sx={{ mt: 1, py: 0 }}>
+        <Alert className="topMenuAddStreamStatusAlert" severity={addStatus.kind}>
           {addStatus.message}
         </Alert>
       ) : null}

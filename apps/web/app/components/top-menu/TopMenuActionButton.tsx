@@ -37,13 +37,12 @@ export function TopMenuActionButton({
     <Tooltip title={label}>
       <Button
         id={id}
-        className="btn ghost"
+        className="btn ghost topMenuActionBtnIconOnly"
         size="small"
         variant="outlined"
         type="button"
         aria-label={label}
         onClick={onActionClick}
-        sx={{ minWidth: 38, px: 0.95 }}
       >
         {icon}
       </Button>
