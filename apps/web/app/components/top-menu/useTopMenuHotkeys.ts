@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
 type UseTopMenuHotkeysArgs = {
   searchVisible: boolean;
@@ -29,10 +29,54 @@ export function useTopMenuHotkeys({
   onCycleTheme,
   onCycleVibe
 }: UseTopMenuHotkeysArgs) {
+  const latestRef = useRef<UseTopMenuHotkeysArgs>({
+    searchVisible,
+    onCloseHelp,
+    onToggleHelp,
+    onFocusSearch,
+    onToggleMenu,
+    onToggleControls,
+    onToggleAllColumnControls,
+    onToggleSearch,
+    onToggleAddStream,
+    onCycleTheme,
+    onCycleVibe
+  });
+
+  useEffect(() => {
+    latestRef.current = {
+      searchVisible,
+      onCloseHelp,
+      onToggleHelp,
+      onFocusSearch,
+      onToggleMenu,
+      onToggleControls,
+      onToggleAllColumnControls,
+      onToggleSearch,
+      onToggleAddStream,
+      onCycleTheme,
+      onCycleVibe
+    };
+  }, [
+    searchVisible,
+    onCloseHelp,
+    onToggleHelp,
+    onFocusSearch,
+    onToggleMenu,
+    onToggleControls,
+    onToggleAllColumnControls,
+    onToggleSearch,
+    onToggleAddStream,
+    onCycleTheme,
+    onCycleVibe
+  ]);
+
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
+      const handlers = latestRef.current;
+
       if (e.key === 'Escape') {
-        onCloseHelp();
+        handlers.onCloseHelp();
         return;
       }
 
@@ -51,53 +95,53 @@ export function useTopMenuHotkeys({
 
       if (key === '?') {
         e.preventDefault();
-        onToggleHelp();
+        handlers.onToggleHelp();
         return;
       }
       if (key === '/') {
         e.preventDefault();
-        if (!searchVisible) onToggleSearch();
-        else onFocusSearch();
+        if (!handlers.searchVisible) handlers.onToggleSearch();
+        else handlers.onFocusSearch();
         return;
       }
       if (lower === 'h') {
         e.preventDefault();
-        onToggleHelp();
+        handlers.onToggleHelp();
         return;
       }
       if (lower === 'm') {
         e.preventDefault();
-        onToggleMenu();
+        handlers.onToggleMenu();
         return;
       }
       if (lower === 'c') {
         e.preventDefault();
-        onToggleControls();
+        handlers.onToggleControls();
         return;
       }
       if (lower === 'g') {
         e.preventDefault();
-        onToggleAllColumnControls();
+        handlers.onToggleAllColumnControls();
         return;
       }
       if (lower === 's') {
         e.preventDefault();
-        onToggleSearch();
+        handlers.onToggleSearch();
         return;
       }
       if (lower === 'a') {
         e.preventDefault();
-        onToggleAddStream();
+        handlers.onToggleAddStream();
         return;
       }
       if (lower === 't') {
         e.preventDefault();
-        onCycleTheme();
+        handlers.onCycleTheme();
         return;
       }
       if (lower === 'v') {
         e.preventDefault();
-        onCycleVibe();
+        handlers.onCycleVibe();
       }
     };
 
@@ -105,17 +149,5 @@ export function useTopMenuHotkeys({
     return () => {
       window.removeEventListener('keydown', onKeyDown);
     };
-  }, [
-    onCloseHelp,
-    onToggleHelp,
-    onFocusSearch,
-    onToggleMenu,
-    onToggleControls,
-    onToggleAllColumnControls,
-    onToggleSearch,
-    onToggleAddStream,
-    onCycleTheme,
-    onCycleVibe,
-    searchVisible
-  ]);
+  }, []);
 }

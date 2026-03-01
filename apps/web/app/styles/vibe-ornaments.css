@@ -2,8 +2,12 @@
   --news-readable-bg: linear-gradient(180deg, rgba(7, 13, 26, 0.985), rgba(7, 13, 26, 0.985));
   --column-readable-bg: linear-gradient(180deg, rgba(10, 18, 35, 0.96), rgba(8, 15, 30, 0.96));
   --vibe-frame-color: rgba(118, 177, 255, 0.9);
-  --vibe-frame-glow: rgba(118, 177, 255, 0.26);
-  --vibe-ornament-opacity: 0.54;
+  --vibe-frame-glow: rgba(118, 177, 255, 0.24);
+  --vibe-accent-2: rgba(127, 232, 255, 0.9);
+  --vibe-accent-3: rgba(242, 197, 121, 0.9);
+  --vibe-line-weight: 1.45px;
+  --vibe-inner-inset: 5px;
+  --vibe-ornament-opacity: 0.62;
   --effect-ornament-scale: 1;
 }
 
@@ -13,11 +17,11 @@ body[data-theme='light'] {
 }
 
 body[data-effect-intensity='low'] {
-  --effect-ornament-scale: 0.5;
+  --effect-ornament-scale: 0.62;
 }
 
 body[data-effect-intensity='high'] {
-  --effect-ornament-scale: 1.15;
+  --effect-ornament-scale: 1.2;
 }
 
 body .feed-column-shell,
@@ -30,7 +34,7 @@ body .news-item-card {
 body .feed-column-shell .MuiCardContent-root,
 body .news-item-card .MuiCardContent-root {
   position: relative;
-  z-index: 1;
+  z-index: 2;
 }
 
 body .news-item-card {
@@ -38,7 +42,7 @@ body .news-item-card {
 }
 
 body .feed-column-shell {
-  background: var(--column-readable-bg), var(--column-shell-overlay) !important;
+  background: var(--column-readable-bg) !important;
 }
 
 body .feed-column-shell::before,
@@ -53,71 +57,78 @@ body .news-item-card::after {
 body .feed-column-shell::before,
 body .news-item-card::before {
   z-index: 0;
-  inset: 5px;
+  inset: var(--vibe-inner-inset);
   border-radius: inherit;
-  border: 1.6px solid var(--vibe-frame-color);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--vibe-frame-glow) 45%, transparent);
+  border: var(--vibe-line-weight) solid var(--vibe-frame-color);
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--vibe-frame-glow) 48%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--vibe-frame-glow) 28%, transparent);
   opacity: calc(0.86 * var(--effect-ornament-scale));
 }
 
 body .feed-column-shell::after,
 body .news-item-card::after {
-  z-index: 0;
-  inset: 2px;
+  z-index: 1;
+  inset: 3px;
   border-radius: inherit;
-  background:
-    radial-gradient(circle, var(--vibe-frame-color) 0 36%, transparent 42%) 10px 10px / 8px 8px no-repeat,
-    radial-gradient(circle, var(--vibe-frame-color) 0 36%, transparent 42%) calc(100% - 10px) 10px / 8px 8px no-repeat,
-    radial-gradient(circle, var(--vibe-frame-color) 0 36%, transparent 42%) 10px calc(100% - 10px) / 8px 8px no-repeat,
-    radial-gradient(circle, var(--vibe-frame-color) 0 36%, transparent 42%) calc(100% - 10px) calc(100% - 10px) / 8px 8px no-repeat,
-    linear-gradient(var(--vibe-frame-color), var(--vibe-frame-color)) top center / 64px 1px no-repeat,
-    linear-gradient(var(--vibe-frame-color), var(--vibe-frame-color)) bottom center / 64px 1px no-repeat;
   opacity: calc(var(--vibe-ornament-opacity) * var(--effect-ornament-scale));
+  background:
+    linear-gradient(var(--vibe-frame-color), var(--vibe-frame-color)) 14px 14px / 18px 1.4px no-repeat,
+    linear-gradient(var(--vibe-frame-color), var(--vibe-frame-color)) 14px 14px / 1.4px 18px no-repeat,
+    linear-gradient(var(--vibe-frame-color), var(--vibe-frame-color)) calc(100% - 14px) 14px / 18px 1.4px no-repeat,
+    linear-gradient(var(--vibe-frame-color), var(--vibe-frame-color)) calc(100% - 14px) 14px / 1.4px 18px no-repeat,
+    linear-gradient(var(--vibe-frame-color), var(--vibe-frame-color)) 14px calc(100% - 14px) / 18px 1.4px no-repeat,
+    linear-gradient(var(--vibe-frame-color), var(--vibe-frame-color)) 14px calc(100% - 14px) / 1.4px 18px no-repeat,
+    linear-gradient(var(--vibe-frame-color), var(--vibe-frame-color)) calc(100% - 14px) calc(100% - 14px) / 18px 1.4px no-repeat,
+    linear-gradient(var(--vibe-frame-color), var(--vibe-frame-color)) calc(100% - 14px) calc(100% - 14px) / 1.4px 18px no-repeat;
 }
 
 body .feed-column-shell[data-column-theme='match']::before {
   border-width: 2px;
-  border-color: color-mix(in srgb, var(--match-pill-bg) 68%, white 32%);
+  border-color: color-mix(in srgb, var(--match-pill-bg) 70%, white 30%);
   box-shadow:
-    inset 0 0 0 1px color-mix(in srgb, var(--match-pill-bg) 45%, transparent),
-    0 0 14px color-mix(in srgb, var(--match-pill-bg) 22%, transparent);
+    inset 0 0 0 1px color-mix(in srgb, var(--match-pill-bg) 44%, transparent),
+    0 0 16px color-mix(in srgb, var(--match-pill-bg) 20%, transparent);
 }
 
-body[data-vibe='anime'] .feed-column-shell {
-  border-radius: 24px !important;
-}
-
-body[data-vibe='anime'] .news-item-card {
-  border-radius: 20px !important;
-}
-
+/* Anime Pop: comic halftones + burst marks */
 body[data-vibe='anime'] {
   --vibe-frame-color: rgba(255, 126, 220, 0.94);
   --vibe-frame-glow: rgba(127, 232, 255, 0.3);
+  --vibe-accent-2: rgba(122, 236, 255, 0.94);
+}
+
+body[data-vibe='anime'] .feed-column-shell {
+  border-radius: 22px !important;
+}
+
+body[data-vibe='anime'] .news-item-card {
+  border-radius: 18px !important;
 }
 
 body[data-vibe='anime'] .feed-column-shell::after,
 body[data-vibe='anime'] .news-item-card::after {
   background:
-    radial-gradient(circle, rgba(255, 156, 228, 0.95) 0 38%, transparent 42%) 16px 12px / 10px 10px no-repeat,
-    radial-gradient(circle, rgba(122, 236, 255, 0.95) 0 38%, transparent 42%) 28px 18px / 6px 6px no-repeat,
-    radial-gradient(circle, rgba(122, 236, 255, 0.95) 0 38%, transparent 42%) calc(100% - 18px) 12px / 10px 10px no-repeat,
-    radial-gradient(circle, rgba(255, 156, 228, 0.95) 0 38%, transparent 42%) calc(100% - 30px) 18px / 6px 6px no-repeat,
-    radial-gradient(circle, rgba(255, 156, 228, 0.95) 0 38%, transparent 42%) 16px calc(100% - 12px) / 10px 10px no-repeat,
-    radial-gradient(circle, rgba(122, 236, 255, 0.95) 0 38%, transparent 42%) calc(100% - 18px) calc(100% - 12px) / 10px 10px no-repeat,
-    linear-gradient(120deg, rgba(255, 146, 224, 0.52) 0 36%, transparent 37%) left top / 40px 20px no-repeat,
-    linear-gradient(-120deg, rgba(122, 236, 255, 0.52) 0 36%, transparent 37%) right bottom / 40px 20px no-repeat;
+    radial-gradient(circle, var(--vibe-frame-color) 0 42%, transparent 48%) 22px 16px / 10px 10px no-repeat,
+    radial-gradient(circle, var(--vibe-accent-2) 0 42%, transparent 48%) calc(100% - 22px) 16px / 10px 10px no-repeat,
+    radial-gradient(circle, var(--vibe-accent-2) 0 36%, transparent 42%) 24px calc(100% - 16px) / 8px 8px no-repeat,
+    radial-gradient(circle, var(--vibe-frame-color) 0 36%, transparent 42%) calc(100% - 24px) calc(100% - 16px) / 8px 8px no-repeat,
+    radial-gradient(circle at center, color-mix(in srgb, var(--vibe-frame-color) 70%, transparent) 0 1px, transparent 1px 3px) 100% 0 / 36px 36px repeat,
+    linear-gradient(118deg, color-mix(in srgb, var(--vibe-frame-color) 56%, transparent) 0 42%, transparent 45%) left top / 58px 22px no-repeat,
+    linear-gradient(-118deg, color-mix(in srgb, var(--vibe-accent-2) 56%, transparent) 0 42%, transparent 45%) right bottom / 58px 22px no-repeat;
+}
+
+/* Video Game: pixel corners + scanline ticks */
+body[data-vibe='arcade'] {
+  --vibe-frame-color: rgba(88, 246, 255, 0.95);
+  --vibe-frame-glow: rgba(100, 255, 234, 0.34);
+  --vibe-accent-2: rgba(255, 95, 246, 0.9);
 }
 
 body[data-vibe='arcade'] .feed-column-shell,
 body[data-vibe='arcade'] .news-item-card {
-  border-radius: 4px !important;
-  clip-path: polygon(0 11px, 11px 11px, 11px 0, calc(100% - 11px) 0, calc(100% - 11px) 11px, 100% 11px, 100% calc(100% - 11px), calc(100% - 11px) calc(100% - 11px), calc(100% - 11px) 100%, 11px 100%, 11px calc(100% - 11px), 0 calc(100% - 11px)) !important;
-}
-
-body[data-vibe='arcade'] {
-  --vibe-frame-color: rgba(88, 246, 255, 0.95);
-  --vibe-frame-glow: rgba(100, 255, 234, 0.34);
+  border-radius: 6px !important;
+  clip-path: polygon(0 12px, 12px 12px, 12px 0, calc(100% - 12px) 0, calc(100% - 12px) 12px, 100% 12px, 100% calc(100% - 12px), calc(100% - 12px) calc(100% - 12px), calc(100% - 12px) 100%, 12px 100%, 12px calc(100% - 12px), 0 calc(100% - 12px)) !important;
 }
 
 body[data-vibe='arcade'] .feed-column-shell::before,
@@ -128,48 +139,44 @@ body[data-vibe='arcade'] .news-item-card::before {
 body[data-vibe='arcade'] .feed-column-shell::after,
 body[data-vibe='arcade'] .news-item-card::after {
   background:
-    linear-gradient(rgba(80, 255, 177, 0.88), rgba(80, 255, 177, 0.88)) 8px 8px / 14px 2px no-repeat,
-    linear-gradient(rgba(80, 255, 177, 0.88), rgba(80, 255, 177, 0.88)) 8px 8px / 2px 14px no-repeat,
-    linear-gradient(rgba(255, 95, 246, 0.88), rgba(255, 95, 246, 0.88)) calc(100% - 8px) 8px / 14px 2px no-repeat,
-    linear-gradient(rgba(255, 95, 246, 0.88), rgba(255, 95, 246, 0.88)) calc(100% - 8px) 8px / 2px 14px no-repeat,
-    linear-gradient(rgba(80, 255, 177, 0.88), rgba(80, 255, 177, 0.88)) 8px calc(100% - 8px) / 14px 2px no-repeat,
-    linear-gradient(rgba(80, 255, 177, 0.88), rgba(80, 255, 177, 0.88)) 8px calc(100% - 8px) / 2px 14px no-repeat,
-    linear-gradient(rgba(255, 95, 246, 0.88), rgba(255, 95, 246, 0.88)) calc(100% - 8px) calc(100% - 8px) / 14px 2px no-repeat,
-    linear-gradient(rgba(255, 95, 246, 0.88), rgba(255, 95, 246, 0.88)) calc(100% - 8px) calc(100% - 8px) / 2px 14px no-repeat,
-    repeating-linear-gradient(90deg, rgba(96, 255, 238, 0.5) 0 6px, transparent 6px 12px) top center / 86px 1px no-repeat,
-    repeating-linear-gradient(90deg, rgba(96, 255, 238, 0.5) 0 6px, transparent 6px 12px) bottom center / 86px 1px no-repeat;
+    linear-gradient(var(--vibe-frame-color), var(--vibe-frame-color)) 10px 10px / 16px 2px no-repeat,
+    linear-gradient(var(--vibe-frame-color), var(--vibe-frame-color)) 10px 10px / 2px 16px no-repeat,
+    linear-gradient(var(--vibe-accent-2), var(--vibe-accent-2)) calc(100% - 10px) 10px / 16px 2px no-repeat,
+    linear-gradient(var(--vibe-accent-2), var(--vibe-accent-2)) calc(100% - 10px) 10px / 2px 16px no-repeat,
+    repeating-linear-gradient(90deg, color-mix(in srgb, var(--vibe-frame-color) 60%, transparent) 0 7px, transparent 7px 13px) top center / 96px 1px no-repeat,
+    repeating-linear-gradient(90deg, color-mix(in srgb, var(--vibe-frame-color) 60%, transparent) 0 7px, transparent 7px 13px) bottom center / 96px 1px no-repeat;
+}
+
+/* Movie Night: film strip + clapper accents */
+body[data-vibe='cinema'] {
+  --vibe-frame-color: rgba(242, 197, 121, 0.95);
+  --vibe-frame-glow: rgba(245, 183, 98, 0.28);
+  --vibe-accent-2: rgba(244, 122, 176, 0.9);
 }
 
 body[data-vibe='cinema'] .feed-column-shell,
 body[data-vibe='cinema'] .news-item-card {
   border-radius: 12px !important;
-  clip-path: none !important;
-}
-
-body[data-vibe='cinema'] {
-  --vibe-frame-color: rgba(242, 197, 121, 0.95);
-  --vibe-frame-glow: rgba(245, 183, 98, 0.28);
 }
 
 body[data-vibe='cinema'] .feed-column-shell::after,
 body[data-vibe='cinema'] .news-item-card::after {
   background:
-    repeating-linear-gradient(180deg, transparent 0 6px, rgba(250, 230, 195, 0.85) 6px 10px, transparent 10px 16px) left center / 10px 100% no-repeat,
-    repeating-linear-gradient(180deg, transparent 0 6px, rgba(250, 230, 195, 0.85) 6px 10px, transparent 10px 16px) right center / 10px 100% no-repeat,
-    repeating-linear-gradient(135deg, rgba(248, 211, 148, 0.72) 0 4px, transparent 4px 8px) left 14px top 6px / 36px 10px no-repeat,
-    linear-gradient(rgba(248, 211, 148, 0.72), rgba(248, 211, 148, 0.72)) top center / 54px 1px no-repeat,
-    linear-gradient(rgba(248, 211, 148, 0.72), rgba(248, 211, 148, 0.72)) bottom center / 54px 1px no-repeat;
+    repeating-linear-gradient(180deg, transparent 0 7px, color-mix(in srgb, var(--vibe-frame-color) 84%, transparent) 7px 11px, transparent 11px 18px) left center / 11px 100% no-repeat,
+    repeating-linear-gradient(180deg, transparent 0 7px, color-mix(in srgb, var(--vibe-frame-color) 84%, transparent) 7px 11px, transparent 11px 18px) right center / 11px 100% no-repeat,
+    repeating-linear-gradient(135deg, color-mix(in srgb, var(--vibe-frame-color) 66%, transparent) 0 4px, transparent 4px 8px) 14px 9px / 38px 10px no-repeat,
+    linear-gradient(color-mix(in srgb, var(--vibe-accent-2) 72%, transparent), color-mix(in srgb, var(--vibe-accent-2) 72%, transparent)) top center / 58px 1px no-repeat;
+}
+
+/* Newspaper: column rules + editorial corners */
+body[data-vibe='newspaper'] {
+  --vibe-frame-color: rgba(210, 223, 236, 0.94);
+  --vibe-frame-glow: rgba(153, 173, 195, 0.22);
 }
 
 body[data-vibe='newspaper'] .feed-column-shell,
 body[data-vibe='newspaper'] .news-item-card {
-  border-radius: 1px !important;
-  clip-path: none !important;
-}
-
-body[data-vibe='newspaper'] {
-  --vibe-frame-color: rgba(210, 223, 236, 0.94);
-  --vibe-frame-glow: rgba(153, 173, 195, 0.22);
+  border-radius: 2px !important;
 }
 
 body[data-vibe='newspaper'] .feed-column-shell::before,
@@ -181,9 +188,16 @@ body[data-vibe='newspaper'] .news-item-card::before {
 body[data-vibe='newspaper'] .feed-column-shell::after,
 body[data-vibe='newspaper'] .news-item-card::after {
   background:
-    linear-gradient(rgba(206, 220, 236, 0.88), rgba(206, 220, 236, 0.88)) top center / calc(100% - 22px) 1px no-repeat,
-    linear-gradient(rgba(206, 220, 236, 0.88), rgba(206, 220, 236, 0.88)) bottom center / calc(100% - 22px) 1px no-repeat,
-    repeating-linear-gradient(90deg, rgba(206, 220, 236, 0.52) 0 7px, transparent 7px 13px) top center / 90px 1px no-repeat;
+    repeating-linear-gradient(0deg, color-mix(in srgb, var(--vibe-frame-color) 44%, transparent) 0 1px, transparent 1px 8px) left center / calc(100% - 26px) 100% no-repeat,
+    linear-gradient(var(--vibe-frame-color), var(--vibe-frame-color)) top center / calc(100% - 26px) 1px no-repeat,
+    linear-gradient(var(--vibe-frame-color), var(--vibe-frame-color)) bottom center / calc(100% - 26px) 1px no-repeat;
+}
+
+/* Cyber Witch: rune-circuit corners + octagonal shell */
+body[data-vibe='cyberwitch'] {
+  --vibe-frame-color: rgba(99, 221, 255, 0.95);
+  --vibe-frame-glow: rgba(190, 119, 255, 0.26);
+  --vibe-accent-2: rgba(199, 118, 255, 0.94);
 }
 
 body[data-vibe='cyberwitch'] .feed-column-shell,
@@ -192,70 +206,70 @@ body[data-vibe='cyberwitch'] .news-item-card {
   clip-path: polygon(14px 0, calc(100% - 14px) 0, 100% 14px, 100% calc(100% - 14px), calc(100% - 14px) 100%, 14px 100%, 0 calc(100% - 14px), 0 14px) !important;
 }
 
-body[data-vibe='cyberwitch'] {
-  --vibe-frame-color: rgba(99, 221, 255, 0.95);
-  --vibe-frame-glow: rgba(190, 119, 255, 0.26);
-}
-
 body[data-vibe='cyberwitch'] .feed-column-shell::after,
 body[data-vibe='cyberwitch'] .news-item-card::after {
   background:
-    radial-gradient(circle, rgba(93, 230, 255, 0.94) 0 38%, transparent 42%) 14px 14px / 8px 8px no-repeat,
-    radial-gradient(circle, rgba(199, 118, 255, 0.94) 0 38%, transparent 42%) calc(100% - 14px) 14px / 8px 8px no-repeat,
-    radial-gradient(circle, rgba(199, 118, 255, 0.94) 0 38%, transparent 42%) 14px calc(100% - 14px) / 8px 8px no-repeat,
-    radial-gradient(circle, rgba(93, 230, 255, 0.94) 0 38%, transparent 42%) calc(100% - 14px) calc(100% - 14px) / 8px 8px no-repeat,
-    linear-gradient(rgba(93, 230, 255, 0.72), rgba(93, 230, 255, 0.72)) left center / 1px 66px no-repeat,
-    linear-gradient(rgba(199, 118, 255, 0.72), rgba(199, 118, 255, 0.72)) right center / 1px 66px no-repeat,
-    linear-gradient(90deg, rgba(93, 230, 255, 0.62), rgba(199, 118, 255, 0.62)) top center / 74px 1px no-repeat;
+    radial-gradient(circle, var(--vibe-frame-color) 0 40%, transparent 46%) 15px 15px / 9px 9px no-repeat,
+    radial-gradient(circle, var(--vibe-accent-2) 0 40%, transparent 46%) calc(100% - 15px) 15px / 9px 9px no-repeat,
+    radial-gradient(circle, var(--vibe-accent-2) 0 40%, transparent 46%) 15px calc(100% - 15px) / 9px 9px no-repeat,
+    radial-gradient(circle, var(--vibe-frame-color) 0 40%, transparent 46%) calc(100% - 15px) calc(100% - 15px) / 9px 9px no-repeat,
+    linear-gradient(var(--vibe-frame-color), var(--vibe-frame-color)) left center / 1px 70px no-repeat,
+    linear-gradient(var(--vibe-accent-2), var(--vibe-accent-2)) right center / 1px 70px no-repeat,
+    linear-gradient(90deg, color-mix(in srgb, var(--vibe-frame-color) 72%, transparent), color-mix(in srgb, var(--vibe-accent-2) 72%, transparent)) top center / 78px 1px no-repeat;
+}
+
+/* Fantasy: branch tips + gem crest */
+body[data-vibe='fantasy'] {
+  --vibe-frame-color: rgba(232, 194, 114, 0.95);
+  --vibe-frame-glow: rgba(125, 228, 181, 0.26);
+  --vibe-accent-2: rgba(128, 228, 182, 0.9);
 }
 
 body[data-vibe='fantasy'] .feed-column-shell,
 body[data-vibe='fantasy'] .news-item-card {
-  border-radius: 9px !important;
-  clip-path: polygon(0 8px, 8px 0, calc(50% - 10px) 0, 50% 7px, calc(50% + 10px) 0, calc(100% - 8px) 0, 100% 8px, 100% calc(100% - 8px), calc(100% - 8px) 100%, calc(50% + 10px) 100%, 50% calc(100% - 7px), calc(50% - 10px) 100%, 8px 100%, 0 calc(100% - 8px)) !important;
-}
-
-body[data-vibe='fantasy'] {
-  --vibe-frame-color: rgba(232, 194, 114, 0.95);
-  --vibe-frame-glow: rgba(125, 228, 181, 0.26);
+  border-radius: 10px !important;
+  clip-path: polygon(0 10px, 10px 0, calc(50% - 12px) 0, 50% 8px, calc(50% + 12px) 0, calc(100% - 10px) 0, 100% 10px, 100% calc(100% - 10px), calc(100% - 10px) 100%, calc(50% + 12px) 100%, 50% calc(100% - 8px), calc(50% - 12px) 100%, 10px 100%, 0 calc(100% - 10px)) !important;
 }
 
 body[data-vibe='fantasy'] .feed-column-shell::after,
 body[data-vibe='fantasy'] .news-item-card::after {
   background:
-    radial-gradient(ellipse 8px 13px, rgba(128, 228, 182, 0.9) 0 45%, transparent 52%) 12px 12px / 18px 24px no-repeat,
-    radial-gradient(ellipse 8px 13px, rgba(128, 228, 182, 0.9) 0 45%, transparent 52%) calc(100% - 12px) 12px / 18px 24px no-repeat,
-    radial-gradient(ellipse 8px 13px, rgba(128, 228, 182, 0.9) 0 45%, transparent 52%) 12px calc(100% - 12px) / 18px 24px no-repeat,
-    radial-gradient(ellipse 8px 13px, rgba(128, 228, 182, 0.9) 0 45%, transparent 52%) calc(100% - 12px) calc(100% - 12px) / 18px 24px no-repeat,
-    linear-gradient(45deg, transparent 46%, rgba(236, 201, 128, 0.9) 47% 53%, transparent 54%) top center / 14px 14px no-repeat,
-    linear-gradient(-45deg, transparent 46%, rgba(236, 201, 128, 0.9) 47% 53%, transparent 54%) bottom center / 14px 14px no-repeat;
+    radial-gradient(ellipse 8px 14px, var(--vibe-accent-2) 0 45%, transparent 52%) 14px 14px / 20px 26px no-repeat,
+    radial-gradient(ellipse 8px 14px, var(--vibe-accent-2) 0 45%, transparent 52%) calc(100% - 14px) 14px / 20px 26px no-repeat,
+    radial-gradient(ellipse 8px 14px, var(--vibe-accent-2) 0 45%, transparent 52%) 14px calc(100% - 14px) / 20px 26px no-repeat,
+    radial-gradient(ellipse 8px 14px, var(--vibe-accent-2) 0 45%, transparent 52%) calc(100% - 14px) calc(100% - 14px) / 20px 26px no-repeat,
+    linear-gradient(45deg, transparent 44%, color-mix(in srgb, var(--vibe-frame-color) 90%, transparent) 45% 55%, transparent 56%) top center / 16px 16px no-repeat,
+    linear-gradient(-45deg, transparent 44%, color-mix(in srgb, var(--vibe-frame-color) 90%, transparent) 45% 55%, transparent 56%) bottom center / 16px 16px no-repeat;
+}
+
+/* Sci-Fi: HUD brackets + telemetry ticks */
+body[data-vibe='scifi'] {
+  --vibe-frame-color: rgba(116, 229, 255, 0.96);
+  --vibe-frame-glow: rgba(139, 151, 255, 0.28);
+  --vibe-accent-2: rgba(136, 151, 255, 0.92);
 }
 
 body[data-vibe='scifi'] .feed-column-shell,
 body[data-vibe='scifi'] .news-item-card {
   border-radius: 8px !important;
-  clip-path: polygon(0 10px, 10px 0, calc(100% - 10px) 0, 100% 10px, 100% calc(100% - 10px), calc(100% - 10px) 100%, 10px 100%, 0 calc(100% - 10px)) !important;
-}
-
-body[data-vibe='scifi'] {
-  --vibe-frame-color: rgba(116, 229, 255, 0.96);
-  --vibe-frame-glow: rgba(139, 151, 255, 0.28);
+  clip-path: polygon(0 11px, 11px 0, calc(100% - 11px) 0, 100% 11px, 100% calc(100% - 11px), calc(100% - 11px) 100%, 11px 100%, 0 calc(100% - 11px)) !important;
 }
 
 body[data-vibe='scifi'] .feed-column-shell::after,
 body[data-vibe='scifi'] .news-item-card::after {
   background:
-    linear-gradient(rgba(116, 229, 255, 0.92), rgba(116, 229, 255, 0.92)) 12px 10px / 18px 2px no-repeat,
-    linear-gradient(rgba(116, 229, 255, 0.92), rgba(116, 229, 255, 0.92)) 10px 12px / 2px 18px no-repeat,
-    linear-gradient(rgba(136, 151, 255, 0.92), rgba(136, 151, 255, 0.92)) calc(100% - 12px) 10px / 18px 2px no-repeat,
-    linear-gradient(rgba(136, 151, 255, 0.92), rgba(136, 151, 255, 0.92)) calc(100% - 10px) 12px / 2px 18px no-repeat,
-    linear-gradient(rgba(116, 229, 255, 0.92), rgba(116, 229, 255, 0.92)) 12px calc(100% - 10px) / 18px 2px no-repeat,
-    linear-gradient(rgba(116, 229, 255, 0.92), rgba(116, 229, 255, 0.92)) 10px calc(100% - 12px) / 2px 18px no-repeat,
-    linear-gradient(rgba(136, 151, 255, 0.92), rgba(136, 151, 255, 0.92)) calc(100% - 12px) calc(100% - 10px) / 18px 2px no-repeat,
-    linear-gradient(rgba(136, 151, 255, 0.92), rgba(136, 151, 255, 0.92)) calc(100% - 10px) calc(100% - 12px) / 2px 18px no-repeat,
-    repeating-linear-gradient(90deg, rgba(116, 229, 255, 0.5) 0 7px, transparent 7px 12px) top center / 82px 1px no-repeat;
+    linear-gradient(var(--vibe-frame-color), var(--vibe-frame-color)) 12px 10px / 20px 2px no-repeat,
+    linear-gradient(var(--vibe-frame-color), var(--vibe-frame-color)) 10px 12px / 2px 20px no-repeat,
+    linear-gradient(var(--vibe-accent-2), var(--vibe-accent-2)) calc(100% - 12px) 10px / 20px 2px no-repeat,
+    linear-gradient(var(--vibe-accent-2), var(--vibe-accent-2)) calc(100% - 10px) 12px / 2px 20px no-repeat,
+    linear-gradient(var(--vibe-frame-color), var(--vibe-frame-color)) 12px calc(100% - 10px) / 20px 2px no-repeat,
+    linear-gradient(var(--vibe-frame-color), var(--vibe-frame-color)) 10px calc(100% - 12px) / 2px 20px no-repeat,
+    linear-gradient(var(--vibe-accent-2), var(--vibe-accent-2)) calc(100% - 12px) calc(100% - 10px) / 20px 2px no-repeat,
+    linear-gradient(var(--vibe-accent-2), var(--vibe-accent-2)) calc(100% - 10px) calc(100% - 12px) / 2px 20px no-repeat,
+    repeating-linear-gradient(90deg, color-mix(in srgb, var(--vibe-frame-color) 54%, transparent) 0 8px, transparent 8px 15px) top center / 88px 1px no-repeat;
 }
 
+/* Performance mode: remove all ornaments */
 body[data-performance='on'] .feed-column-shell,
 body[data-performance='on'] .news-item-card {
   clip-path: none !important;
