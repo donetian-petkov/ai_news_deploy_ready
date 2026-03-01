@@ -1,32 +1,15 @@
 'use client';
 
 import type { DragEvent } from 'react';
-import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
-import PushPinIcon from '@mui/icons-material/PushPin';
-import PushPinOutlinedIcon from '@mui/icons-material/PushPinOutlined';
 import RedditIcon from '@mui/icons-material/Reddit';
 import RssFeedIcon from '@mui/icons-material/RssFeed';
 import SmartDisplayIcon from '@mui/icons-material/SmartDisplay';
-import TuneIcon from '@mui/icons-material/Tune';
-import {
-  Alert,
-  Box,
-  Button,
-  Card,
-  CardContent,
-  Chip,
-  FormControl,
-  MenuItem,
-  Select,
-  Skeleton,
-  Stack,
-  Typography
-} from '@mui/material';
-import type { BudgetMode, FeedInfo, NewsItem, SortMode } from '../../store/types';
+import { Box, Card, CardContent, Chip, Stack, Typography } from '@mui/material';
+import type { FeedInfo } from '../../store/types';
 import { FILTERED_FEED_URL } from '../../store/constants';
-import type { BodyMode, FeedAskState, FeedColumnHandlers, FeedColumnStateModel, FeedColumnViewModel, FeedFilterPreset } from './reactColumns.types';
-import { collapseText, compactResearch, extractConfidence, getFeedFilterPreset } from './reactColumns.utils';
-import { NewsCard } from './NewsCard';
+import type { FeedColumnHandlers, FeedColumnStateModel, FeedColumnViewModel } from './reactColumns.types';
+import { FeedColumnControlsPanel } from './feed-column/FeedColumnControlsPanel';
+import { FeedColumnItemsList } from './feed-column/FeedColumnItemsList';
 
 type DragState = {
   canDrag: boolean;
@@ -49,14 +32,6 @@ type FeedColumnProps = {
   drag: DragState;
 };
 
-function askKey(it: NewsItem): string {
-  return `${it.feedUrl}::${it.id}`;
-}
-
-function bodyKey(it: NewsItem, kind: 'summary' | 'research'): string {
-  return `${it.feedUrl}::${it.id}::${kind}`;
-}
-
 export function FeedColumn({
   feed,
   columnIdx,
@@ -71,19 +46,10 @@ export function FeedColumn({
     moodFilter,
     typeFilter,
     searchQuery,
-    hideAllResearch,
-    hideAllSummaries,
-    aiEnabled,
-    aiAvailable,
-    buttonMode,
     fontScale,
-    connected,
-    compactBtnSx,
-    compactFormSx,
-    labels,
-    cardLabels,
-    vibeIcons
+    connected
   } = view;
+
   const {
     filteredColumnItems,
     itemsByFeed,
@@ -92,52 +58,14 @@ export function FeedColumn({
     pinnedByUrl,
     controlsOpenByUrl,
     advancedControlsByUrl,
-    deleteAgeByUrl,
-    summaryPendingById,
-    researchPendingById,
-    pinnedNewsById,
-    askByItem,
-    bodyModes
+    deleteAgeByUrl
   } = state;
-  const {
-    getBodyMode,
-    getDefaultBodyMode,
-    setBodyMode,
-    onTogglePinnedColumn,
-    onRemoveFeed,
-    onToggleFeedControls,
-    onToggleFeedSummary,
-    onToggleFeedResearch,
-    onSetFeedBudget,
-    onSetFeedInterval,
-    onSetFeedSortMode,
-    onSetFeedFilterPreset,
-    onToggleAdvancedControls,
-    onSetDeleteAge,
-    onRemoveOldInFeed,
-    onShowMoreNews,
-    onResetNewsToTen,
-    onTogglePinnedNews,
-    onCopyLink,
-    onCopyNewsPayload,
-    onHideItem,
-    onRequestSummary,
-    onRequestResearch,
-    onToggleAsk,
-    onSetAskDraft,
-    onAskSubmit
-  } = handlers;
 
-  const visibleLimit = Math.max(10, visibleByFeed[feed.url] || 10);
-  const isHydrated = !!hydratedColumns[feed.url];
-  const pinned = !!pinnedByUrl[feed.url];
-  const controlsOpen = typeof controlsOpenByUrl[feed.url] === 'boolean' ? !!controlsOpenByUrl[feed.url] : true;
-  const advancedControlsOpen = !!advancedControlsByUrl[feed.url];
-  const deleteAge = deleteAgeByUrl[feed.url] || 'week';
   const isMatchColumn = feed.url === FILTERED_FEED_URL || String(feed.label || '').toLowerCase().startsWith('filtered');
   const colTheme: 'a' | 'b' | 'match' = isMatchColumn ? 'match' : (columnIdx % 2 === 0 ? 'a' : 'b');
   const accent = colTheme === 'a' ? palette.a : colTheme === 'b' ? palette.b : palette.m;
   const soft = colTheme === 'a' ? palette.aSoft : colTheme === 'b' ? palette.bSoft : palette.mSoft;
+
   const items = isMatchColumn ? filteredColumnItems : (itemsByFeed[feed.url] || []);
   const moodFilterEffective = performanceMode ? 'all' : moodFilter;
   const typeFilterEffective = performanceMode ? 'all' : typeFilter;
@@ -154,17 +82,20 @@ export function FeedColumn({
       return hay.includes(normalizedQuery);
     })
     : typeFilteredItems;
+
+  const visibleLimit = Math.max(10, visibleByFeed[feed.url] || 10);
   const shownItems = itemsVisible.slice(0, visibleLimit);
+  const isHydrated = !!hydratedColumns[feed.url];
+  const pinned = !!pinnedByUrl[feed.url];
+  const controlsOpen = typeof controlsOpenByUrl[feed.url] === 'boolean' ? !!controlsOpenByUrl[feed.url] : true;
+  const advancedControlsOpen = !!advancedControlsByUrl[feed.url];
+  const deleteAge = deleteAgeByUrl[feed.url] || 'week';
 
   return (
     <Box
       key={feed.url}
       data-feed-url={feed.url}
-      sx={{
-        width: '100%',
-        minWidth: 0,
-        mx: 'auto'
-      }}
+      sx={{ width: '100%', minWidth: 0, mx: 'auto' }}
       draggable={drag.canDrag}
       onDragStart={drag.onDragStart}
       onDragEnd={drag.onDragEnd}
@@ -238,266 +169,36 @@ export function FeedColumn({
               />
             </Stack>
           </Stack>
-          <Stack direction="row" spacing={1} sx={{ mb: 1.1 }} flexWrap="wrap">
-            {!isMatchColumn ? (
-              <Button
-                size="small"
-                variant={pinned ? 'contained' : 'outlined'}
-                startIcon={pinned ? <PushPinIcon /> : <PushPinOutlinedIcon />}
-                onClick={() => onTogglePinnedColumn(feed.url)}
-                sx={compactBtnSx}
-              >
-                {pinned ? labels.pinned : labels.pin}
-              </Button>
-            ) : null}
-            {!isMatchColumn ? (
-              <Button
-                size="small"
-                variant="outlined"
-                color="error"
-                startIcon={<DeleteOutlineIcon />}
-                onClick={() => onRemoveFeed(feed.url)}
-                disabled={!connected}
-                sx={compactBtnSx}
-              >
-                {labels.remove}
-              </Button>
-            ) : null}
-            <Button
-              size="small"
-              variant="outlined"
-              startIcon={<TuneIcon />}
-              onClick={() => onToggleFeedControls(feed.url)}
-              sx={compactBtnSx}
-            >
-              {controlsOpen ? labels.hideControls : labels.showControls}
-            </Button>
-          </Stack>
-          {isHydrated && controlsOpen ? (
-            <Box
-              sx={{
-                mb: 1.1,
-                display: 'grid',
-                gap: 0.8,
-                gridTemplateColumns: {
-                  xs: '1fr',
-                  sm: 'repeat(2, minmax(0, 1fr))'
-                }
-              }}
-            >
-              {aiAvailable ? (
-                <>
-                  <Button
-                    size="small"
-                    fullWidth
-                    variant={feed.summaryEnabled ? 'contained' : 'outlined'}
-                    onClick={() => onToggleFeedSummary(feed)}
-                    disabled={!connected}
-                    sx={compactBtnSx}
-                  >
-                    {feed.summaryEnabled ? labels.summariesOn : labels.summariesOff}
-                  </Button>
-                  <Button
-                    size="small"
-                    fullWidth
-                    variant={feed.researchEnabled ? 'contained' : 'outlined'}
-                    onClick={() => onToggleFeedResearch(feed)}
-                    disabled={!connected}
-                    sx={compactBtnSx}
-                  >
-                    {feed.researchEnabled ? labels.researchOn : labels.researchOff}
-                  </Button>
-                  <FormControl size="small" fullWidth sx={compactFormSx}>
-                    <Select
-                      value={feed.budget}
-                      onChange={e => onSetFeedBudget(feed, e.target.value as BudgetMode)}
-                      disabled={!connected}
-                    >
-                      <MenuItem value="low">{labels.budgetLow}</MenuItem>
-                      <MenuItem value="standard">{labels.budgetStandard}</MenuItem>
-                      <MenuItem value="high">{labels.budgetHigh}</MenuItem>
-                    </Select>
-                  </FormControl>
-                </>
-              ) : (
-                <Alert severity="info" variant="outlined" sx={{ gridColumn: '1 / -1' }}>
-                  {labels.aiUnavailable}
-                </Alert>
-              )}
-              <FormControl size="small" fullWidth sx={compactFormSx}>
-                <Select
-                  value={String(feed.intervalSec || 120)}
-                  onChange={e => onSetFeedInterval(feed, Number(e.target.value) || 120)}
-                  disabled={!connected}
-                >
-                  <MenuItem value="45">{labels.poll45}</MenuItem>
-                  <MenuItem value="60">{labels.poll60}</MenuItem>
-                  <MenuItem value="90">{labels.poll90}</MenuItem>
-                  <MenuItem value="120">{labels.poll120}</MenuItem>
-                  <MenuItem value="180">{labels.poll180}</MenuItem>
-                  <MenuItem value="300">{labels.poll300}</MenuItem>
-                </Select>
-              </FormControl>
-              <FormControl size="small" fullWidth sx={compactFormSx}>
-                <Select
-                  value={feed.sortMode}
-                  onChange={e => onSetFeedSortMode(feed, e.target.value as SortMode)}
-                  disabled={!connected}
-                >
-                  <MenuItem value="newest">{labels.sortNewest}</MenuItem>
-                  <MenuItem value="oldest">{labels.sortOldest}</MenuItem>
-                  <MenuItem value="matched">{labels.sortMatched}</MenuItem>
-                </Select>
-              </FormControl>
-              <FormControl size="small" fullWidth sx={compactFormSx}>
-                <Select
-                  value={getFeedFilterPreset(feed.filters)}
-                  onChange={e => onSetFeedFilterPreset(feed, e.target.value as FeedFilterPreset)}
-                  disabled={!connected}
-                >
-                  <MenuItem value="all">{labels.filterAll}</MenuItem>
-                  <MenuItem value="matches">{labels.filterMatches}</MenuItem>
-                  <MenuItem value="researched">{labels.filterResearched}</MenuItem>
-                  <MenuItem value="summaries">{labels.filterSummaries}</MenuItem>
-                  <MenuItem value="matches_researched">{labels.filterMatchesResearched}</MenuItem>
-                  <MenuItem value="matches_summaries">{labels.filterMatchesSummaries}</MenuItem>
-                  <MenuItem value="researched_summaries">{labels.filterResearchedSummaries}</MenuItem>
-                  <MenuItem value="all_flags">{labels.filterAllFlags}</MenuItem>
-                </Select>
-              </FormControl>
-              <Button
-                size="small"
-                variant="outlined"
-                fullWidth
-                onClick={() => onToggleAdvancedControls(feed.url)}
-                sx={{ ...compactBtnSx, gridColumn: '1 / -1' }}
-              >
-                {advancedControlsOpen ? labels.lessOptions : labels.moreOptions}
-              </Button>
-              {advancedControlsOpen ? (
-                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ gridColumn: '1 / -1' }}>
-                  <FormControl size="small" fullWidth sx={compactFormSx}>
-                    <Select
-                      value={deleteAge}
-                      onChange={e => onSetDeleteAge(feed.url, e.target.value as 'yesterday' | 'week' | 'month' | 'year')}
-                    >
-                      <MenuItem value="yesterday">{labels.deleteYesterday}</MenuItem>
-                      <MenuItem value="week">{labels.deleteWeek}</MenuItem>
-                      <MenuItem value="month">{labels.deleteMonth}</MenuItem>
-                      <MenuItem value="year">{labels.deleteYear}</MenuItem>
-                    </Select>
-                  </FormControl>
-                  <Button
-                    size="small"
-                    variant="outlined"
-                    color="error"
-                    startIcon={<DeleteOutlineIcon />}
-                    onClick={() => onRemoveOldInFeed(feed)}
-                    sx={{ ...compactBtnSx, minWidth: { sm: 136 } }}
-                  >
-                    {labels.deleteOld}
-                  </Button>
-                </Stack>
-              ) : null}
-            </Box>
-          ) : null}
-          {!isHydrated ? (
-            <Stack spacing={1.2} sx={{ py: 0.6 }}>
-              <Skeleton variant="rounded" height={80} sx={{ bgcolor: 'rgba(120,140,180,0.14)' }} />
-              <Skeleton variant="rounded" height={80} sx={{ bgcolor: 'rgba(120,140,180,0.14)' }} />
-              <Alert severity="info" variant="outlined">Loading column...</Alert>
-            </Stack>
-          ) : (
-            <Stack spacing={1.2}>
-              {itemsVisible.length === 0 ? (
-                <Alert severity="info" variant="outlined">
-                  {items.length === 0 ? (isMatchColumn ? labels.waitingMatches : labels.waiting) : labels.noMatches}
-                </Alert>
-              ) : shownItems.map(it => {
-                const askState: FeedAskState = askByItem[askKey(it)] || {
-                  open: false,
-                  draft: '',
-                  pending: false,
-                  remaining: 5,
-                  messages: []
-                };
-                const summaryKey = bodyKey(it, 'summary');
-                const researchKey = bodyKey(it, 'research');
-                const summaryResearchHidden = hideAllResearch || bodyModes[researchKey] === 'hidden';
-                const savedSummaryMode = bodyModes[summaryKey];
-                const summaryMode = summaryResearchHidden && savedSummaryMode === 'hidden'
-                  ? getDefaultBodyMode(it.summary || '', 260)
-                  : getBodyMode(summaryKey, it.summary || '', 260);
-                const summaryLong = String(it.summary || '').trim().length > 260;
-                const summaryText = summaryMode === 'collapsed' ? collapseText(it.summary || '', 260) : String(it.summary || '');
-                const researchMode = getBodyMode(researchKey, it.research || '', 340);
-                const researchLong = String(it.research || '').trim().length > 340;
-                const researchText = researchMode === 'collapsed' ? compactResearch(it.research || '') : String(it.research || '');
-                const researchConfidence = extractConfidence(it.research || '');
-                return (
-                  <NewsCard
-                    key={it.id}
-                    item={it}
-                    askState={askState}
-                    labels={cardLabels}
-                    vibeIcons={vibeIcons}
-                    compactBtnSx={compactBtnSx}
-                    buttonMode={buttonMode}
-                    aiAvailable={aiAvailable}
-                    performanceMode={performanceMode}
-                    fontScale={fontScale}
-                    connected={connected}
-                    hideAllResearch={hideAllResearch}
-                    hideAllSummaries={hideAllSummaries}
-                    summaryPending={!!summaryPendingById[it.id]}
-                    researchPending={!!researchPendingById[it.id]}
-                    isPinnedNews={!!pinnedNewsById[it.id]}
-                    accent={accent}
-                    soft={soft}
-                    matchAccent={palette.m}
-                    showAutoResearching={aiAvailable && feed.researchEnabled && aiEnabled && !it.research && !researchPendingById[it.id] && !hideAllResearch}
-                    summaryMode={summaryMode}
-                    summaryLong={summaryLong}
-                    summaryText={summaryText}
-                    researchMode={researchMode}
-                    researchLong={researchLong}
-                    researchText={researchText}
-                    researchConfidence={researchConfidence}
-                    onTogglePinnedNews={onTogglePinnedNews}
-                    onCopyLink={onCopyLink}
-                    onCopyNews={onCopyNewsPayload}
-                    onHideItem={onHideItem}
-                    onRequestSummary={onRequestSummary}
-                    onRequestResearch={onRequestResearch}
-                    onToggleAsk={onToggleAsk}
-                    onSetSummaryMode={(mode: BodyMode) => setBodyMode(summaryKey, mode)}
-                    onSetResearchMode={(mode: BodyMode) => setBodyMode(researchKey, mode)}
-                    onAskDraft={onSetAskDraft}
-                    onAskSubmit={onAskSubmit}
-                  />
-                );
-              })}
-              {itemsVisible.length > shownItems.length ? (
-                <Button
-                  size="small"
-                  variant="outlined"
-                  onClick={() => onShowMoreNews(feed.url)}
-                >
-                  {labels.showFiveMore}
-                </Button>
-              ) : null}
-              {itemsVisible.length > 10 && shownItems.length > 10 ? (
-                <Button
-                  size="small"
-                  variant="outlined"
-                  color="secondary"
-                  onClick={() => onResetNewsToTen(feed.url)}
-                >
-                  {labels.resetToTenItems}
-                </Button>
-              ) : null}
-            </Stack>
-          )}
+
+          <FeedColumnControlsPanel
+            feed={feed}
+            isMatchColumn={isMatchColumn}
+            isHydrated={isHydrated}
+            controlsOpen={controlsOpen}
+            advancedControlsOpen={advancedControlsOpen}
+            deleteAge={deleteAge}
+            pinned={pinned}
+            connected={connected}
+            aiAvailable={view.aiAvailable}
+            compactBtnSx={view.compactBtnSx}
+            compactFormSx={view.compactFormSx}
+            labels={view.labels}
+            handlers={handlers}
+          />
+
+          <FeedColumnItemsList
+            feed={feed}
+            items={items}
+            itemsVisible={itemsVisible}
+            shownItems={shownItems}
+            isMatchColumn={isMatchColumn}
+            accent={accent}
+            soft={soft}
+            isHydrated={isHydrated}
+            view={view}
+            state={state}
+            handlers={handlers}
+          />
         </CardContent>
       </Card>
     </Box>

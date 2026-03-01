@@ -35,7 +35,6 @@ import {
 import { sendWsMessage, startWsConnection, stopWsConnection } from '../store/wsClient';
 import type { BudgetMode, FeedInfo, NewsItem, SortMode } from '../store/types';
 import { FILTERED_FEED_URL } from '../store/constants';
-import { FeedColumn } from './columns/FeedColumn';
 import type { BodyMode, CardLabels, FeedColumnHandlers, FeedColumnStateModel, FeedColumnViewModel, FeedFilterPreset, SchemeValue, VibeValue } from './columns/reactColumns.types';
 import { buildColumnPalette, cutoffFromAge, getVibeIcons, presetToFeedFilters, SCHEME_LIST, VIBE_LIST } from './columns/reactColumns.utils';
 import { useReactColumnsState } from './columns/hooks/useReactColumnsState';
@@ -43,6 +42,7 @@ import { useFeedUiPersistence } from './columns/hooks/useFeedUiPersistence';
 import { useDesktopNewsNotifications } from './columns/hooks/useDesktopNewsNotifications';
 import { useAllColumnControlsSync } from './columns/hooks/useAllColumnControlsSync';
 import { useColumnHydration } from './columns/hooks/useColumnHydration';
+import { FeedColumnsGrid } from './columns/FeedColumnsGrid';
 
 type Props = {
   wsUrl: string;
@@ -699,39 +699,15 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
         />
       </Stack>
 
-      <Box
-        sx={{
-          display: 'grid',
-          gap: 1.5,
-          width: '100%',
-          justifyItems: 'stretch',
-          gridTemplateColumns: {
-            xs: 'minmax(0, 1fr)',
-            sm: 'repeat(2, minmax(320px, 1fr))',
-            lg: 'repeat(3, minmax(330px, 1fr))',
-            xl: 'repeat(4, minmax(330px, 1fr))'
-          }
-        }}
-        onDragOver={onGridDragOver}
-        onDrop={onGridDrop}
-      >
-        {renderedFeeds.map((feed: FeedInfo, columnIdx: number) => {
-          const isMatchColumn = feed.url === FILTERED_FEED_URL || String(feed.label || '').toLowerCase().startsWith('filtered');
-          const canDrag = !isMatchColumn;
-
-          return (
-            <FeedColumn
-              key={feed.url}
-              feed={feed}
-              columnIdx={columnIdx}
-              view={columnViewModel}
-              state={columnStateModel}
-              handlers={columnHandlers}
-              drag={buildDragState(feed, canDrag)}
-            />
-          );
-        })}
-      </Box>
+      <FeedColumnsGrid
+        feeds={renderedFeeds}
+        view={columnViewModel}
+        state={columnStateModel}
+        handlers={columnHandlers}
+        onGridDragOver={onGridDragOver}
+        onGridDrop={onGridDrop}
+        buildDragState={buildDragState}
+      />
       <Snackbar
         open={clipboardNoticeOpen}
         autoHideDuration={1400}
