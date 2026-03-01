@@ -23,7 +23,7 @@ export function NewsCardActions() {
   const AskIconComp = vibeIcons.ask;
 
   return (
-    <Stack direction="row" spacing={0.8} sx={{ mt: 0.3 }} flexWrap="wrap">
+    <Stack direction="row" spacing={0.8} sx={{ mt: 0.55, px: 0.8, pb: 0.8 }} flexWrap="wrap">
       {aiAvailable ? (
         <>
           <Tooltip title={summaryPending ? labels.generatingSummary : labels.summary}>

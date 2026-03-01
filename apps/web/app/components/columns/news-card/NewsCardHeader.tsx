@@ -26,14 +26,14 @@ export function NewsCardHeader() {
 
   return (
     <>
-      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 0.9 }}>
+      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 0.9, pt: 0.35, px: 0.8 }}>
         <Stack direction="row" spacing={0.8} alignItems="center">
           <Typography variant="caption" sx={{ color: NEWS_CARD_COLOR_TOKENS.headerMuted }}>
             {formatTime(item.publishedMs)}
           </Typography>
           {item.isMatch ? <Chip size="small" label={labels.match} variant="outlined" sx={{ color: matchAccent, borderColor: matchAccent, fontWeight: 800 }} /> : null}
         </Stack>
-        <Stack direction="row" spacing={0.6} alignItems="center">
+        <Stack direction="row" spacing={0.6} alignItems="center" sx={{ pr: 0.2 }}>
           <Tooltip title={isPinnedNews ? labels.unpinNews : labels.pinNews}>
             <Button
               size="small"
