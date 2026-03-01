@@ -48,13 +48,13 @@ body .news-item-card .MuiCardContent-root {
 }
 
 body:not([data-performance='on']) .feed-column-shell .MuiCardContent-root {
-  padding-top: 20px !important;
-  padding-bottom: 20px !important;
+  padding-top: 28px !important;
+  padding-bottom: 28px !important;
 }
 
 body:not([data-performance='on']) .news-item-card .MuiCardContent-root {
-  padding-top: 18px !important;
-  padding-bottom: 18px !important;
+  padding-top: 24px !important;
+  padding-bottom: 24px !important;
 }
 
 .columnOrnamentLayer,
@@ -95,21 +95,21 @@ body:not([data-performance='on']) .news-item-card .MuiCardContent-root {
 .columnOrnamentLayer .frameTop,
 .cardOrnamentLayer .frameTop {
   top: 1px;
-  left: 18px;
-  right: 18px;
-  height: 14px;
+  left: 14px;
+  right: 14px;
+  height: 18px;
   background-image: var(--orn-top);
-  opacity: 0.9;
+  opacity: 0.98;
 }
 
 .columnOrnamentLayer .frameBottom,
 .cardOrnamentLayer .frameBottom {
   bottom: 0;
-  left: 18px;
-  right: 18px;
-  height: 14px;
+  left: 14px;
+  right: 14px;
+  height: 18px;
   background-image: var(--orn-bottom);
-  opacity: 0.9;
+  opacity: 0.98;
 }
 
 .columnOrnamentLayer .cornerTL,
@@ -120,10 +120,10 @@ body:not([data-performance='on']) .news-item-card .MuiCardContent-root {
 .cardOrnamentLayer .cornerTR,
 .cardOrnamentLayer .cornerBL,
 .cardOrnamentLayer .cornerBR {
-  width: 30px;
-  height: 30px;
+  width: 36px;
+  height: 36px;
   background-image: var(--orn-corner);
-  opacity: 0.88;
+  opacity: 0.96;
 }
 
 .columnOrnamentLayer .cornerTL,
@@ -163,43 +163,37 @@ body:not([data-performance='on']) .news-item-card .MuiCardContent-root {
 .cardOrnamentLayer .glyphBR {
   position: absolute;
   display: block;
-  width: 14px;
-  height: 14px;
+  width: 18px;
+  height: 18px;
   background-image: var(--orn-glyph);
   background-position: center;
   background-repeat: no-repeat;
   background-size: contain;
-  opacity: 0.96;
+  opacity: 1;
 }
 
 .columnOrnamentLayer .glyphTL,
 .cardOrnamentLayer .glyphTL {
-  top: 8px;
-  left: 8px;
+  top: 10px;
+  left: 10px;
 }
 
 .columnOrnamentLayer .glyphTR,
 .cardOrnamentLayer .glyphTR {
-  top: 8px;
-  right: 8px;
+  top: 10px;
+  right: 10px;
 }
 
 .columnOrnamentLayer .glyphBL,
 .cardOrnamentLayer .glyphBL {
-  bottom: 8px;
-  left: 8px;
+  bottom: 10px;
+  left: 10px;
 }
 
 .columnOrnamentLayer .glyphBR,
 .cardOrnamentLayer .glyphBR {
-  bottom: 8px;
-  right: 8px;
-}
-
-/* Keep bottom glyphs away from action rows on cards */
-.cardOrnamentLayer .glyphBL,
-.cardOrnamentLayer .glyphBR {
-  display: none;
+  bottom: 10px;
+  right: 10px;
 }
 
 .feed-column-shell::after,
