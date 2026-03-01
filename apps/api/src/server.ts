@@ -56,31 +56,38 @@ const prisma = new PrismaClient({
 type SummaryLang = 'bg' | 'en' | 'bilingual';
 type ResearchLang = 'bg' | 'en';
 type AIProvider = z.infer<typeof aiProviderSchema>;
-type Mood =
-  | 'pesimistic'
-  | 'optimistic'
-  | 'realistic'
-  | 'melancholy'
-  | 'happiness'
-  | 'sadness'
-  | 'rage'
-  | 'uncertainty'
-  | 'neutral'
-  | 'curios';
-type NewsType =
-  | 'science'
-  | 'movies'
-  | 'politics'
-  | 'business'
-  | 'technology'
-  | 'sports'
-  | 'health'
-  | 'world'
-  | 'culture'
-  | 'environment'
-  | 'crime'
-  | 'education'
-  | 'other';
+
+enum MoodValue {
+  Pesimistic = 'pesimistic',
+  Optimistic = 'optimistic',
+  Realistic = 'realistic',
+  Melancholy = 'melancholy',
+  Happiness = 'happiness',
+  Sadness = 'sadness',
+  Rage = 'rage',
+  Uncertainty = 'uncertainty',
+  Neutral = 'neutral',
+  Curios = 'curios'
+}
+
+enum NewsTypeValue {
+  Science = 'science',
+  Movies = 'movies',
+  Politics = 'politics',
+  Business = 'business',
+  Technology = 'technology',
+  Sports = 'sports',
+  Health = 'health',
+  World = 'world',
+  Culture = 'culture',
+  Environment = 'environment',
+  Crime = 'crime',
+  Education = 'education',
+  Other = 'other'
+}
+
+type Mood = `${MoodValue}`;
+type NewsType = `${NewsTypeValue}`;
 
 type FeedKind = 'rss' | 'reddit' | 'youtube';
 
@@ -838,27 +845,27 @@ function normalizeMood(raw: string): Mood | undefined {
     .replace(/\s+/g, ' ');
   const direct = s.replace(/[\s_-]/g, '');
 
-  if (direct === 'pesimistic' || direct === 'pessimistic') return 'pesimistic';
-  if (direct === 'optimistic') return 'optimistic';
-  if (direct === 'realistic') return 'realistic';
-  if (direct === 'melancholy' || direct === 'melancholic') return 'melancholy';
-  if (direct === 'happiness' || direct === 'happy' || direct === 'joy' || direct === 'joyful') return 'happiness';
-  if (direct === 'sadness' || direct === 'sad') return 'sadness';
-  if (direct === 'rage' || direct === 'angry' || direct === 'anger' || direct === 'furious') return 'rage';
-  if (direct === 'uncertainty' || direct === 'uncertain' || direct === 'anxiety' || direct === 'anxious') return 'uncertainty';
-  if (direct === 'neutral') return 'neutral';
-  if (direct === 'curios' || direct === 'curious' || direct === 'curiosity') return 'curios';
+  if (direct === 'pesimistic' || direct === 'pessimistic') return MoodValue.Pesimistic;
+  if (direct === 'optimistic') return MoodValue.Optimistic;
+  if (direct === 'realistic') return MoodValue.Realistic;
+  if (direct === 'melancholy' || direct === 'melancholic') return MoodValue.Melancholy;
+  if (direct === 'happiness' || direct === 'happy' || direct === 'joy' || direct === 'joyful') return MoodValue.Happiness;
+  if (direct === 'sadness' || direct === 'sad') return MoodValue.Sadness;
+  if (direct === 'rage' || direct === 'angry' || direct === 'anger' || direct === 'furious') return MoodValue.Rage;
+  if (direct === 'uncertainty' || direct === 'uncertain' || direct === 'anxiety' || direct === 'anxious') return MoodValue.Uncertainty;
+  if (direct === 'neutral') return MoodValue.Neutral;
+  if (direct === 'curios' || direct === 'curious' || direct === 'curiosity') return MoodValue.Curios;
 
-  if (s.includes('pesimistic') || s.includes('pessimistic')) return 'pesimistic';
-  if (s.includes('optimistic')) return 'optimistic';
-  if (s.includes('realistic')) return 'realistic';
-  if (s.includes('melancholy') || s.includes('melancholic')) return 'melancholy';
-  if (s.includes('happiness') || s.includes('joy')) return 'happiness';
-  if (s.includes('sadness') || s.includes(' sad')) return 'sadness';
-  if (s.includes('rage') || s.includes('anger') || s.includes('angry')) return 'rage';
-  if (s.includes('uncertainty') || s.includes('uncertain') || s.includes('anxiety')) return 'uncertainty';
-  if (s.includes('neutral')) return 'neutral';
-  if (s.includes('curios') || s.includes('curious') || s.includes('curiosity')) return 'curios';
+  if (s.includes('pesimistic') || s.includes('pessimistic')) return MoodValue.Pesimistic;
+  if (s.includes('optimistic')) return MoodValue.Optimistic;
+  if (s.includes('realistic')) return MoodValue.Realistic;
+  if (s.includes('melancholy') || s.includes('melancholic')) return MoodValue.Melancholy;
+  if (s.includes('happiness') || s.includes('joy')) return MoodValue.Happiness;
+  if (s.includes('sadness') || s.includes(' sad')) return MoodValue.Sadness;
+  if (s.includes('rage') || s.includes('anger') || s.includes('angry')) return MoodValue.Rage;
+  if (s.includes('uncertainty') || s.includes('uncertain') || s.includes('anxiety')) return MoodValue.Uncertainty;
+  if (s.includes('neutral')) return MoodValue.Neutral;
+  if (s.includes('curios') || s.includes('curious') || s.includes('curiosity')) return MoodValue.Curios;
   return undefined;
 }
 
@@ -866,7 +873,7 @@ function moodInstruction(): string {
   return [
     'Classify the overall mood of this news into exactly one label.',
     'Allowed labels only:',
-    'pesimistic, optimistic, realistic, melancholy, happiness, sadness, rage, uncertainty, neutral, curios.',
+    `${Object.values(MoodValue).join(', ')}.`,
     'Return exactly one label with no extra words or punctuation.'
   ].join(' ');
 }
@@ -880,32 +887,32 @@ function normalizeNewsType(raw: string): NewsType | undefined {
     .replace(/\s+/g, ' ');
   const direct = s.replace(/[\s_-]/g, '');
 
-  if (direct === 'science' || direct === 'scientific') return 'science';
-  if (direct === 'movies' || direct === 'movie' || direct === 'film' || direct === 'cinema') return 'movies';
-  if (direct === 'politics' || direct === 'political') return 'politics';
-  if (direct === 'business' || direct === 'finance' || direct === 'economy' || direct === 'economic') return 'business';
-  if (direct === 'technology' || direct === 'tech') return 'technology';
-  if (direct === 'sports' || direct === 'sport') return 'sports';
-  if (direct === 'health' || direct === 'medical' || direct === 'medicine') return 'health';
-  if (direct === 'world' || direct === 'international') return 'world';
-  if (direct === 'culture' || direct === 'arts' || direct === 'art') return 'culture';
-  if (direct === 'environment' || direct === 'climate') return 'environment';
-  if (direct === 'crime' || direct === 'criminal' || direct === 'law') return 'crime';
-  if (direct === 'education' || direct === 'school' || direct === 'academic') return 'education';
-  if (direct === 'other') return 'other';
+  if (direct === 'science' || direct === 'scientific') return NewsTypeValue.Science;
+  if (direct === 'movies' || direct === 'movie' || direct === 'film' || direct === 'cinema') return NewsTypeValue.Movies;
+  if (direct === 'politics' || direct === 'political') return NewsTypeValue.Politics;
+  if (direct === 'business' || direct === 'finance' || direct === 'economy' || direct === 'economic') return NewsTypeValue.Business;
+  if (direct === 'technology' || direct === 'tech') return NewsTypeValue.Technology;
+  if (direct === 'sports' || direct === 'sport') return NewsTypeValue.Sports;
+  if (direct === 'health' || direct === 'medical' || direct === 'medicine') return NewsTypeValue.Health;
+  if (direct === 'world' || direct === 'international') return NewsTypeValue.World;
+  if (direct === 'culture' || direct === 'arts' || direct === 'art') return NewsTypeValue.Culture;
+  if (direct === 'environment' || direct === 'climate') return NewsTypeValue.Environment;
+  if (direct === 'crime' || direct === 'criminal' || direct === 'law') return NewsTypeValue.Crime;
+  if (direct === 'education' || direct === 'school' || direct === 'academic') return NewsTypeValue.Education;
+  if (direct === 'other') return NewsTypeValue.Other;
 
-  if (s.includes('science')) return 'science';
-  if (s.includes('movie') || s.includes('film') || s.includes('cinema')) return 'movies';
-  if (s.includes('politic')) return 'politics';
-  if (s.includes('business') || s.includes('finance') || s.includes('econom')) return 'business';
-  if (s.includes('technology') || s.includes('tech')) return 'technology';
-  if (s.includes('sport')) return 'sports';
-  if (s.includes('health') || s.includes('medical') || s.includes('medicine')) return 'health';
-  if (s.includes('world') || s.includes('international')) return 'world';
-  if (s.includes('culture') || s.includes('art')) return 'culture';
-  if (s.includes('environment') || s.includes('climate')) return 'environment';
-  if (s.includes('crime') || s.includes('criminal') || s.includes('law')) return 'crime';
-  if (s.includes('education') || s.includes('school') || s.includes('academic')) return 'education';
+  if (s.includes('science')) return NewsTypeValue.Science;
+  if (s.includes('movie') || s.includes('film') || s.includes('cinema')) return NewsTypeValue.Movies;
+  if (s.includes('politic')) return NewsTypeValue.Politics;
+  if (s.includes('business') || s.includes('finance') || s.includes('econom')) return NewsTypeValue.Business;
+  if (s.includes('technology') || s.includes('tech')) return NewsTypeValue.Technology;
+  if (s.includes('sport')) return NewsTypeValue.Sports;
+  if (s.includes('health') || s.includes('medical') || s.includes('medicine')) return NewsTypeValue.Health;
+  if (s.includes('world') || s.includes('international')) return NewsTypeValue.World;
+  if (s.includes('culture') || s.includes('art')) return NewsTypeValue.Culture;
+  if (s.includes('environment') || s.includes('climate')) return NewsTypeValue.Environment;
+  if (s.includes('crime') || s.includes('criminal') || s.includes('law')) return NewsTypeValue.Crime;
+  if (s.includes('education') || s.includes('school') || s.includes('academic')) return NewsTypeValue.Education;
   return undefined;
 }
 
@@ -913,7 +920,7 @@ function newsTypeInstruction(): string {
   return [
     'Classify the news topic into exactly one label.',
     'Allowed labels only:',
-    'science, movies, politics, business, technology, sports, health, world, culture, environment, crime, education, other.',
+    `${Object.values(NewsTypeValue).join(', ')}.`,
     'Return exactly one label with no extra words or punctuation.'
   ].join(' ');
 }

@@ -4,7 +4,7 @@ import RedditIcon from '@mui/icons-material/Reddit';
 import RssFeedIcon from '@mui/icons-material/RssFeed';
 import SmartDisplayIcon from '@mui/icons-material/SmartDisplay';
 import { Box, Card, CardContent, Chip, Stack, Typography } from '@mui/material';
-import type { FeedInfo } from '../../store/types';
+import { NewsMoodFilterValue, NewsTypeFilterValue, type FeedInfo } from '../../store/types';
 import { FILTERED_FEED_URL } from '../../store/constants';
 import type { FeedColumnDragState } from './reactColumns.types';
 import { useFeedColumnsContext } from './context/FeedColumnsContext';
@@ -54,12 +54,12 @@ export function FeedColumn({
   const soft = colTheme === 'a' ? palette.aSoft : colTheme === 'b' ? palette.bSoft : palette.mSoft;
 
   const items = isMatchColumn ? filteredColumnItems : (itemsByFeed[feed.url] || []);
-  const moodFilterEffective = performanceMode ? 'all' : moodFilter;
-  const typeFilterEffective = performanceMode ? 'all' : typeFilter;
-  const moodFilteredItems = moodFilterEffective === 'all'
+  const moodFilterEffective = performanceMode ? NewsMoodFilterValue.All : moodFilter;
+  const typeFilterEffective = performanceMode ? NewsTypeFilterValue.All : typeFilter;
+  const moodFilteredItems = moodFilterEffective === NewsMoodFilterValue.All
     ? items
     : items.filter(it => it.mood === moodFilterEffective);
-  const typeFilteredItems = typeFilterEffective === 'all'
+  const typeFilteredItems = typeFilterEffective === NewsTypeFilterValue.All
     ? moodFilteredItems
     : moodFilteredItems.filter(it => it.newsType === typeFilterEffective);
   const normalizedQuery = String(searchQuery || '').trim().toLowerCase();

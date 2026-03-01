@@ -1,4 +1,16 @@
-import type { BudgetMode, FeedKind, NewsMood, NewsType, SortMode } from './types';
+import {
+  type BudgetMode,
+  type FeedKind,
+  type MoodFilter,
+  type NewsMood,
+  NewsMoodFilterValue,
+  NewsMoodValue,
+  type NewsType,
+  NewsTypeFilterValue,
+  NewsTypeValue,
+  type SortMode,
+  type TypeFilter
+} from './types';
 
 export enum PrimitiveType {
   String = 'string',
@@ -52,35 +64,6 @@ export enum ResearchLangValue {
   En = 'en'
 }
 
-export enum NewsMoodValue {
-  Pesimistic = 'pesimistic',
-  Optimistic = 'optimistic',
-  Realistic = 'realistic',
-  Melancholy = 'melancholy',
-  Happiness = 'happiness',
-  Sadness = 'sadness',
-  Rage = 'rage',
-  Uncertainty = 'uncertainty',
-  Neutral = 'neutral',
-  Curios = 'curios'
-}
-
-export enum NewsTypeValue {
-  Science = 'science',
-  Movies = 'movies',
-  Politics = 'politics',
-  Business = 'business',
-  Technology = 'technology',
-  Sports = 'sports',
-  Health = 'health',
-  World = 'world',
-  Culture = 'culture',
-  Environment = 'environment',
-  Crime = 'crime',
-  Education = 'education',
-  Other = 'other'
-}
-
 export enum FontPresetValue {
   System = 'system',
   Manrope = 'manrope',
@@ -103,6 +86,8 @@ const SORT_MODE_SET = new Set<SortMode>(Object.values(SortModeValue) as SortMode
 const FEED_KIND_SET = new Set<FeedKind>(Object.values(FeedKindValue) as FeedKind[]);
 const NEWS_MOOD_SET = new Set<NewsMood>(Object.values(NewsMoodValue) as NewsMood[]);
 const NEWS_TYPE_SET = new Set<NewsType>(Object.values(NewsTypeValue) as NewsType[]);
+const NEWS_MOOD_FILTER_SET = new Set<MoodFilter>(Object.values(NewsMoodFilterValue) as MoodFilter[]);
+const NEWS_TYPE_FILTER_SET = new Set<TypeFilter>(Object.values(NewsTypeFilterValue) as TypeFilter[]);
 const FONT_PRESET_SET = new Set<string>(Object.values(FontPresetValue));
 const FONT_SIZE_SET = new Set<string>(Object.values(FontSizeValue));
 const AI_PROVIDER_SET = new Set<string>(Object.values(AiProviderValue));
@@ -143,6 +128,14 @@ export function isNewsMood(value: unknown): value is NewsMood {
 
 export function isNewsType(value: unknown): value is NewsType {
   return isString(value) && NEWS_TYPE_SET.has(value as NewsType);
+}
+
+export function isMoodFilter(value: unknown): value is MoodFilter {
+  return isString(value) && NEWS_MOOD_FILTER_SET.has(value as MoodFilter);
+}
+
+export function isTypeFilter(value: unknown): value is TypeFilter {
+  return isString(value) && NEWS_TYPE_FILTER_SET.has(value as TypeFilter);
 }
 
 export function isAiProvider(value: unknown): value is AiProviderValue {

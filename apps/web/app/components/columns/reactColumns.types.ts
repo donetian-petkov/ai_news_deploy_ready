@@ -1,5 +1,5 @@
 import type { DragEvent } from 'react';
-import type { BudgetMode, FeedInfo, NewsItem, SortMode } from '../../store/types';
+import type { BudgetMode, FeedInfo, MoodFilter, NewsItem, SortMode, TypeFilter } from '../../store/types';
 
 export type BodyMode = 'collapsed' | 'expanded' | 'hidden';
 export type VibeValue = 'default' | 'anime' | 'arcade' | 'cinema' | 'newspaper' | 'cyberwitch' | 'fantasy' | 'scifi';
@@ -120,8 +120,8 @@ export type FeedAskState = {
 export type FeedColumnViewModel = {
   palette: ColumnPalette;
   performanceMode: boolean;
-  moodFilter: string;
-  typeFilter: string;
+  moodFilter: MoodFilter;
+  typeFilter: TypeFilter;
   searchQuery: string;
   hideAllResearch: boolean;
   hideAllSummaries: boolean;

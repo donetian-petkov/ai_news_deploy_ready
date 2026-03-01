@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import uiReducer, { setSearchQuery, setTopUiState, triggerHideAllResearch, setAppearanceSettings, setNotifySettings, setAiSettings, setMoodFilter, setTypeFilter, hydrateUiSettings, enqueueToast, dismissToast } from './uiSlice';
+import { NewsMoodFilterValue, NewsTypeFilterValue } from '../types';
 
 describe('uiSlice', () => {
   it('returns the initial state', () => {
@@ -24,8 +25,8 @@ describe('uiSlice', () => {
       aiAvailable: false,
       aiEnabled: false,
       aiProvider: 'openai',
-      moodFilter: 'all',
-      typeFilter: 'all',
+      moodFilter: NewsMoodFilterValue.All,
+      typeFilter: NewsTypeFilterValue.All,
       summaryLang: 'bilingual',
       researchLang: 'bg',
       allBudget: 'standard',
@@ -104,8 +105,8 @@ describe('uiSlice', () => {
     expect(state.effectIntensity).toBe('high');
     expect(state.soundTheme).toBe('scifi');
     expect(state.soundEnabled).toBe(false);
-    expect(state.moodFilter).toBe('all');
-    expect(state.typeFilter).toBe('all');
+    expect(state.moodFilter).toBe(NewsMoodFilterValue.All);
+    expect(state.typeFilter).toBe(NewsTypeFilterValue.All);
 
     state = uiReducer(state, setNotifySettings({ notifyEnabled: true, notifyMode: 'all' }));
     expect(state.notifyEnabled).toBe(true);
@@ -131,22 +132,22 @@ describe('uiSlice', () => {
     state = uiReducer(state, setAiSettings({ aiProvider: 'invalid-provider' as never }));
     expect(state.aiProvider).toBe('claude');
 
-    state = uiReducer(state, setMoodFilter('rage'));
-    expect(state.moodFilter).toBe('rage');
+    state = uiReducer(state, setMoodFilter(NewsMoodFilterValue.Rage));
+    expect(state.moodFilter).toBe(NewsMoodFilterValue.Rage);
     state = uiReducer(state, setMoodFilter('not-a-mood' as never));
-    expect(state.moodFilter).toBe('rage');
+    expect(state.moodFilter).toBe(NewsMoodFilterValue.Rage);
 
-    state = uiReducer(state, setTypeFilter('science'));
-    expect(state.typeFilter).toBe('science');
+    state = uiReducer(state, setTypeFilter(NewsTypeFilterValue.Science));
+    expect(state.typeFilter).toBe(NewsTypeFilterValue.Science);
     state = uiReducer(state, setTypeFilter('not-a-type' as never));
-    expect(state.typeFilter).toBe('science');
+    expect(state.typeFilter).toBe(NewsTypeFilterValue.Science);
 
     state = uiReducer(state, setAppearanceSettings({ performanceMode: true }));
     expect(state.performanceMode).toBe(true);
-    state = uiReducer(state, setMoodFilter('sadness'));
-    state = uiReducer(state, setTypeFilter('politics'));
-    expect(state.moodFilter).toBe('all');
-    expect(state.typeFilter).toBe('all');
+    state = uiReducer(state, setMoodFilter(NewsMoodFilterValue.Sadness));
+    state = uiReducer(state, setTypeFilter(NewsTypeFilterValue.Politics));
+    expect(state.moodFilter).toBe(NewsMoodFilterValue.All);
+    expect(state.typeFilter).toBe(NewsTypeFilterValue.All);
   });
 
   it('hydrates stored prefs for performance mode and ai-related visibility toggles', () => {

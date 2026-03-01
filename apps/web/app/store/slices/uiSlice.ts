@@ -1,4 +1,11 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
+import {
+  type MoodFilter,
+  NewsMoodFilterValue,
+  type TypeFilter,
+  NewsTypeFilterValue
+} from '../types';
+import { isMoodFilter, isTypeFilter } from '../valueEnums';
 
 const isVibe = (value: string): value is UiState['vibe'] =>
   value === 'default'
@@ -30,8 +37,8 @@ type UiState = {
   aiAvailable: boolean;
   aiEnabled: boolean;
   aiProvider: 'openai' | 'claude' | 'openrouter';
-  moodFilter: 'all' | 'pesimistic' | 'optimistic' | 'realistic' | 'melancholy' | 'happiness' | 'sadness' | 'rage' | 'uncertainty' | 'neutral' | 'curios';
-  typeFilter: 'all' | 'science' | 'movies' | 'politics' | 'business' | 'technology' | 'sports' | 'health' | 'world' | 'culture' | 'environment' | 'crime' | 'education' | 'other';
+  moodFilter: MoodFilter;
+  typeFilter: TypeFilter;
   summaryLang: 'bilingual' | 'bg' | 'en';
   researchLang: 'bg' | 'en';
   allBudget: 'mixed' | 'low' | 'standard' | 'high';
@@ -68,8 +75,8 @@ const initialState: UiState = {
   aiAvailable: false,
   aiEnabled: false,
   aiProvider: 'openai',
-  moodFilter: 'all',
-  typeFilter: 'all',
+  moodFilter: NewsMoodFilterValue.All,
+  typeFilter: NewsTypeFilterValue.All,
   summaryLang: 'bilingual',
   researchLang: 'bg',
   allBudget: 'standard',
@@ -146,48 +153,21 @@ const uiSlice = createSlice({
     },
     setMoodFilter(state, action: PayloadAction<UiState['moodFilter']>) {
       if (state.performanceMode) {
-        state.moodFilter = 'all';
+        state.moodFilter = NewsMoodFilterValue.All;
         return;
       }
       const next = action.payload;
-      if (
-        next === 'all'
-        || next === 'pesimistic'
-        || next === 'optimistic'
-        || next === 'realistic'
-        || next === 'melancholy'
-        || next === 'happiness'
-        || next === 'sadness'
-        || next === 'rage'
-        || next === 'uncertainty'
-        || next === 'neutral'
-        || next === 'curios'
-      ) {
+      if (isMoodFilter(next)) {
         state.moodFilter = next;
       }
     },
     setTypeFilter(state, action: PayloadAction<UiState['typeFilter']>) {
       if (state.performanceMode) {
-        state.typeFilter = 'all';
+        state.typeFilter = NewsTypeFilterValue.All;
         return;
       }
       const next = action.payload;
-      if (
-        next === 'all'
-        || next === 'science'
-        || next === 'movies'
-        || next === 'politics'
-        || next === 'business'
-        || next === 'technology'
-        || next === 'sports'
-        || next === 'health'
-        || next === 'world'
-        || next === 'culture'
-        || next === 'environment'
-        || next === 'crime'
-        || next === 'education'
-        || next === 'other'
-      ) {
+      if (isTypeFilter(next)) {
         state.typeFilter = next;
       }
     },
@@ -205,8 +185,8 @@ const uiSlice = createSlice({
       if (typeof next.performanceMode === 'boolean') {
         state.performanceMode = next.performanceMode;
         if (next.performanceMode) {
-          state.moodFilter = 'all';
-          state.typeFilter = 'all';
+          state.moodFilter = NewsMoodFilterValue.All;
+          state.typeFilter = NewsTypeFilterValue.All;
           state.soundEnabled = false;
         }
       }
@@ -256,42 +236,15 @@ const uiSlice = createSlice({
       if (typeof next.hideAllSummaries === 'boolean') state.hideAllSummaries = next.hideAllSummaries;
       if (typeof next.notifyEnabled === 'boolean') state.notifyEnabled = next.notifyEnabled;
       if (next.notifyMode === 'matched' || next.notifyMode === 'matched_pinned' || next.notifyMode === 'pinned' || next.notifyMode === 'all') state.notifyMode = next.notifyMode;
-      if (
-        next.moodFilter === 'all'
-        || next.moodFilter === 'pesimistic'
-        || next.moodFilter === 'optimistic'
-        || next.moodFilter === 'realistic'
-        || next.moodFilter === 'melancholy'
-        || next.moodFilter === 'happiness'
-        || next.moodFilter === 'sadness'
-        || next.moodFilter === 'rage'
-        || next.moodFilter === 'uncertainty'
-        || next.moodFilter === 'neutral'
-        || next.moodFilter === 'curios'
-      ) state.moodFilter = next.moodFilter;
-      if (
-        next.typeFilter === 'all'
-        || next.typeFilter === 'science'
-        || next.typeFilter === 'movies'
-        || next.typeFilter === 'politics'
-        || next.typeFilter === 'business'
-        || next.typeFilter === 'technology'
-        || next.typeFilter === 'sports'
-        || next.typeFilter === 'health'
-        || next.typeFilter === 'world'
-        || next.typeFilter === 'culture'
-        || next.typeFilter === 'environment'
-        || next.typeFilter === 'crime'
-        || next.typeFilter === 'education'
-        || next.typeFilter === 'other'
-      ) state.typeFilter = next.typeFilter;
+      if (isMoodFilter(next.moodFilter)) state.moodFilter = next.moodFilter;
+      if (isTypeFilter(next.typeFilter)) state.typeFilter = next.typeFilter;
       if (next.font === 'system' || next.font === 'manrope' || next.font === 'grotesk' || next.font === 'sora' || next.font === 'plex' || next.font === 'serif' || next.font === 'mono') state.font = next.font;
       if (next.fontSize === 'sm' || next.fontSize === 'md' || next.fontSize === 'lg' || next.fontSize === 'xl') state.fontSize = next.fontSize;
       if (next.scheme === 'classic' || next.scheme === 'vivid' || next.scheme === 'sunset' || next.scheme === 'neon' || next.scheme === 'ocean' || next.scheme === 'forest') state.scheme = next.scheme;
       if (typeof next.performanceMode === 'boolean') state.performanceMode = next.performanceMode;
       if (state.performanceMode) {
-        state.moodFilter = 'all';
-        state.typeFilter = 'all';
+        state.moodFilter = NewsMoodFilterValue.All;
+        state.typeFilter = NewsTypeFilterValue.All;
         state.soundEnabled = false;
       }
       if (next.buttonMode === 'icons' || next.buttonMode === 'text') state.buttonMode = next.buttonMode;

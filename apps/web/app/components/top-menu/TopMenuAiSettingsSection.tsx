@@ -1,12 +1,16 @@
 'use client';
 
 import { Alert } from '@mui/material';
+import {
+  NewsMoodFilterValue,
+  NewsTypeFilterValue,
+  type MoodFilter,
+  type TypeFilter
+} from '../../store/types';
 
 type AiProvider = 'openai' | 'claude' | 'openrouter';
 type SummaryLang = 'bilingual' | 'bg' | 'en';
 type ResearchLang = 'bg' | 'en';
-type MoodFilter = 'all' | 'pesimistic' | 'optimistic' | 'realistic' | 'melancholy' | 'happiness' | 'sadness' | 'rage' | 'uncertainty' | 'neutral' | 'curios';
-type TypeFilter = 'all' | 'science' | 'movies' | 'politics' | 'business' | 'technology' | 'sports' | 'health' | 'world' | 'culture' | 'environment' | 'crime' | 'education' | 'other';
 type Budget = 'mixed' | 'low' | 'standard' | 'high';
 
 type TopMenuAiSettingsSectionProps = {
@@ -99,17 +103,17 @@ export function TopMenuAiSettingsSection({
                 disabled={!aiAvailable}
                 onChange={e => onMoodFilterChange(e.target.value as MoodFilter)}
               >
-                <option value="all">{labels.moodAll}</option>
-                <option value="pesimistic">{labels.moodPesimistic}</option>
-                <option value="optimistic">{labels.moodOptimistic}</option>
-                <option value="realistic">{labels.moodRealistic}</option>
-                <option value="melancholy">{labels.moodMelancholy}</option>
-                <option value="happiness">{labels.moodHappiness}</option>
-                <option value="sadness">{labels.moodSadness}</option>
-                <option value="rage">{labels.moodRage}</option>
-                <option value="uncertainty">{labels.moodUncertainty}</option>
-                <option value="neutral">{labels.moodNeutral}</option>
-                <option value="curios">{labels.moodCurios}</option>
+                <option value={NewsMoodFilterValue.All}>{labels.moodAll}</option>
+                <option value={NewsMoodFilterValue.Pesimistic}>{labels.moodPesimistic}</option>
+                <option value={NewsMoodFilterValue.Optimistic}>{labels.moodOptimistic}</option>
+                <option value={NewsMoodFilterValue.Realistic}>{labels.moodRealistic}</option>
+                <option value={NewsMoodFilterValue.Melancholy}>{labels.moodMelancholy}</option>
+                <option value={NewsMoodFilterValue.Happiness}>{labels.moodHappiness}</option>
+                <option value={NewsMoodFilterValue.Sadness}>{labels.moodSadness}</option>
+                <option value={NewsMoodFilterValue.Rage}>{labels.moodRage}</option>
+                <option value={NewsMoodFilterValue.Uncertainty}>{labels.moodUncertainty}</option>
+                <option value={NewsMoodFilterValue.Neutral}>{labels.moodNeutral}</option>
+                <option value={NewsMoodFilterValue.Curios}>{labels.moodCurios}</option>
               </select>
             </label>
             <label className="checkbox">
@@ -121,20 +125,20 @@ export function TopMenuAiSettingsSection({
                 disabled={!aiAvailable}
                 onChange={e => onTypeFilterChange(e.target.value as TypeFilter)}
               >
-                <option value="all">{labels.typeAll}</option>
-                <option value="science">{labels.typeScience}</option>
-                <option value="movies">{labels.typeMovies}</option>
-                <option value="politics">{labels.typePolitics}</option>
-                <option value="business">{labels.typeBusiness}</option>
-                <option value="technology">{labels.typeTechnology}</option>
-                <option value="sports">{labels.typeSports}</option>
-                <option value="health">{labels.typeHealth}</option>
-                <option value="world">{labels.typeWorld}</option>
-                <option value="culture">{labels.typeCulture}</option>
-                <option value="environment">{labels.typeEnvironment}</option>
-                <option value="crime">{labels.typeCrime}</option>
-                <option value="education">{labels.typeEducation}</option>
-                <option value="other">{labels.typeOther}</option>
+                <option value={NewsTypeFilterValue.All}>{labels.typeAll}</option>
+                <option value={NewsTypeFilterValue.Science}>{labels.typeScience}</option>
+                <option value={NewsTypeFilterValue.Movies}>{labels.typeMovies}</option>
+                <option value={NewsTypeFilterValue.Politics}>{labels.typePolitics}</option>
+                <option value={NewsTypeFilterValue.Business}>{labels.typeBusiness}</option>
+                <option value={NewsTypeFilterValue.Technology}>{labels.typeTechnology}</option>
+                <option value={NewsTypeFilterValue.Sports}>{labels.typeSports}</option>
+                <option value={NewsTypeFilterValue.Health}>{labels.typeHealth}</option>
+                <option value={NewsTypeFilterValue.World}>{labels.typeWorld}</option>
+                <option value={NewsTypeFilterValue.Culture}>{labels.typeCulture}</option>
+                <option value={NewsTypeFilterValue.Environment}>{labels.typeEnvironment}</option>
+                <option value={NewsTypeFilterValue.Crime}>{labels.typeCrime}</option>
+                <option value={NewsTypeFilterValue.Education}>{labels.typeEducation}</option>
+                <option value={NewsTypeFilterValue.Other}>{labels.typeOther}</option>
               </select>
             </label>
           </>
