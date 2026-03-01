@@ -1,54 +1,40 @@
 'use client';
 
-import type { DragEvent } from 'react';
 import RedditIcon from '@mui/icons-material/Reddit';
 import RssFeedIcon from '@mui/icons-material/RssFeed';
 import SmartDisplayIcon from '@mui/icons-material/SmartDisplay';
 import { Box, Card, CardContent, Chip, Stack, Typography } from '@mui/material';
 import type { FeedInfo } from '../../store/types';
 import { FILTERED_FEED_URL } from '../../store/constants';
-import type { FeedColumnHandlers, FeedColumnStateModel, FeedColumnViewModel } from './reactColumns.types';
+import type { FeedColumnDragState } from './reactColumns.types';
+import { useFeedColumnsContext } from './context/FeedColumnsContext';
 import { FeedColumnControlsPanel } from './feed-column/FeedColumnControlsPanel';
 import { FeedColumnItemsList } from './feed-column/FeedColumnItemsList';
 import { COLUMN_COLOR_TOKENS, COLUMN_LAYOUT_TOKENS, COLUMN_STYLE_TOKENS } from './designTokens';
 
-type DragState = {
-  canDrag: boolean;
-  isDragging: boolean;
-  isDropTarget: boolean;
-  onDragStart: (e: DragEvent<HTMLDivElement>) => void;
-  onDragEnd: () => void;
-  onDragEnter: () => void;
-  onDragOver: (e: DragEvent<HTMLDivElement>) => void;
-  onDrop: (e: DragEvent<HTMLDivElement>) => void;
-  setNode: (node: HTMLDivElement | null) => void;
-};
-
 type FeedColumnProps = {
   feed: FeedInfo;
   columnIdx: number;
-  view: FeedColumnViewModel;
-  state: FeedColumnStateModel;
-  handlers: FeedColumnHandlers;
-  drag: DragState;
+  drag: FeedColumnDragState;
 };
 
 export function FeedColumn({
   feed,
   columnIdx,
-  view,
-  state,
-  handlers,
   drag
 }: FeedColumnProps) {
+  const {
+    view,
+    state
+  } = useFeedColumnsContext();
+
   const {
     palette,
     performanceMode,
     moodFilter,
     typeFilter,
     searchQuery,
-    fontScale,
-    connected
+    fontScale
   } = view;
 
   const {
@@ -181,12 +167,6 @@ export function FeedColumn({
             advancedControlsOpen={advancedControlsOpen}
             deleteAge={deleteAge}
             pinned={pinned}
-            connected={connected}
-            aiAvailable={view.aiAvailable}
-            compactBtnSx={view.compactBtnSx}
-            compactFormSx={view.compactFormSx}
-            labels={view.labels}
-            handlers={handlers}
           />
 
           <FeedColumnItemsList
@@ -198,9 +178,6 @@ export function FeedColumn({
             accent={accent}
             soft={soft}
             isHydrated={isHydrated}
-            view={view}
-            state={state}
-            handlers={handlers}
           />
         </CardContent>
       </Card>

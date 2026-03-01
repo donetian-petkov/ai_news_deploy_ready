@@ -1,3 +1,4 @@
+import type { DragEvent } from 'react';
 import type { BudgetMode, FeedInfo, NewsItem, SortMode } from '../../store/types';
 
 export type BodyMode = 'collapsed' | 'expanded' | 'hidden';
@@ -179,4 +180,16 @@ export type FeedColumnHandlers = {
   onToggleAsk: (id: string, feedUrl: string) => void;
   onSetAskDraft: (id: string, feedUrl: string, draft: string) => void;
   onAskSubmit: (it: NewsItem) => void;
+};
+
+export type FeedColumnDragState = {
+  canDrag: boolean;
+  isDragging: boolean;
+  isDropTarget: boolean;
+  onDragStart: (e: DragEvent<HTMLDivElement>) => void;
+  onDragEnd: () => void;
+  onDragEnter: () => void;
+  onDragOver: (e: DragEvent<HTMLDivElement>) => void;
+  onDrop: (e: DragEvent<HTMLDivElement>) => void;
+  setNode: (node: HTMLDivElement | null) => void;
 };

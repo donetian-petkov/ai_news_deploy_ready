@@ -35,13 +35,14 @@ import {
 import { sendWsMessage, startWsConnection, stopWsConnection } from '../store/wsClient';
 import type { BudgetMode, FeedInfo, NewsItem, SortMode } from '../store/types';
 import { FILTERED_FEED_URL } from '../store/constants';
-import type { BodyMode, CardLabels, FeedColumnHandlers, FeedColumnStateModel, FeedColumnViewModel, FeedFilterPreset, SchemeValue, VibeValue } from './columns/reactColumns.types';
+import type { BodyMode, CardLabels, FeedColumnDragState, FeedColumnHandlers, FeedColumnStateModel, FeedColumnViewModel, FeedFilterPreset, SchemeValue, VibeValue } from './columns/reactColumns.types';
 import { buildColumnPalette, cutoffFromAge, getVibeIcons, presetToFeedFilters, SCHEME_LIST, VIBE_LIST } from './columns/reactColumns.utils';
 import { useReactColumnsState } from './columns/hooks/useReactColumnsState';
 import { useFeedUiPersistence } from './columns/hooks/useFeedUiPersistence';
 import { useDesktopNewsNotifications } from './columns/hooks/useDesktopNewsNotifications';
 import { useAllColumnControlsSync } from './columns/hooks/useAllColumnControlsSync';
 import { useColumnHydration } from './columns/hooks/useColumnHydration';
+import { FeedColumnsProvider } from './columns/context/FeedColumnsContext';
 import { FeedColumnsGrid } from './columns/FeedColumnsGrid';
 import { COLUMN_LAYOUT_TOKENS } from './columns/designTokens';
 
@@ -619,7 +620,7 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
     dragLastTargetRef.current = null;
   };
 
-  const buildDragState = (feed: FeedInfo, canDrag: boolean) => ({
+  const buildDragState = (feed: FeedInfo, canDrag: boolean): FeedColumnDragState => ({
     canDrag,
     isDragging: dragFeedUrl === feed.url,
     isDropTarget: !!dragFeedUrl && dragFeedUrl !== feed.url && dragOverFeedUrl === feed.url,
@@ -686,6 +687,22 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
     }
   });
 
+  const columnsContextValue = useMemo(() => ({
+    view: columnViewModel,
+    state: columnStateModel,
+    handlers: columnHandlers,
+    onGridDragOver,
+    onGridDrop,
+    buildDragState
+  }), [
+    buildDragState,
+    columnHandlers,
+    columnStateModel,
+    columnViewModel,
+    onGridDragOver,
+    onGridDrop
+  ]);
+
   return (
     <Box className="container" sx={{ pt: 1, pb: 0.5 }}>
       <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.25 }}>
@@ -700,15 +717,9 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
         />
       </Stack>
 
-      <FeedColumnsGrid
-        feeds={renderedFeeds}
-        view={columnViewModel}
-        state={columnStateModel}
-        handlers={columnHandlers}
-        onGridDragOver={onGridDragOver}
-        onGridDrop={onGridDrop}
-        buildDragState={buildDragState}
-      />
+      <FeedColumnsProvider value={columnsContextValue}>
+        <FeedColumnsGrid feeds={renderedFeeds} />
+      </FeedColumnsProvider>
       <Snackbar
         open={clipboardNoticeOpen}
         autoHideDuration={1400}

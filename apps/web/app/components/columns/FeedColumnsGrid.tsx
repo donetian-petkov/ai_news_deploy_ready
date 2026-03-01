@@ -1,43 +1,22 @@
 'use client';
 
-import type { DragEvent } from 'react';
 import { Box } from '@mui/material';
 import type { FeedInfo } from '../../store/types';
 import { FILTERED_FEED_URL } from '../../store/constants';
-import type { FeedColumnHandlers, FeedColumnStateModel, FeedColumnViewModel } from './reactColumns.types';
+import { useFeedColumnsContext } from './context/FeedColumnsContext';
 import { FeedColumn } from './FeedColumn';
-
-type DragState = {
-  canDrag: boolean;
-  isDragging: boolean;
-  isDropTarget: boolean;
-  onDragStart: (e: DragEvent<HTMLDivElement>) => void;
-  onDragEnd: () => void;
-  onDragEnter: () => void;
-  onDragOver: (e: DragEvent<HTMLDivElement>) => void;
-  onDrop: (e: DragEvent<HTMLDivElement>) => void;
-  setNode: (node: HTMLDivElement | null) => void;
-};
 
 type Props = {
   feeds: FeedInfo[];
-  view: FeedColumnViewModel;
-  state: FeedColumnStateModel;
-  handlers: FeedColumnHandlers;
-  onGridDragOver: (e: DragEvent<HTMLDivElement>) => void;
-  onGridDrop: (e: DragEvent<HTMLDivElement>) => void;
-  buildDragState: (feed: FeedInfo, canDrag: boolean) => DragState;
 };
 
-export function FeedColumnsGrid({
-  feeds,
-  view,
-  state,
-  handlers,
-  onGridDragOver,
-  onGridDrop,
-  buildDragState
-}: Props) {
+export function FeedColumnsGrid({ feeds }: Props) {
+  const {
+    onGridDragOver,
+    onGridDrop,
+    buildDragState
+  } = useFeedColumnsContext();
+
   return (
     <Box
       sx={{
@@ -64,9 +43,6 @@ export function FeedColumnsGrid({
             key={feed.url}
             feed={feed}
             columnIdx={columnIdx}
-            view={view}
-            state={state}
-            handlers={handlers}
             drag={buildDragState(feed, canDrag)}
           />
         );

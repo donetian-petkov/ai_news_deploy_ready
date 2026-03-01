@@ -2,9 +2,10 @@
 
 import { Alert, Button, Skeleton, Stack } from '@mui/material';
 import type { FeedInfo, NewsItem } from '../../../store/types';
-import type { BodyMode, FeedAskState, FeedColumnHandlers, FeedColumnStateModel, FeedColumnViewModel } from '../reactColumns.types';
+import type { BodyMode, FeedAskState } from '../reactColumns.types';
 import { collapseText, compactResearch, extractConfidence } from '../reactColumns.utils';
 import { NewsCard } from '../NewsCard';
+import { useFeedColumnsContext } from '../context/FeedColumnsContext';
 import { COLUMN_COLOR_TOKENS, COLUMN_LAYOUT_TOKENS } from '../designTokens';
 
 type Props = {
@@ -16,47 +17,6 @@ type Props = {
   accent: string;
   soft: string;
   isHydrated: boolean;
-  view: Pick<
-    FeedColumnViewModel,
-    | 'aiAvailable'
-    | 'aiEnabled'
-    | 'performanceMode'
-    | 'fontScale'
-    | 'buttonMode'
-    | 'compactBtnSx'
-    | 'labels'
-    | 'cardLabels'
-    | 'vibeIcons'
-    | 'hideAllResearch'
-    | 'hideAllSummaries'
-    | 'palette'
-    | 'connected'
-  >;
-  state: Pick<
-    FeedColumnStateModel,
-    | 'summaryPendingById'
-    | 'researchPendingById'
-    | 'pinnedNewsById'
-    | 'askByItem'
-    | 'bodyModes'
-  >;
-  handlers: Pick<
-    FeedColumnHandlers,
-    | 'getBodyMode'
-    | 'getDefaultBodyMode'
-    | 'setBodyMode'
-    | 'onTogglePinnedNews'
-    | 'onCopyLink'
-    | 'onCopyNewsPayload'
-    | 'onHideItem'
-    | 'onRequestSummary'
-    | 'onRequestResearch'
-    | 'onToggleAsk'
-    | 'onSetAskDraft'
-    | 'onAskSubmit'
-    | 'onShowMoreNews'
-    | 'onResetNewsToTen'
-  >;
 };
 
 function askKey(it: NewsItem): string {
@@ -75,11 +35,14 @@ export function FeedColumnItemsList({
   isMatchColumn,
   accent,
   soft,
-  isHydrated,
-  view,
-  state,
-  handlers
+  isHydrated
 }: Props) {
+  const {
+    view,
+    state,
+    handlers
+  } = useFeedColumnsContext();
+
   const {
     aiAvailable,
     aiEnabled,

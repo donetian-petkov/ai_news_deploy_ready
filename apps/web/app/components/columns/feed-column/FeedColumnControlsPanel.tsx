@@ -14,7 +14,8 @@ import {
   Stack
 } from '@mui/material';
 import type { BudgetMode, FeedInfo, SortMode } from '../../../store/types';
-import type { FeedColumnHandlers, FeedFilterPreset } from '../reactColumns.types';
+import type { FeedFilterPreset } from '../reactColumns.types';
+import { useFeedColumnsContext } from '../context/FeedColumnsContext';
 import { getFeedFilterPreset } from '../reactColumns.utils';
 
 type Props = {
@@ -25,26 +26,6 @@ type Props = {
   advancedControlsOpen: boolean;
   deleteAge: 'yesterday' | 'week' | 'month' | 'year';
   pinned: boolean;
-  connected: boolean;
-  aiAvailable: boolean;
-  compactBtnSx: Record<string, unknown>;
-  compactFormSx: Record<string, unknown>;
-  labels: Record<string, string>;
-  handlers: Pick<
-    FeedColumnHandlers,
-    | 'onTogglePinnedColumn'
-    | 'onRemoveFeed'
-    | 'onToggleFeedControls'
-    | 'onToggleFeedSummary'
-    | 'onToggleFeedResearch'
-    | 'onSetFeedBudget'
-    | 'onSetFeedInterval'
-    | 'onSetFeedSortMode'
-    | 'onSetFeedFilterPreset'
-    | 'onToggleAdvancedControls'
-    | 'onSetDeleteAge'
-    | 'onRemoveOldInFeed'
-  >;
 };
 
 export function FeedColumnControlsPanel({
@@ -54,14 +35,21 @@ export function FeedColumnControlsPanel({
   controlsOpen,
   advancedControlsOpen,
   deleteAge,
-  pinned,
-  connected,
-  aiAvailable,
-  compactBtnSx,
-  compactFormSx,
-  labels,
-  handlers
+  pinned
 }: Props) {
+  const {
+    view,
+    handlers
+  } = useFeedColumnsContext();
+
+  const {
+    connected,
+    aiAvailable,
+    compactBtnSx,
+    compactFormSx,
+    labels
+  } = view;
+
   const {
     onTogglePinnedColumn,
     onRemoveFeed,
