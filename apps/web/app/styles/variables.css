@@ -1,0 +1,248 @@
+:root {
+  --ui-font-scale: 1;
+  --bg-main: #050a17;
+  --bg-glow-1: radial-gradient(1200px 560px at 8% -4%, rgba(61, 149, 255, 0.24), transparent 64%);
+  --bg-glow-2: radial-gradient(1000px 480px at 88% 8%, rgba(32, 203, 125, 0.18), transparent 68%);
+  --bg-noise: linear-gradient(115deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0) 28%, rgba(255,255,255,0.03) 54%, rgba(255,255,255,0) 100%);
+  --panel-bg: rgba(14, 21, 38, 0.8);
+  --panel-border: rgba(106, 132, 178, 0.35);
+  --card-bg: rgba(8, 14, 28, 0.86);
+  --card-border: rgba(106, 132, 178, 0.34);
+  --text-main: #eaf1ff;
+  --text-muted: rgba(206, 220, 245, 0.78);
+  --section-bg: rgba(15, 24, 40, 0.64);
+  --field-bg: rgba(26, 37, 59, 0.72);
+  --topbar-start: rgba(6, 12, 24, 0.94);
+  --topbar-end: rgba(6, 12, 24, 0.78);
+  --title-font-family: var(--font-family);
+  --news-title-font-family: var(--font-family);
+  --news-body-font-family: var(--font-family);
+  --column-radius: 16px;
+  --news-card-radius: 14px;
+  --topbar-blur: 12px;
+  --topbar-shadow: 0 18px 28px rgba(0, 0, 0, 0.28), inset 0 -1px 0 rgba(255, 255, 255, 0.04);
+  --panel-shadow: inset 0 1px 0 rgba(255,255,255,0.04), 0 14px 28px rgba(0,0,0,0.24);
+  --button-hover-shadow: 0 0 0 1px var(--panel-border), 0 8px 16px rgba(0, 0, 0, 0.24);
+  --button-hover-lift: -1px;
+  --news-card-overlay: radial-gradient(520px 220px at 100% 0%, rgba(61,149,255,0.16), transparent 70%);
+  --column-shell-overlay: radial-gradient(700px 260px at 0% 0%, rgba(61,149,255,0.12), transparent 70%);
+}
+
+body[data-theme='light'] {
+  --bg-main: #eef3ff;
+  --bg-glow-1: radial-gradient(1200px 560px at 8% -4%, rgba(66, 126, 218, 0.16), transparent 64%);
+  --bg-glow-2: radial-gradient(1000px 480px at 88% 8%, rgba(56, 188, 125, 0.12), transparent 68%);
+  --bg-noise: linear-gradient(115deg, rgba(23,41,70,0.03) 0%, rgba(23,41,70,0) 32%, rgba(23,41,70,0.03) 61%, rgba(23,41,70,0) 100%);
+  --panel-bg: rgba(255, 255, 255, 0.88);
+  --panel-border: rgba(118, 132, 166, 0.45);
+  --card-bg: rgba(255, 255, 255, 0.92);
+  --card-border: rgba(106, 118, 151, 0.42);
+  --text-main: #122033;
+  --text-muted: rgba(31, 47, 71, 0.74);
+  --section-bg: rgba(239, 244, 255, 0.84);
+  --field-bg: rgba(255, 255, 255, 0.93);
+  --topbar-start: rgba(242, 246, 255, 0.97);
+  --topbar-end: rgba(238, 244, 255, 0.9);
+}
+
+body[data-font='system'] { --font-family: 'Inter', 'Segoe UI', sans-serif; }
+body[data-font='manrope'] { --font-family: 'Manrope', 'Segoe UI', sans-serif; }
+body[data-font='grotesk'] { --font-family: 'Space Grotesk', 'Segoe UI', sans-serif; }
+body[data-font='sora'] { --font-family: 'Sora', 'Segoe UI', sans-serif; }
+body[data-font='plex'] { --font-family: 'IBM Plex Sans', 'Segoe UI', sans-serif; }
+body[data-font='serif'] { --font-family: 'Cinzel', Georgia, serif; }
+body[data-font='mono'] { --font-family: 'IBM Plex Mono', 'SF Mono', monospace; }
+
+body[data-font-size='sm'] { --ui-font-scale: 0.92; }
+body[data-font-size='md'] { --ui-font-scale: 1; }
+body[data-font-size='lg'] { --ui-font-scale: 1.08; }
+body[data-font-size='xl'] { --ui-font-scale: 1.16; }
+
+body[data-vibe='anime'] {
+  --bg-main: #08081a;
+  --bg-glow-1: radial-gradient(1120px 540px at -5% -8%, rgba(255, 84, 176, 0.32), transparent 63%);
+  --bg-glow-2: radial-gradient(1040px 500px at 100% 10%, rgba(88, 216, 255, 0.28), transparent 64%);
+  --panel-bg: rgba(34, 18, 58, 0.7);
+  --section-bg: rgba(30, 20, 58, 0.6);
+  --field-bg: rgba(39, 24, 69, 0.72);
+  --panel-border: rgba(242, 108, 209, 0.58);
+  --card-border: rgba(106, 187, 255, 0.5);
+  --topbar-start: rgba(42, 18, 66, 0.93);
+  --topbar-end: rgba(20, 23, 65, 0.86);
+  --text-main: #f1f5ff;
+  --text-muted: rgba(227, 215, 246, 0.8);
+  --news-card-overlay: radial-gradient(540px 220px at 100% 0%, rgba(255, 92, 189, 0.2), transparent 70%);
+  --column-shell-overlay: radial-gradient(700px 280px at 0% 0%, rgba(114, 190, 255, 0.2), transparent 72%);
+  --column-radius: 20px;
+  --news-card-radius: 18px;
+}
+body[data-vibe='arcade'] {
+  --bg-main: #050912;
+  --bg-glow-1: radial-gradient(1120px 540px at 5% -5%, rgba(57, 255, 132, 0.24), transparent 62%);
+  --bg-glow-2: radial-gradient(1040px 520px at 95% 8%, rgba(255, 76, 230, 0.26), transparent 66%);
+  --panel-bg: rgba(10, 24, 30, 0.72);
+  --section-bg: rgba(8, 21, 33, 0.66);
+  --field-bg: rgba(10, 26, 44, 0.72);
+  --panel-border: rgba(91, 255, 203, 0.56);
+  --card-border: rgba(91, 231, 255, 0.48);
+  --topbar-start: rgba(10, 34, 36, 0.94);
+  --topbar-end: rgba(25, 12, 44, 0.86);
+  --text-main: #e6faff;
+  --text-muted: rgba(189, 225, 238, 0.82);
+  --news-card-overlay: radial-gradient(520px 220px at 100% 0%, rgba(76, 255, 176, 0.2), transparent 70%);
+  --column-shell-overlay: radial-gradient(700px 280px at 0% 0%, rgba(84, 233, 255, 0.16), transparent 72%);
+  --column-radius: 11px;
+  --news-card-radius: 10px;
+}
+body[data-vibe='cinema'] {
+  --bg-main: #0b0910;
+  --bg-glow-1: radial-gradient(1040px 520px at 0% -6%, rgba(212, 94, 80, 0.2), transparent 64%);
+  --bg-glow-2: radial-gradient(1040px 520px at 100% 0%, rgba(221, 175, 90, 0.22), transparent 66%);
+  --panel-bg: rgba(36, 23, 26, 0.76);
+  --section-bg: rgba(33, 21, 30, 0.64);
+  --field-bg: rgba(45, 27, 36, 0.72);
+  --panel-border: rgba(218, 167, 95, 0.58);
+  --card-border: rgba(194, 112, 120, 0.46);
+  --topbar-start: rgba(42, 21, 27, 0.94);
+  --topbar-end: rgba(28, 19, 33, 0.86);
+  --text-main: #f6efe6;
+  --text-muted: rgba(231, 212, 189, 0.8);
+  --news-card-overlay: radial-gradient(520px 220px at 100% 0%, rgba(238, 195, 110, 0.18), transparent 70%);
+  --column-shell-overlay: radial-gradient(700px 280px at 0% 0%, rgba(186, 66, 95, 0.2), transparent 72%);
+  --column-radius: 16px;
+  --news-card-radius: 14px;
+}
+body[data-vibe='newspaper'] {
+  --bg-main: #0b1117;
+  --bg-glow-1: radial-gradient(1080px 540px at 6% -6%, rgba(104, 121, 140, 0.22), transparent 64%);
+  --bg-glow-2: radial-gradient(1040px 520px at 98% 8%, rgba(170, 142, 84, 0.18), transparent 66%);
+  --panel-bg: rgba(22, 29, 37, 0.78);
+  --section-bg: rgba(24, 30, 37, 0.66);
+  --field-bg: rgba(26, 34, 46, 0.76);
+  --panel-border: rgba(150, 166, 182, 0.54);
+  --card-border: rgba(167, 178, 190, 0.44);
+  --topbar-start: rgba(29, 35, 42, 0.94);
+  --topbar-end: rgba(20, 28, 37, 0.86);
+  --text-main: #edf2f7;
+  --text-muted: rgba(197, 210, 223, 0.82);
+  --news-card-overlay: radial-gradient(520px 220px at 100% 0%, rgba(142, 157, 176, 0.16), transparent 70%);
+  --column-shell-overlay: radial-gradient(700px 280px at 0% 0%, rgba(155, 171, 186, 0.18), transparent 72%);
+  --column-radius: 10px;
+  --news-card-radius: 10px;
+}
+body[data-vibe='cyberwitch'] {
+  --bg-main: #070916;
+  --bg-glow-1: radial-gradient(1120px 540px at 3% -8%, rgba(182, 86, 255, 0.3), transparent 62%);
+  --bg-glow-2: radial-gradient(1040px 500px at 100% 10%, rgba(0, 229, 255, 0.24), transparent 64%);
+  --panel-bg: rgba(20, 18, 48, 0.72);
+  --section-bg: rgba(21, 18, 49, 0.63);
+  --field-bg: rgba(24, 22, 58, 0.75);
+  --panel-border: rgba(194, 110, 255, 0.6);
+  --card-border: rgba(114, 219, 255, 0.5);
+  --topbar-start: rgba(36, 19, 62, 0.95);
+  --topbar-end: rgba(13, 31, 56, 0.86);
+  --text-main: #edf2ff;
+  --text-muted: rgba(206, 218, 246, 0.82);
+  --news-card-overlay: radial-gradient(540px 220px at 100% 0%, rgba(174, 100, 255, 0.2), transparent 70%);
+  --column-shell-overlay: radial-gradient(700px 280px at 0% 0%, rgba(74, 214, 255, 0.2), transparent 72%);
+  --column-radius: 18px;
+  --news-card-radius: 16px;
+}
+body[data-vibe='fantasy'] {
+  --bg-main: #08110f;
+  --bg-glow-1: radial-gradient(1120px 540px at 0% -6%, rgba(89, 184, 131, 0.26), transparent 64%);
+  --bg-glow-2: radial-gradient(1040px 500px at 100% 10%, rgba(206, 158, 79, 0.2), transparent 67%);
+  --panel-bg: rgba(17, 35, 30, 0.74);
+  --section-bg: rgba(18, 36, 32, 0.64);
+  --field-bg: rgba(16, 31, 45, 0.76);
+  --panel-border: rgba(147, 209, 138, 0.58);
+  --card-border: rgba(224, 176, 88, 0.48);
+  --topbar-start: rgba(19, 44, 36, 0.95);
+  --topbar-end: rgba(21, 23, 45, 0.87);
+  --text-main: #e9f4ea;
+  --text-muted: rgba(206, 224, 211, 0.8);
+  --news-card-overlay: radial-gradient(540px 220px at 100% 0%, rgba(238, 181, 84, 0.2), transparent 70%);
+  --column-shell-overlay: radial-gradient(700px 280px at 0% 0%, rgba(92, 199, 143, 0.2), transparent 72%);
+  --column-radius: 18px;
+  --news-card-radius: 17px;
+}
+body[data-vibe='scifi'] {
+  --bg-main: #050d1a;
+  --bg-glow-1: radial-gradient(1120px 540px at 2% -5%, rgba(44, 212, 255, 0.26), transparent 64%);
+  --bg-glow-2: radial-gradient(1040px 500px at 100% 8%, rgba(120, 132, 255, 0.24), transparent 66%);
+  --panel-bg: rgba(13, 25, 45, 0.74);
+  --section-bg: rgba(14, 27, 46, 0.66);
+  --field-bg: rgba(16, 31, 52, 0.76);
+  --panel-border: rgba(126, 210, 255, 0.58);
+  --card-border: rgba(127, 139, 255, 0.48);
+  --topbar-start: rgba(15, 33, 58, 0.95);
+  --topbar-end: rgba(13, 21, 41, 0.87);
+  --text-main: #e9f5ff;
+  --text-muted: rgba(203, 222, 238, 0.81);
+  --news-card-overlay: radial-gradient(540px 220px at 100% 0%, rgba(0, 214, 255, 0.2), transparent 70%);
+  --column-shell-overlay: radial-gradient(700px 280px at 0% 0%, rgba(120, 132, 255, 0.2), transparent 72%);
+  --column-radius: 14px;
+  --news-card-radius: 12px;
+}
+
+body[data-font='system'][data-vibe='anime'] {
+  --font-family: 'Sora', 'Segoe UI', sans-serif;
+  --title-font-family: 'Bangers', 'Sora', sans-serif;
+  --news-title-font-family: 'Sora', 'Segoe UI', sans-serif;
+}
+body[data-font='system'][data-vibe='arcade'] {
+  --font-family: 'Space Grotesk', 'Segoe UI', sans-serif;
+  --title-font-family: 'Orbitron', 'Space Grotesk', sans-serif;
+  --news-title-font-family: 'Orbitron', 'Space Grotesk', sans-serif;
+}
+body[data-font='system'][data-vibe='cinema'] {
+  --font-family: 'Manrope', 'Segoe UI', sans-serif;
+  --title-font-family: 'Cinzel', Georgia, serif;
+  --news-title-font-family: 'Cinzel', Georgia, serif;
+}
+body[data-font='system'][data-vibe='newspaper'] {
+  --font-family: 'IBM Plex Sans', 'Segoe UI', sans-serif;
+  --title-font-family: 'IBM Plex Sans', 'Segoe UI', sans-serif;
+  --news-title-font-family: 'IBM Plex Sans', 'Segoe UI', sans-serif;
+}
+body[data-font='system'][data-vibe='cyberwitch'] {
+  --font-family: 'Space Grotesk', 'Segoe UI', sans-serif;
+  --title-font-family: 'Orbitron', 'Space Grotesk', sans-serif;
+  --news-title-font-family: 'Space Grotesk', 'Segoe UI', sans-serif;
+}
+body[data-font='system'][data-vibe='fantasy'] {
+  --font-family: 'Manrope', 'Segoe UI', sans-serif;
+  --title-font-family: 'Cinzel', Georgia, serif;
+  --news-title-font-family: 'Cinzel', Georgia, serif;
+}
+body[data-font='system'][data-vibe='scifi'] {
+  --font-family: 'Space Grotesk', 'Segoe UI', sans-serif;
+  --title-font-family: 'Orbitron', 'Space Grotesk', sans-serif;
+  --news-title-font-family: 'Orbitron', 'Space Grotesk', sans-serif;
+}
+
+body[data-scheme='vivid'] { --panel-border: rgba(118, 165, 255, 0.48); --card-border: rgba(118, 165, 255, 0.44); }
+body[data-scheme='sunset'] { --panel-border: rgba(255, 157, 102, 0.45); --card-border: rgba(255, 157, 102, 0.4); }
+body[data-scheme='neon'] { --panel-border: rgba(0, 221, 255, 0.52); --card-border: rgba(0, 221, 255, 0.48); }
+body[data-scheme='ocean'] { --panel-border: rgba(79, 169, 242, 0.5); --card-border: rgba(79, 169, 242, 0.44); }
+body[data-scheme='forest'] { --panel-border: rgba(91, 173, 117, 0.46); --card-border: rgba(91, 173, 117, 0.42); }
+
+body[data-performance='on'] {
+  --bg-main: #060d1c;
+  --bg-glow-1: none;
+  --bg-glow-2: none;
+  --bg-noise: none;
+  --panel-bg: rgba(10, 18, 34, 0.96);
+  --section-bg: rgba(11, 19, 36, 0.96);
+  --field-bg: rgba(14, 24, 43, 0.96);
+  --card-bg: rgba(10, 18, 34, 0.98);
+  --news-card-overlay: none;
+  --column-shell-overlay: none;
+  --column-radius: 12px;
+  --news-card-radius: 11px;
+  --topbar-blur: 0px;
+  --topbar-shadow: none;
+  --panel-shadow: none;
+  --button-hover-shadow: none;
+  --button-hover-lift: 0px;
+}

@@ -1,0 +1,81 @@
+html,
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+  background: var(--bg-main, #050a17);
+  color: var(--text-main, #eaf1ff);
+  font-family: var(--font-family, 'Inter', 'Segoe UI', sans-serif);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  position: relative;
+  overflow-x: hidden;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: -14% -8%;
+  pointer-events: none;
+  background: var(--bg-glow-1), var(--bg-glow-2);
+  z-index: -2;
+}
+
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background: var(--bg-noise);
+  opacity: 0.75;
+  z-index: -1;
+}
+
+.iconGlyph {
+  font-size: 13px;
+  line-height: 1;
+  font-weight: 900;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+
+.spinAnim {
+  animation: spinAnim 1s linear infinite;
+}
+
+@keyframes spinAnim {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+body[data-performance='on']::before,
+body[data-performance='on']::after {
+  display: none;
+}
+
+body[data-performance='on'] .mobileTopActions .MuiChip-root,
+body[data-performance='on'] .mobileDrawerPaper {
+  backdrop-filter: none;
+}
+
+body[data-performance='on'] *,
+body[data-performance='on'] *::before,
+body[data-performance='on'] *::after {
+  animation-duration: 0s !important;
+  animation-iteration-count: 1 !important;
+  transition: none !important;
+}
