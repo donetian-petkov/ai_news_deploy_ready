@@ -1,4 +1,4 @@
-import type { FeedInfo, NewsItem } from '../../store/types';
+import type { BudgetMode, FeedInfo, NewsItem, SortMode } from '../../store/types';
 
 export type BodyMode = 'collapsed' | 'expanded' | 'hidden';
 export type VibeValue = 'default' | 'anime' | 'arcade' | 'cinema' | 'newspaper' | 'cyberwitch' | 'fantasy' | 'scifi';
@@ -107,3 +107,76 @@ export type NewsCardProps = {
 };
 
 export type FeedFilters = FeedInfo['filters'];
+
+export type FeedAskState = {
+  open: boolean;
+  draft: string;
+  pending: boolean;
+  remaining: number;
+  messages: Array<{ q: string; a?: string; error?: string }>;
+};
+
+export type FeedColumnViewModel = {
+  palette: ColumnPalette;
+  performanceMode: boolean;
+  moodFilter: string;
+  typeFilter: string;
+  searchQuery: string;
+  hideAllResearch: boolean;
+  hideAllSummaries: boolean;
+  aiEnabled: boolean;
+  aiAvailable: boolean;
+  buttonMode: 'icons' | 'text';
+  fontScale: number;
+  connected: boolean;
+  compactBtnSx: Record<string, unknown>;
+  compactFormSx: Record<string, unknown>;
+  labels: Record<string, string>;
+  cardLabels: CardLabels;
+  vibeIcons: VibeIcons;
+};
+
+export type FeedColumnStateModel = {
+  filteredColumnItems: NewsItem[];
+  itemsByFeed: Record<string, NewsItem[]>;
+  visibleByFeed: Record<string, number>;
+  hydratedColumns: Record<string, true>;
+  pinnedByUrl: Record<string, boolean>;
+  controlsOpenByUrl: Record<string, boolean>;
+  advancedControlsByUrl: Record<string, boolean>;
+  deleteAgeByUrl: Record<string, 'yesterday' | 'week' | 'month' | 'year'>;
+  summaryPendingById: Record<string, true>;
+  researchPendingById: Record<string, true>;
+  pinnedNewsById: Record<string, true>;
+  askByItem: Record<string, FeedAskState>;
+  bodyModes: Record<string, BodyMode>;
+};
+
+export type FeedColumnHandlers = {
+  getBodyMode: (key: string, text: string, threshold: number) => BodyMode;
+  getDefaultBodyMode: (text: string, threshold: number) => BodyMode;
+  setBodyMode: (key: string, mode: BodyMode) => void;
+  onTogglePinnedColumn: (feedUrl: string) => void;
+  onRemoveFeed: (feedUrl: string) => void;
+  onToggleFeedControls: (feedUrl: string) => void;
+  onToggleFeedSummary: (feed: FeedInfo) => void;
+  onToggleFeedResearch: (feed: FeedInfo) => void;
+  onSetFeedBudget: (feed: FeedInfo, budget: BudgetMode) => void;
+  onSetFeedInterval: (feed: FeedInfo, intervalSec: number) => void;
+  onSetFeedSortMode: (feed: FeedInfo, sortMode: SortMode) => void;
+  onSetFeedFilterPreset: (feed: FeedInfo, preset: FeedFilterPreset) => void;
+  onToggleAdvancedControls: (feedUrl: string) => void;
+  onSetDeleteAge: (feedUrl: string, age: 'yesterday' | 'week' | 'month' | 'year') => void;
+  onRemoveOldInFeed: (feed: FeedInfo) => void;
+  onShowMoreNews: (feedUrl: string) => void;
+  onResetNewsToTen: (feedUrl: string) => void;
+  onTogglePinnedNews: (id: string) => void;
+  onCopyLink: (url: string) => void;
+  onCopyNewsPayload: (it: NewsItem) => void;
+  onHideItem: (it: NewsItem) => void;
+  onRequestSummary: (it: NewsItem) => void;
+  onRequestResearch: (it: NewsItem) => void;
+  onToggleAsk: (id: string, feedUrl: string) => void;
+  onSetAskDraft: (id: string, feedUrl: string, draft: string) => void;
+  onAskSubmit: (it: NewsItem) => void;
+};

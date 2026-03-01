@@ -1,14 +1,13 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import type { DragEvent } from 'react';
 import { Box, Chip, Snackbar, Stack, Typography } from '@mui/material';
 import { useTranslation } from 'react-i18next';
-import { useAppDispatch, useAppSelector } from '../store/hooks';
+import { useAppDispatch } from '../store/hooks';
 import {
   removeFeedLocally,
-  hydrateFeedUiState,
   reorderFeeds,
-  setAllFeedControlsOpen,
   setFeedBudgetSetting,
   setFeedColumnSettings,
   setFeedDeleteAge,
@@ -37,8 +36,13 @@ import { sendWsMessage, startWsConnection, stopWsConnection } from '../store/wsC
 import type { BudgetMode, FeedInfo, NewsItem, SortMode } from '../store/types';
 import { FILTERED_FEED_URL } from '../store/constants';
 import { FeedColumn } from './columns/FeedColumn';
-import type { BodyMode, CardLabels, FeedFilterPreset, SchemeValue, VibeValue } from './columns/reactColumns.types';
+import type { BodyMode, CardLabels, FeedColumnHandlers, FeedColumnStateModel, FeedColumnViewModel, FeedFilterPreset, SchemeValue, VibeValue } from './columns/reactColumns.types';
 import { buildColumnPalette, cutoffFromAge, getVibeIcons, presetToFeedFilters, SCHEME_LIST, VIBE_LIST } from './columns/reactColumns.utils';
+import { useReactColumnsState } from './columns/hooks/useReactColumnsState';
+import { useFeedUiPersistence } from './columns/hooks/useFeedUiPersistence';
+import { useDesktopNewsNotifications } from './columns/hooks/useDesktopNewsNotifications';
+import { useAllColumnControlsSync } from './columns/hooks/useAllColumnControlsSync';
+import { useColumnHydration } from './columns/hooks/useColumnHydration';
 
 type Props = {
   wsUrl: string;
@@ -47,40 +51,47 @@ type Props = {
 export default function ReactColumnsPreview({ wsUrl }: Props) {
   const { t } = useTranslation();
   const dispatch = useAppDispatch();
-  const connected = useAppSelector(s => s.connection.connected);
-  const status = useAppSelector(s => s.connection.status);
-  const vibe = useAppSelector(s => s.ui.vibe);
-  const scheme = useAppSelector(s => s.ui.scheme);
-  const buttonMode = useAppSelector(s => s.ui.buttonMode);
-  const performanceMode = useAppSelector(s => s.ui.performanceMode);
-  const fontSize = useAppSelector(s => s.ui.fontSize);
-  const notifyEnabled = useAppSelector(s => s.ui.notifyEnabled);
-  const notifyMode = useAppSelector(s => s.ui.notifyMode);
-  const hideAllResearch = useAppSelector(s => s.ui.hideAllResearch);
-  const hideAllSummaries = useAppSelector(s => s.ui.hideAllSummaries);
-  const showMoreNewsAllSeq = useAppSelector(s => s.ui.showMoreNewsAllSeq);
-  const resetNewsShownAllSeq = useAppSelector(s => s.ui.resetNewsShownAllSeq);
-  const aiEnabled = useAppSelector(s => s.ui.aiEnabled);
-  const aiAvailable = useAppSelector(s => s.ui.aiAvailable);
-  const feeds = useAppSelector(s => s.feeds.feeds);
-  const pinnedByUrl = useAppSelector(s => s.feeds.pinnedByUrl);
-  const controlsOpenByUrl = useAppSelector(s => s.feeds.controlsOpenByUrl);
-  const deleteAgeByUrl = useAppSelector(s => s.feeds.deleteAgeByUrl);
-  const orderByUrl = useAppSelector(s => s.feeds.orderByUrl);
-  const searchQuery = useAppSelector(s => s.ui.searchQuery);
-  const moodFilter = useAppSelector(s => s.ui.moodFilter);
-  const typeFilter = useAppSelector(s => s.ui.typeFilter);
-  const allColumnControlsHidden = useAppSelector(s => s.ui.allColumnControlsHidden);
-  const itemsByFeed = useAppSelector(s => s.news.itemsByFeed);
-  const summaryPendingById = useAppSelector(s => s.news.summaryPendingById);
-  const researchPendingById = useAppSelector(s => s.news.researchPendingById);
-  const pinnedNewsById = useAppSelector(s => s.news.pinnedNewsById);
-  const askByItem = useAppSelector(s => s.news.askByItem);
+  const { connection, ui, feeds: feedsState, news: newsState } = useReactColumnsState();
+  const {
+    connected,
+    status
+  } = connection;
+  const {
+    vibe,
+    scheme,
+    buttonMode,
+    performanceMode,
+    fontSize,
+    notifyEnabled,
+    notifyMode,
+    hideAllResearch,
+    hideAllSummaries,
+    showMoreNewsAllSeq,
+    resetNewsShownAllSeq,
+    aiEnabled,
+    aiAvailable,
+    searchQuery,
+    moodFilter,
+    typeFilter,
+    allColumnControlsHidden
+  } = ui;
+  const {
+    feeds,
+    pinnedByUrl,
+    controlsOpenByUrl,
+    deleteAgeByUrl,
+    orderByUrl
+  } = feedsState;
+  const {
+    itemsByFeed,
+    summaryPendingById,
+    researchPendingById,
+    pinnedNewsById,
+    askByItem
+  } = newsState;
   const pendingTimeoutsRef = useRef<Record<string, number>>({});
   const researchTimeoutsRef = useRef<Record<string, number>>({});
   const hydratedFeedUiRef = useRef(false);
-  const seenNewsIdsRef = useRef<Set<string>>(new Set());
-  const notificationsPrimedRef = useRef(false);
   const [bodyModes, setBodyModes] = useState<Record<string, BodyMode>>({});
   const [clipboardNoticeOpen, setClipboardNoticeOpen] = useState(false);
   const [clipboardNotice, setClipboardNotice] = useState('');
@@ -89,10 +100,7 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
   const [advancedControlsByUrl, setAdvancedControlsByUrl] = useState<Record<string, boolean>>({});
   const dragCommittedRef = useRef(false);
   const dragLastTargetRef = useRef<string | null>(null);
-  const [visibleByFeed, setVisibleByFeed] = useState<Record<string, number>>({});
-  const [hydratedColumns, setHydratedColumns] = useState<Record<string, true>>({});
   const columnNodesRef = useRef<Record<string, HTMLDivElement | null>>({});
-  const prevAllControlsHiddenRef = useRef<boolean | null>(null);
   const l = useMemo(
     () => t('columns', { returnObjects: true }) as Record<string, string>,
     [t]
@@ -118,119 +126,29 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
     };
   }, [dispatch, wsUrl]);
 
-  useEffect(() => {
-    if (typeof window === 'undefined' || hydratedFeedUiRef.current || !feeds.length) return;
-    try {
-      const raw = window.localStorage.getItem('aiNews.feedUi.v1');
-      if (raw) {
-        const parsed = JSON.parse(raw) as {
-          pinnedByUrl?: Record<string, boolean>;
-          controlsOpenByUrl?: Record<string, boolean>;
-          deleteAgeByUrl?: Record<string, 'yesterday' | 'week' | 'month' | 'year'>;
-          orderByUrl?: string[];
-        };
-        dispatch(hydrateFeedUiState(parsed));
-      }
-    } catch {}
-    hydratedFeedUiRef.current = true;
-  }, [dispatch, feeds.length]);
+  useFeedUiPersistence({
+    dispatch,
+    feeds,
+    pinnedByUrl,
+    controlsOpenByUrl,
+    deleteAgeByUrl,
+    orderByUrl,
+    hydratedRef: hydratedFeedUiRef,
+    setAdvancedControlsByUrl
+  });
 
-  useEffect(() => {
-    if (typeof window === 'undefined' || !feeds.length) return;
-    try {
-      window.localStorage.setItem('aiNews.feedUi.v1', JSON.stringify({
-        pinnedByUrl,
-        controlsOpenByUrl,
-        deleteAgeByUrl,
-        orderByUrl
-      }));
-    } catch {}
-  }, [controlsOpenByUrl, deleteAgeByUrl, feeds.length, orderByUrl, pinnedByUrl]);
+  useDesktopNewsNotifications({
+    itemsByFeed,
+    notifyEnabled,
+    notifyMode,
+    pinnedByUrl
+  });
 
-  useEffect(() => {
-    if (!feeds.length) return;
-    const feedUrlSet = new Set(feeds.map(f => f.url));
-    setAdvancedControlsByUrl(prev => {
-      let changed = false;
-      const next: Record<string, boolean> = {};
-      for (const [url, value] of Object.entries(prev)) {
-        if (feedUrlSet.has(url)) next[url] = !!value;
-        else changed = true;
-      }
-      return changed ? next : prev;
-    });
-  }, [feeds]);
-
-  useEffect(() => {
-    if (!notificationsPrimedRef.current) {
-      Object.values(itemsByFeed).forEach(items => {
-        (items || []).forEach(item => {
-          if (item?.id) seenNewsIdsRef.current.add(item.id);
-        });
-      });
-      notificationsPrimedRef.current = true;
-      return;
-    }
-
-    const newlySeen: Array<{ feedUrl: string; item: NewsItem }> = [];
-    Object.entries(itemsByFeed).forEach(([feedUrl, items]) => {
-      const list = Array.isArray(items) ? items : [];
-      // Lists are kept newest-first; stop scanning once we hit first known id.
-      for (let i = 0; i < list.length; i++) {
-        const item = list[i];
-        if (!item?.id) continue;
-        if (seenNewsIdsRef.current.has(item.id)) break;
-        newlySeen.push({ feedUrl, item });
-      }
-    });
-
-    if (!newlySeen.length) return;
-
-    const notificationsAllowed = notifyEnabled
-      && typeof Notification !== 'undefined'
-      && Notification.permission === 'granted';
-
-    const shouldNotify = (feedUrl: string, it: NewsItem): boolean => {
-      if (notifyMode === 'all') return true;
-      if (notifyMode === 'pinned') return !!pinnedByUrl[feedUrl];
-      if (notifyMode === 'matched_pinned') return !!it.isMatch && !!pinnedByUrl[feedUrl];
-      return !!it.isMatch;
-    };
-
-    // Notify in chronological order when multiple items land in one batch.
-    for (let i = newlySeen.length - 1; i >= 0; i--) {
-      const { feedUrl, item } = newlySeen[i];
-      seenNewsIdsRef.current.add(item.id);
-      if (!notificationsAllowed) continue;
-      if (!shouldNotify(feedUrl, item)) continue;
-      const body = String(item.summary || item.research || '').trim();
-      const n = new Notification(item.isMatch ? `MATCH · ${item.title}` : item.title, {
-        body: body || item.link
-      });
-      n.onclick = () => window.open(item.link, '_blank', 'noopener,noreferrer');
-    }
-  }, [itemsByFeed, notifyEnabled, notifyMode, pinnedByUrl]);
-
-  useEffect(() => {
-    if (!feeds.length) return;
-    if (prevAllControlsHiddenRef.current === null) {
-      prevAllControlsHiddenRef.current = allColumnControlsHidden;
-      if (allColumnControlsHidden) {
-        dispatch(setAllFeedControlsOpen(false));
-      }
-      return;
-    }
-
-    if (prevAllControlsHiddenRef.current !== allColumnControlsHidden) {
-      dispatch(setAllFeedControlsOpen(!allColumnControlsHidden));
-      prevAllControlsHiddenRef.current = allColumnControlsHidden;
-      return;
-    }
-
-    if (allColumnControlsHidden) {
-      dispatch(setAllFeedControlsOpen(false));
-    }
-  }, [allColumnControlsHidden, dispatch, feeds.length]);
+  useAllColumnControlsSync({
+    dispatch,
+    allColumnControlsHidden,
+    feedsCount: feeds.length
+  });
 
   const previewFeeds = useMemo(() => {
     if (feeds.length) {
@@ -281,88 +199,16 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
     });
   }, [itemsByFeed, pinnedNewsById]);
 
-  useEffect(() => {
-    if (!renderedFeeds.length) return;
-    setVisibleByFeed(prev => {
-      const next: Record<string, number> = {};
-      renderedFeeds.forEach(feed => {
-        next[feed.url] = Math.max(10, prev[feed.url] || 10);
-      });
-      return next;
-    });
-  }, [renderedFeeds]);
-
-  useEffect(() => {
-    if (showMoreNewsAllSeq <= 0 || !renderedFeeds.length) return;
-    setVisibleByFeed(prev => {
-      const next = { ...prev };
-      renderedFeeds.forEach(feed => {
-        next[feed.url] = Math.max(10, (next[feed.url] || 10) + 5);
-      });
-      return next;
-    });
-  }, [showMoreNewsAllSeq, renderedFeeds]);
-
-  useEffect(() => {
-    if (resetNewsShownAllSeq <= 0 || !renderedFeeds.length) return;
-    setVisibleByFeed(prev => {
-      const next = { ...prev };
-      renderedFeeds.forEach(feed => {
-        next[feed.url] = 10;
-      });
-      return next;
-    });
-  }, [resetNewsShownAllSeq, renderedFeeds]);
-
-  useEffect(() => {
-    setHydratedColumns(prev => {
-      const next = { ...prev };
-      let changed = false;
-      for (let i = 0; i < Math.min(4, renderedFeeds.length); i++) {
-        const url = renderedFeeds[i].url;
-        if (!next[url]) {
-          next[url] = true;
-          changed = true;
-        }
-      }
-      return changed ? next : prev;
-    });
-  }, [renderedFeeds]);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const observer = new IntersectionObserver(entries => {
-      const found: string[] = [];
-      entries.forEach(entry => {
-        if (!entry.isIntersecting) return;
-        const el = entry.target as HTMLElement;
-        const url = String(el.dataset.feedUrl || '');
-        if (url) found.push(url);
-      });
-      if (!found.length) return;
-      setHydratedColumns(prev => {
-        const next = { ...prev };
-        let changed = false;
-        found.forEach(url => {
-          if (!next[url]) {
-            next[url] = true;
-            changed = true;
-          }
-        });
-        return changed ? next : prev;
-      });
-    }, {
-      root: null,
-      rootMargin: '320px 0px',
-      threshold: 0.01
-    });
-
-    renderedFeeds.forEach(feed => {
-      const node = columnNodesRef.current[feed.url];
-      if (node) observer.observe(node);
-    });
-    return () => observer.disconnect();
-  }, [renderedFeeds]);
+  const {
+    visibleByFeed,
+    setVisibleByFeed,
+    hydratedColumns
+  } = useColumnHydration({
+    renderedFeeds,
+    showMoreNewsAllSeq,
+    resetNewsShownAllSeq,
+    columnNodesRef
+  });
 
   const requestSummary = (it: NewsItem) => {
     if (!connected) return;
@@ -614,6 +460,230 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
     thinking: l.thinking,
     send: l.send
   }), [l]);
+  const columnViewModel = useMemo<FeedColumnViewModel>(() => ({
+    palette,
+    performanceMode,
+    moodFilter,
+    typeFilter,
+    searchQuery,
+    hideAllResearch,
+    hideAllSummaries,
+    aiEnabled,
+    aiAvailable,
+    buttonMode,
+    fontScale,
+    connected,
+    compactBtnSx,
+    compactFormSx,
+    labels: l,
+    cardLabels,
+    vibeIcons
+  }), [
+    aiAvailable,
+    aiEnabled,
+    buttonMode,
+    cardLabels,
+    compactBtnSx,
+    compactFormSx,
+    connected,
+    fontScale,
+    hideAllResearch,
+    hideAllSummaries,
+    l,
+    moodFilter,
+    palette,
+    performanceMode,
+    searchQuery,
+    typeFilter,
+    vibeIcons
+  ]);
+  const columnStateModel = useMemo<FeedColumnStateModel>(() => ({
+    filteredColumnItems,
+    itemsByFeed,
+    visibleByFeed,
+    hydratedColumns,
+    pinnedByUrl,
+    controlsOpenByUrl,
+    advancedControlsByUrl,
+    deleteAgeByUrl,
+    summaryPendingById,
+    researchPendingById,
+    pinnedNewsById,
+    askByItem,
+    bodyModes
+  }), [
+    advancedControlsByUrl,
+    askByItem,
+    bodyModes,
+    controlsOpenByUrl,
+    deleteAgeByUrl,
+    filteredColumnItems,
+    hydratedColumns,
+    itemsByFeed,
+    pinnedByUrl,
+    pinnedNewsById,
+    researchPendingById,
+    summaryPendingById,
+    visibleByFeed
+  ]);
+  const columnHandlers = useMemo<FeedColumnHandlers>(() => ({
+    getBodyMode,
+    getDefaultBodyMode,
+    setBodyMode,
+    onTogglePinnedColumn: (feedUrl: string) => dispatch(togglePinned(feedUrl)),
+    onRemoveFeed: removeFeed,
+    onToggleFeedControls: (feedUrl: string) => dispatch(toggleFeedControls(feedUrl)),
+    onToggleFeedSummary: toggleFeedSummary,
+    onToggleFeedResearch: toggleFeedResearch,
+    onSetFeedBudget: setFeedBudget,
+    onSetFeedInterval: setFeedInterval,
+    onSetFeedSortMode: setFeedSortMode,
+    onSetFeedFilterPreset: setFeedFilterPreset,
+    onToggleAdvancedControls: (feedUrl: string) => setAdvancedControlsByUrl(prev => ({ ...prev, [feedUrl]: !prev[feedUrl] })),
+    onSetDeleteAge: (feedUrl, age) => dispatch(setFeedDeleteAge({ feedUrl, age })),
+    onRemoveOldInFeed: removeOldInFeed,
+    onShowMoreNews: (feedUrl: string) => setVisibleByFeed(prev => ({ ...prev, [feedUrl]: (prev[feedUrl] || 10) + 5 })),
+    onResetNewsToTen: (feedUrl: string) => setVisibleByFeed(prev => ({ ...prev, [feedUrl]: 10 })),
+    onTogglePinnedNews: (id: string) => dispatch(togglePinnedNews(id)),
+    onCopyLink: copyLink,
+    onCopyNewsPayload: copyNewsPayload,
+    onHideItem: hideItem,
+    onRequestSummary: requestSummary,
+    onRequestResearch: requestResearch,
+    onToggleAsk: (id, feedUrl) => dispatch(toggleAskOpen({ id, feedUrl })),
+    onSetAskDraft: (id, feedUrl, draft) => dispatch(setAskDraft({ id, feedUrl, draft })),
+    onAskSubmit: requestAsk
+  }), [
+    copyLink,
+    copyNewsPayload,
+    dispatch,
+    getBodyMode,
+    getDefaultBodyMode,
+    hideItem,
+    removeFeed,
+    removeOldInFeed,
+    requestAsk,
+    requestResearch,
+    requestSummary,
+    setBodyMode,
+    setFeedBudget,
+    setFeedFilterPreset,
+    setFeedInterval,
+    setFeedSortMode,
+    setVisibleByFeed,
+    toggleFeedResearch,
+    toggleFeedSummary
+  ]);
+
+  const onGridDragOver = (e: DragEvent<HTMLDivElement>) => {
+    if (!dragFeedUrl) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const onGridDrop = (e: DragEvent<HTMLDivElement>) => {
+    if (!dragFeedUrl) return;
+    if (dragCommittedRef.current) return;
+    e.preventDefault();
+    const fromUrl = String(
+      e.dataTransfer.getData('application/x-ai-news-feed')
+      || e.dataTransfer.getData('text/plain')
+      || dragFeedUrl
+      || ''
+    ).trim();
+    if (!fromUrl) return;
+
+    const nodes = renderedFeeds
+      .map(feed => ({ url: feed.url, node: columnNodesRef.current[feed.url] }))
+      .filter((x): x is { url: string; node: HTMLDivElement } => !!x.node);
+    if (!nodes.length) return;
+
+    let bestUrl = nodes[0].url;
+    let bestDist = Number.POSITIVE_INFINITY;
+    for (const n of nodes) {
+      const rect = n.node.getBoundingClientRect();
+      const centerX = rect.left + rect.width / 2;
+      const d = Math.abs(e.clientX - centerX);
+      if (d < bestDist) {
+        bestDist = d;
+        bestUrl = n.url;
+      }
+    }
+    if (bestUrl && bestUrl !== fromUrl) {
+      dispatch(reorderFeeds({ fromUrl, toUrl: bestUrl }));
+    }
+    dragCommittedRef.current = true;
+    setDragFeedUrl(null);
+    setDragOverFeedUrl(null);
+    dragLastTargetRef.current = null;
+  };
+
+  const buildDragState = (feed: FeedInfo, canDrag: boolean) => ({
+    canDrag,
+    isDragging: dragFeedUrl === feed.url,
+    isDropTarget: !!dragFeedUrl && dragFeedUrl !== feed.url && dragOverFeedUrl === feed.url,
+    onDragStart: (e: DragEvent<HTMLDivElement>) => {
+      if (!canDrag) return;
+      const target = e.target as HTMLElement | null;
+      if (target?.closest('button, a, input, textarea, select, label, [role=\"button\"]')) {
+        e.preventDefault();
+        return;
+      }
+      dragCommittedRef.current = false;
+      dragLastTargetRef.current = null;
+      setDragFeedUrl(feed.url);
+      setDragOverFeedUrl(feed.url);
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', feed.url);
+      e.dataTransfer.setData('application/x-ai-news-feed', feed.url);
+    },
+    onDragEnd: () => {
+      const fallbackTarget = dragLastTargetRef.current || dragOverFeedUrl;
+      if (!dragCommittedRef.current && dragFeedUrl && fallbackTarget && dragFeedUrl !== fallbackTarget) {
+        dispatch(reorderFeeds({ fromUrl: dragFeedUrl, toUrl: fallbackTarget }));
+      }
+      setDragFeedUrl(null);
+      setDragOverFeedUrl(null);
+      dragCommittedRef.current = false;
+      dragLastTargetRef.current = null;
+    },
+    setNode: (node: HTMLDivElement | null) => {
+      columnNodesRef.current[feed.url] = node;
+    },
+    onDragEnter: () => {
+      if (!canDrag) return;
+      if (dragFeedUrl && dragFeedUrl !== feed.url) {
+        setDragOverFeedUrl(feed.url);
+        if (dragLastTargetRef.current !== feed.url) {
+          dispatch(reorderFeeds({ fromUrl: dragFeedUrl, toUrl: feed.url }));
+          dragCommittedRef.current = true;
+          dragLastTargetRef.current = feed.url;
+        }
+      }
+    },
+    onDragOver: (e: DragEvent<HTMLDivElement>) => {
+      if (!canDrag) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      if (dragFeedUrl && dragFeedUrl !== feed.url && dragOverFeedUrl !== feed.url) {
+        setDragOverFeedUrl(feed.url);
+        if (dragLastTargetRef.current !== feed.url) {
+          dispatch(reorderFeeds({ fromUrl: dragFeedUrl, toUrl: feed.url }));
+          dragCommittedRef.current = true;
+          dragLastTargetRef.current = feed.url;
+        }
+      }
+    },
+    onDrop: (e: DragEvent<HTMLDivElement>) => {
+      if (!canDrag) return;
+      e.preventDefault();
+      e.stopPropagation();
+      dragCommittedRef.current = true;
+      dragLastTargetRef.current = feed.url;
+      setDragFeedUrl(null);
+      setDragOverFeedUrl(null);
+    }
+  });
 
   return (
     <Box className="container" sx={{ pt: 1, pb: 0.5 }}>
@@ -642,47 +712,8 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
             xl: 'repeat(4, minmax(330px, 1fr))'
           }
         }}
-        onDragOver={e => {
-          if (!dragFeedUrl) return;
-          e.preventDefault();
-          e.dataTransfer.dropEffect = 'move';
-        }}
-        onDrop={e => {
-          if (!dragFeedUrl) return;
-          if (dragCommittedRef.current) return;
-          e.preventDefault();
-          const fromUrl = String(
-            e.dataTransfer.getData('application/x-ai-news-feed')
-            || e.dataTransfer.getData('text/plain')
-            || dragFeedUrl
-            || ''
-          ).trim();
-          if (!fromUrl) return;
-
-          const nodes = renderedFeeds
-            .map(feed => ({ url: feed.url, node: columnNodesRef.current[feed.url] }))
-            .filter((x): x is { url: string; node: HTMLDivElement } => !!x.node);
-          if (!nodes.length) return;
-
-          let bestUrl = nodes[0].url;
-          let bestDist = Number.POSITIVE_INFINITY;
-          for (const n of nodes) {
-            const rect = n.node.getBoundingClientRect();
-            const centerX = rect.left + rect.width / 2;
-            const d = Math.abs(e.clientX - centerX);
-            if (d < bestDist) {
-              bestDist = d;
-              bestUrl = n.url;
-            }
-          }
-          if (bestUrl && bestUrl !== fromUrl) {
-            dispatch(reorderFeeds({ fromUrl, toUrl: bestUrl }));
-          }
-          dragCommittedRef.current = true;
-          setDragFeedUrl(null);
-          setDragOverFeedUrl(null);
-          dragLastTargetRef.current = null;
-        }}
+        onDragOver={onGridDragOver}
+        onDrop={onGridDrop}
       >
         {renderedFeeds.map((feed: FeedInfo, columnIdx: number) => {
           const isMatchColumn = feed.url === FILTERED_FEED_URL || String(feed.label || '').toLowerCase().startsWith('filtered');
@@ -693,128 +724,10 @@ export default function ReactColumnsPreview({ wsUrl }: Props) {
               key={feed.url}
               feed={feed}
               columnIdx={columnIdx}
-              palette={palette}
-              performanceMode={performanceMode}
-              moodFilter={moodFilter}
-              typeFilter={typeFilter}
-              searchQuery={searchQuery}
-              hideAllResearch={hideAllResearch}
-              hideAllSummaries={hideAllSummaries}
-              aiEnabled={aiEnabled}
-              aiAvailable={aiAvailable}
-              buttonMode={buttonMode}
-              fontScale={fontScale}
-              connected={connected}
-              compactBtnSx={compactBtnSx}
-              compactFormSx={compactFormSx}
-              labels={l}
-              cardLabels={cardLabels}
-              vibeIcons={vibeIcons}
-              filteredColumnItems={filteredColumnItems}
-              itemsByFeed={itemsByFeed}
-              visibleLimit={Math.max(10, visibleByFeed[feed.url] || 10)}
-              isHydrated={!!hydratedColumns[feed.url]}
-              pinned={!!pinnedByUrl[feed.url]}
-              controlsOpen={typeof controlsOpenByUrl[feed.url] === 'boolean' ? !!controlsOpenByUrl[feed.url] : true}
-              advancedControlsOpen={!!advancedControlsByUrl[feed.url]}
-              deleteAge={deleteAgeByUrl[feed.url] || 'week'}
-              summaryPendingById={summaryPendingById}
-              researchPendingById={researchPendingById}
-              pinnedNewsById={pinnedNewsById}
-              askByItem={askByItem}
-              bodyModes={bodyModes}
-              getBodyMode={getBodyMode}
-              getDefaultBodyMode={getDefaultBodyMode}
-              setBodyMode={setBodyMode}
-              drag={{
-                canDrag,
-                isDragging: dragFeedUrl === feed.url,
-                isDropTarget: !!dragFeedUrl && dragFeedUrl !== feed.url && dragOverFeedUrl === feed.url,
-                onDragStart: e => {
-                  if (!canDrag) return;
-                  const target = e.target as HTMLElement | null;
-                  if (target?.closest('button, a, input, textarea, select, label, [role="button"]')) {
-                    e.preventDefault();
-                    return;
-                  }
-                  dragCommittedRef.current = false;
-                  dragLastTargetRef.current = null;
-                  setDragFeedUrl(feed.url);
-                  setDragOverFeedUrl(feed.url);
-                  e.dataTransfer.effectAllowed = 'move';
-                  e.dataTransfer.setData('text/plain', feed.url);
-                  e.dataTransfer.setData('application/x-ai-news-feed', feed.url);
-                },
-                onDragEnd: () => {
-                  const fallbackTarget = dragLastTargetRef.current || dragOverFeedUrl;
-                  if (!dragCommittedRef.current && dragFeedUrl && fallbackTarget && dragFeedUrl !== fallbackTarget) {
-                    dispatch(reorderFeeds({ fromUrl: dragFeedUrl, toUrl: fallbackTarget }));
-                  }
-                  setDragFeedUrl(null);
-                  setDragOverFeedUrl(null);
-                  dragCommittedRef.current = false;
-                  dragLastTargetRef.current = null;
-                },
-                setNode: node => {
-                  columnNodesRef.current[feed.url] = node;
-                },
-                onDragEnter: () => {
-                  if (!canDrag) return;
-                  if (dragFeedUrl && dragFeedUrl !== feed.url) {
-                    setDragOverFeedUrl(feed.url);
-                    if (dragLastTargetRef.current !== feed.url) {
-                      dispatch(reorderFeeds({ fromUrl: dragFeedUrl, toUrl: feed.url }));
-                      dragCommittedRef.current = true;
-                      dragLastTargetRef.current = feed.url;
-                    }
-                  }
-                },
-                onDragOver: e => {
-                  if (!canDrag) return;
-                  e.preventDefault();
-                  e.dataTransfer.dropEffect = 'move';
-                  if (dragFeedUrl && dragFeedUrl !== feed.url && dragOverFeedUrl !== feed.url) {
-                    setDragOverFeedUrl(feed.url);
-                    if (dragLastTargetRef.current !== feed.url) {
-                      dispatch(reorderFeeds({ fromUrl: dragFeedUrl, toUrl: feed.url }));
-                      dragCommittedRef.current = true;
-                      dragLastTargetRef.current = feed.url;
-                    }
-                  }
-                },
-                onDrop: e => {
-                  if (!canDrag) return;
-                  e.preventDefault();
-                  e.stopPropagation();
-                  dragCommittedRef.current = true;
-                  dragLastTargetRef.current = feed.url;
-                  setDragFeedUrl(null);
-                  setDragOverFeedUrl(null);
-                }
-              }}
-              onTogglePinnedColumn={feedUrl => dispatch(togglePinned(feedUrl))}
-              onRemoveFeed={removeFeed}
-              onToggleFeedControls={feedUrl => dispatch(toggleFeedControls(feedUrl))}
-              onToggleFeedSummary={toggleFeedSummary}
-              onToggleFeedResearch={toggleFeedResearch}
-              onSetFeedBudget={setFeedBudget}
-              onSetFeedInterval={setFeedInterval}
-              onSetFeedSortMode={setFeedSortMode}
-              onSetFeedFilterPreset={setFeedFilterPreset}
-              onToggleAdvancedControls={feedUrl => setAdvancedControlsByUrl(prev => ({ ...prev, [feedUrl]: !prev[feedUrl] }))}
-              onSetDeleteAge={(feedUrl, age) => dispatch(setFeedDeleteAge({ feedUrl, age }))}
-              onRemoveOldInFeed={removeOldInFeed}
-              onShowMoreNews={feedUrl => setVisibleByFeed(prev => ({ ...prev, [feedUrl]: (prev[feedUrl] || 10) + 5 }))}
-              onResetNewsToTen={feedUrl => setVisibleByFeed(prev => ({ ...prev, [feedUrl]: 10 }))}
-              onTogglePinnedNews={id => dispatch(togglePinnedNews(id))}
-              onCopyLink={copyLink}
-              onCopyNewsPayload={copyNewsPayload}
-              onHideItem={hideItem}
-              onRequestSummary={requestSummary}
-              onRequestResearch={requestResearch}
-              onToggleAsk={(id, feedUrl) => dispatch(toggleAskOpen({ id, feedUrl }))}
-              onSetAskDraft={(id, feedUrl, draft) => dispatch(setAskDraft({ id, feedUrl, draft }))}
-              onAskSubmit={requestAsk}
+              view={columnViewModel}
+              state={columnStateModel}
+              handlers={columnHandlers}
+              drag={buildDragState(feed, canDrag)}
             />
           );
         })}

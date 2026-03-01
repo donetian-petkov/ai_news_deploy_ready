@@ -24,17 +24,9 @@ import {
 } from '@mui/material';
 import type { BudgetMode, FeedInfo, NewsItem, SortMode } from '../../store/types';
 import { FILTERED_FEED_URL } from '../../store/constants';
-import type { BodyMode, CardLabels, ColumnPalette, FeedFilterPreset, VibeIcons } from './reactColumns.types';
+import type { BodyMode, FeedAskState, FeedColumnHandlers, FeedColumnStateModel, FeedColumnViewModel, FeedFilterPreset } from './reactColumns.types';
 import { collapseText, compactResearch, extractConfidence, getFeedFilterPreset } from './reactColumns.utils';
 import { NewsCard } from './NewsCard';
-
-type AskState = {
-  open: boolean;
-  draft: string;
-  pending: boolean;
-  remaining: number;
-  messages: Array<{ q: string; a?: string; error?: string }>;
-};
 
 type DragState = {
   canDrag: boolean;
@@ -51,63 +43,10 @@ type DragState = {
 type FeedColumnProps = {
   feed: FeedInfo;
   columnIdx: number;
-  palette: ColumnPalette;
-  performanceMode: boolean;
-  moodFilter: string;
-  typeFilter: string;
-  searchQuery: string;
-  hideAllResearch: boolean;
-  hideAllSummaries: boolean;
-  aiEnabled: boolean;
-  aiAvailable: boolean;
-  buttonMode: 'icons' | 'text';
-  fontScale: number;
-  connected: boolean;
-  compactBtnSx: Record<string, unknown>;
-  compactFormSx: Record<string, unknown>;
-  labels: Record<string, string>;
-  cardLabels: CardLabels;
-  vibeIcons: VibeIcons;
-  filteredColumnItems: NewsItem[];
-  itemsByFeed: Record<string, NewsItem[]>;
-  visibleLimit: number;
-  isHydrated: boolean;
-  pinned: boolean;
-  controlsOpen: boolean;
-  advancedControlsOpen: boolean;
-  deleteAge: 'yesterday' | 'week' | 'month' | 'year';
-  summaryPendingById: Record<string, true>;
-  researchPendingById: Record<string, true>;
-  pinnedNewsById: Record<string, true>;
-  askByItem: Record<string, AskState>;
-  bodyModes: Record<string, BodyMode>;
-  getBodyMode: (key: string, text: string, threshold: number) => BodyMode;
-  getDefaultBodyMode: (text: string, threshold: number) => BodyMode;
-  setBodyMode: (key: string, mode: BodyMode) => void;
+  view: FeedColumnViewModel;
+  state: FeedColumnStateModel;
+  handlers: FeedColumnHandlers;
   drag: DragState;
-  onTogglePinnedColumn: (feedUrl: string) => void;
-  onRemoveFeed: (feedUrl: string) => void;
-  onToggleFeedControls: (feedUrl: string) => void;
-  onToggleFeedSummary: (feed: FeedInfo) => void;
-  onToggleFeedResearch: (feed: FeedInfo) => void;
-  onSetFeedBudget: (feed: FeedInfo, budget: BudgetMode) => void;
-  onSetFeedInterval: (feed: FeedInfo, intervalSec: number) => void;
-  onSetFeedSortMode: (feed: FeedInfo, sortMode: SortMode) => void;
-  onSetFeedFilterPreset: (feed: FeedInfo, preset: FeedFilterPreset) => void;
-  onToggleAdvancedControls: (feedUrl: string) => void;
-  onSetDeleteAge: (feedUrl: string, age: 'yesterday' | 'week' | 'month' | 'year') => void;
-  onRemoveOldInFeed: (feed: FeedInfo) => void;
-  onShowMoreNews: (feedUrl: string) => void;
-  onResetNewsToTen: (feedUrl: string) => void;
-  onTogglePinnedNews: (id: string) => void;
-  onCopyLink: (url: string) => void;
-  onCopyNewsPayload: (it: NewsItem) => void;
-  onHideItem: (it: NewsItem) => void;
-  onRequestSummary: (it: NewsItem) => void;
-  onRequestResearch: (it: NewsItem) => void;
-  onToggleAsk: (id: string, feedUrl: string) => void;
-  onSetAskDraft: (id: string, feedUrl: string, draft: string) => void;
-  onAskSubmit: (it: NewsItem) => void;
 };
 
 function askKey(it: NewsItem): string {
@@ -121,64 +60,80 @@ function bodyKey(it: NewsItem, kind: 'summary' | 'research'): string {
 export function FeedColumn({
   feed,
   columnIdx,
-  palette,
-  performanceMode,
-  moodFilter,
-  typeFilter,
-  searchQuery,
-  hideAllResearch,
-  hideAllSummaries,
-  aiEnabled,
-  aiAvailable,
-  buttonMode,
-  fontScale,
-  connected,
-  compactBtnSx,
-  compactFormSx,
-  labels,
-  cardLabels,
-  vibeIcons,
-  filteredColumnItems,
-  itemsByFeed,
-  visibleLimit,
-  isHydrated,
-  pinned,
-  controlsOpen,
-  advancedControlsOpen,
-  deleteAge,
-  summaryPendingById,
-  researchPendingById,
-  pinnedNewsById,
-  askByItem,
-  bodyModes,
-  getBodyMode,
-  getDefaultBodyMode,
-  setBodyMode,
-  drag,
-  onTogglePinnedColumn,
-  onRemoveFeed,
-  onToggleFeedControls,
-  onToggleFeedSummary,
-  onToggleFeedResearch,
-  onSetFeedBudget,
-  onSetFeedInterval,
-  onSetFeedSortMode,
-  onSetFeedFilterPreset,
-  onToggleAdvancedControls,
-  onSetDeleteAge,
-  onRemoveOldInFeed,
-  onShowMoreNews,
-  onResetNewsToTen,
-  onTogglePinnedNews,
-  onCopyLink,
-  onCopyNewsPayload,
-  onHideItem,
-  onRequestSummary,
-  onRequestResearch,
-  onToggleAsk,
-  onSetAskDraft,
-  onAskSubmit
+  view,
+  state,
+  handlers,
+  drag
 }: FeedColumnProps) {
+  const {
+    palette,
+    performanceMode,
+    moodFilter,
+    typeFilter,
+    searchQuery,
+    hideAllResearch,
+    hideAllSummaries,
+    aiEnabled,
+    aiAvailable,
+    buttonMode,
+    fontScale,
+    connected,
+    compactBtnSx,
+    compactFormSx,
+    labels,
+    cardLabels,
+    vibeIcons
+  } = view;
+  const {
+    filteredColumnItems,
+    itemsByFeed,
+    visibleByFeed,
+    hydratedColumns,
+    pinnedByUrl,
+    controlsOpenByUrl,
+    advancedControlsByUrl,
+    deleteAgeByUrl,
+    summaryPendingById,
+    researchPendingById,
+    pinnedNewsById,
+    askByItem,
+    bodyModes
+  } = state;
+  const {
+    getBodyMode,
+    getDefaultBodyMode,
+    setBodyMode,
+    onTogglePinnedColumn,
+    onRemoveFeed,
+    onToggleFeedControls,
+    onToggleFeedSummary,
+    onToggleFeedResearch,
+    onSetFeedBudget,
+    onSetFeedInterval,
+    onSetFeedSortMode,
+    onSetFeedFilterPreset,
+    onToggleAdvancedControls,
+    onSetDeleteAge,
+    onRemoveOldInFeed,
+    onShowMoreNews,
+    onResetNewsToTen,
+    onTogglePinnedNews,
+    onCopyLink,
+    onCopyNewsPayload,
+    onHideItem,
+    onRequestSummary,
+    onRequestResearch,
+    onToggleAsk,
+    onSetAskDraft,
+    onAskSubmit
+  } = handlers;
+
+  const visibleLimit = Math.max(10, visibleByFeed[feed.url] || 10);
+  const isHydrated = !!hydratedColumns[feed.url];
+  const pinned = !!pinnedByUrl[feed.url];
+  const controlsOpen = typeof controlsOpenByUrl[feed.url] === 'boolean' ? !!controlsOpenByUrl[feed.url] : true;
+  const advancedControlsOpen = !!advancedControlsByUrl[feed.url];
+  const deleteAge = deleteAgeByUrl[feed.url] || 'week';
   const isMatchColumn = feed.url === FILTERED_FEED_URL || String(feed.label || '').toLowerCase().startsWith('filtered');
   const colTheme: 'a' | 'b' | 'match' = isMatchColumn ? 'match' : (columnIdx % 2 === 0 ? 'a' : 'b');
   const accent = colTheme === 'a' ? palette.a : colTheme === 'b' ? palette.b : palette.m;
@@ -459,7 +414,7 @@ export function FeedColumn({
                   {items.length === 0 ? (isMatchColumn ? labels.waitingMatches : labels.waiting) : labels.noMatches}
                 </Alert>
               ) : shownItems.map(it => {
-                const askState = askByItem[askKey(it)] || {
+                const askState: FeedAskState = askByItem[askKey(it)] || {
                   open: false,
                   draft: '',
                   pending: false,
