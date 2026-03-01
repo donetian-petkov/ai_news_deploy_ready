@@ -6,28 +6,16 @@ import { Provider } from 'react-redux';
 import { I18nextProvider } from 'react-i18next';
 import { store } from './store/store';
 import { useAppSelector } from './store/hooks';
+import { FontPresetValue, FontSizeValue, isFontPreset, isFontSize } from './store/valueEnums';
 import i18n from './i18n';
+import { FONT_FAMILY_BY_PRESET, FONT_SIZE_BY_PRESET } from './theme/themeTokens';
 
 function MuiThemeBridge({ children }: { children: React.ReactNode }) {
   const ui = useAppSelector(s => s.ui);
   const prefersDark = useMediaQuery('(prefers-color-scheme: dark)');
   const mode = ui.colorMode === 'system' ? (prefersDark ? 'dark' : 'light') : ui.colorMode;
-
-  const fontFamilyByPreset: Record<string, string> = {
-    system: "'Inter', 'Segoe UI', sans-serif",
-    manrope: "'Manrope', 'Segoe UI', sans-serif",
-    grotesk: "'Space Grotesk', 'Segoe UI', sans-serif",
-    sora: "'Sora', 'Segoe UI', sans-serif",
-    plex: "'IBM Plex Sans', 'Segoe UI', sans-serif",
-    serif: "'Cinzel', Georgia, serif",
-    mono: "'IBM Plex Mono', 'SF Mono', monospace"
-  };
-  const fontSizeByPreset: Record<string, number> = {
-    sm: 13,
-    md: 14,
-    lg: 15,
-    xl: 16
-  };
+  const fontPreset = isFontPreset(ui.font) ? ui.font : FontPresetValue.System;
+  const fontSizePreset = isFontSize(ui.fontSize) ? ui.fontSize : FontSizeValue.Md;
 
   const theme = useMemo(() => createTheme({
     palette: {
@@ -42,8 +30,8 @@ function MuiThemeBridge({ children }: { children: React.ReactNode }) {
         : { primary: '#132033', secondary: 'rgba(34,50,74,0.74)' }
     },
     typography: {
-      fontFamily: fontFamilyByPreset[ui.font] || fontFamilyByPreset.system,
-      fontSize: fontSizeByPreset[ui.fontSize] || 14
+      fontFamily: FONT_FAMILY_BY_PRESET[fontPreset],
+      fontSize: FONT_SIZE_BY_PRESET[fontSizePreset]
     },
     shape: {
       borderRadius: 12

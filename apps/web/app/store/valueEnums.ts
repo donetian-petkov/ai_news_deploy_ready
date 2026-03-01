@@ -81,11 +81,30 @@ export enum NewsTypeValue {
   Other = 'other'
 }
 
+export enum FontPresetValue {
+  System = 'system',
+  Manrope = 'manrope',
+  Grotesk = 'grotesk',
+  Sora = 'sora',
+  Plex = 'plex',
+  Serif = 'serif',
+  Mono = 'mono'
+}
+
+export enum FontSizeValue {
+  Sm = 'sm',
+  Md = 'md',
+  Lg = 'lg',
+  Xl = 'xl'
+}
+
 const BUDGET_MODE_SET = new Set<BudgetMode>(Object.values(BudgetModeValue) as BudgetMode[]);
 const SORT_MODE_SET = new Set<SortMode>(Object.values(SortModeValue) as SortMode[]);
 const FEED_KIND_SET = new Set<FeedKind>(Object.values(FeedKindValue) as FeedKind[]);
 const NEWS_MOOD_SET = new Set<NewsMood>(Object.values(NewsMoodValue) as NewsMood[]);
 const NEWS_TYPE_SET = new Set<NewsType>(Object.values(NewsTypeValue) as NewsType[]);
+const FONT_PRESET_SET = new Set<string>(Object.values(FontPresetValue));
+const FONT_SIZE_SET = new Set<string>(Object.values(FontSizeValue));
 const AI_PROVIDER_SET = new Set<string>(Object.values(AiProviderValue));
 const SUMMARY_LANG_SET = new Set<string>(Object.values(SummaryLangValue));
 const RESEARCH_LANG_SET = new Set<string>(Object.values(ResearchLangValue));
@@ -130,6 +149,14 @@ export function isAiProvider(value: unknown): value is AiProviderValue {
   return isString(value) && AI_PROVIDER_SET.has(value);
 }
 
+export function isFontPreset(value: unknown): value is FontPresetValue {
+  return isString(value) && FONT_PRESET_SET.has(value);
+}
+
+export function isFontSize(value: unknown): value is FontSizeValue {
+  return isString(value) && FONT_SIZE_SET.has(value);
+}
+
 export function isSummaryLang(value: unknown): value is SummaryLangValue {
   return isString(value) && SUMMARY_LANG_SET.has(value);
 }
@@ -137,4 +164,3 @@ export function isSummaryLang(value: unknown): value is SummaryLangValue {
 export function isResearchLang(value: unknown): value is ResearchLangValue {
   return isString(value) && RESEARCH_LANG_SET.has(value);
 }
-
