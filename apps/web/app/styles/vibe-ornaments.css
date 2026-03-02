@@ -14,6 +14,8 @@
   --card-shape-radius: 14px;
   --column-clip: none;
   --card-clip: none;
+  --orn-frame-span-column: min(78%, 360px);
+  --orn-frame-span-card: min(74%, 320px);
 }
 
 body[data-theme='light'] {
@@ -95,21 +97,35 @@ body:not([data-performance='on']) .news-item-card .MuiCardContent-root {
 .columnOrnamentLayer .frameTop,
 .cardOrnamentLayer .frameTop {
   top: 1px;
-  left: 14px;
-  right: 14px;
+  left: 50%;
+  right: auto;
+  transform: translateX(-50%);
+  width: var(--orn-frame-span-column);
   height: 18px;
   background-image: var(--orn-top);
+  background-size: 100% 100%;
   opacity: 0.98;
+}
+
+.cardOrnamentLayer .frameTop {
+  width: var(--orn-frame-span-card);
 }
 
 .columnOrnamentLayer .frameBottom,
 .cardOrnamentLayer .frameBottom {
   bottom: 0;
-  left: 14px;
-  right: 14px;
+  left: 50%;
+  right: auto;
+  transform: translateX(-50%);
+  width: var(--orn-frame-span-column);
   height: 18px;
   background-image: var(--orn-bottom);
+  background-size: 100% 100%;
   opacity: 0.98;
+}
+
+.cardOrnamentLayer .frameBottom {
+  width: var(--orn-frame-span-card);
 }
 
 .columnOrnamentLayer .cornerTL,
