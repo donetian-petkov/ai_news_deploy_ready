@@ -24,6 +24,8 @@ export function NewsCardBody() {
   const {
     item,
     showAutoResearching,
+    summaryPending,
+    researchPending,
     summaryMode,
     summaryLong,
     summaryText,
@@ -38,6 +40,26 @@ export function NewsCardBody() {
 
   return (
     <>
+      {summaryPending ? (
+        <Chip
+          size="small"
+          label={labels.generatingSummary}
+          icon={<CircularProgress size={11} color="inherit" />}
+          variant="outlined"
+          sx={{ mb: 0.8, color: NEWS_CARD_COLOR_TOKENS.summaryPendingText, borderColor: NEWS_CARD_COLOR_TOKENS.summaryPendingBorder }}
+        />
+      ) : null}
+
+      {researchPending ? (
+        <Chip
+          size="small"
+          label={labels.researching}
+          icon={<CircularProgress size={11} color="inherit" />}
+          variant="outlined"
+          sx={{ mb: 0.8, color: NEWS_CARD_COLOR_TOKENS.researchPendingText, borderColor: NEWS_CARD_COLOR_TOKENS.researchPendingBorder }}
+        />
+      ) : null}
+
       {hasSummaryBlock ? (
         <Box>
           {summaryVisible && !hideAllSummaries ? (

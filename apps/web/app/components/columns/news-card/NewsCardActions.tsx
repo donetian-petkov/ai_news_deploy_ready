@@ -1,7 +1,7 @@
 'use client';
 
 import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
-import { Button, Chip, Stack, Tooltip } from '@mui/material';
+import { Button, Chip, CircularProgress, Stack, Tooltip } from '@mui/material';
 import { NEWS_CARD_COLOR_TOKENS } from '../designTokens';
 import { useNewsCardContext } from './context/NewsCardContext';
 
@@ -33,6 +33,7 @@ export function NewsCardActions() {
               sx={actionSx}
               onClick={() => onRequestSummary(item)}
               disabled={!connected || summaryPending}
+              startIcon={!iconOnly && summaryPending ? <CircularProgress size={13} color="inherit" /> : undefined}
             >
               {iconOnly
                 ? (summaryPending
@@ -58,6 +59,7 @@ export function NewsCardActions() {
                 onRequestResearch(item);
               }}
               disabled={!connected || researchPending}
+              startIcon={!iconOnly && researchPending ? <CircularProgress size={13} color="inherit" /> : undefined}
             >
               {iconOnly
                 ? (researchPending
