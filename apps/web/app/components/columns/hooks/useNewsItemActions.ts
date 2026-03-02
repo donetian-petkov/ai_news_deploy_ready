@@ -18,6 +18,7 @@ import type { NewsItem } from '../../../store/types';
 import { COLUMN_LAYOUT_TOKENS } from '../designTokens';
 
 type AskStateMap = Record<string, { used: number; remaining: number; draft: string; pending: boolean }>;
+type SharePlatform = 'copy' | 'facebook' | 'reddit' | 'x' | 'tiktok';
 
 type UseNewsItemActionsArgs = {
   dispatch: AppDispatch;
@@ -109,6 +110,51 @@ export function useNewsItemActions({
     }
   }, [labels.linkCopied]);
 
+  const shareNews = useCallback(async (it: NewsItem, platform: SharePlatform) => {
+    const link = String(it.link || '').trim();
+    const title = String(it.title || '').trim();
+    const summary = String(it.summary || '').trim();
+
+    if (!link) return;
+    if (platform === 'copy') {
+      await copyLink(link);
+      return;
+    }
+
+    const encodedLink = encodeURIComponent(link);
+    const encodedTitle = encodeURIComponent(title || link);
+    const encodedShareText = encodeURIComponent(title || summary || link);
+
+    if (platform === 'facebook') {
+      window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodedLink}`, '_blank', 'noopener,noreferrer');
+      return;
+    }
+
+    if (platform === 'reddit') {
+      window.open(`https://www.reddit.com/submit?url=${encodedLink}&title=${encodedTitle}`, '_blank', 'noopener,noreferrer');
+      return;
+    }
+
+    if (platform === 'x') {
+      window.open(`https://twitter.com/intent/tweet?url=${encodedLink}&text=${encodedShareText}`, '_blank', 'noopener,noreferrer');
+      return;
+    }
+
+    const payload = [title, summary, link]
+      .map(x => String(x || '').trim())
+      .filter(Boolean)
+      .join('\n\n');
+
+    try {
+      await navigator.clipboard.writeText(payload);
+      setClipboardNotice(labels.shareTikTokHint || labels.linkCopied);
+      setClipboardNoticeOpen(true);
+    } catch {
+      // Continue to TikTok page even if clipboard write fails.
+    }
+    window.open('https://www.tiktok.com/upload?lang=en', '_blank', 'noopener,noreferrer');
+  }, [copyLink, labels.linkCopied, labels.shareTikTokHint]);
+
   const copyNewsPayload = useCallback(async (it: NewsItem) => {
     const title = String(it.title || '').trim();
     const summary = String(it.summary || '').trim();
@@ -167,6 +213,7 @@ export function useNewsItemActions({
     requestResearch,
     hideItem,
     copyLink,
+    shareNews,
     copyNewsPayload,
     requestAsk,
     clipboardNoticeOpen,
@@ -174,4 +221,3 @@ export function useNewsItemActions({
     setClipboardNoticeOpen
   };
 }
-

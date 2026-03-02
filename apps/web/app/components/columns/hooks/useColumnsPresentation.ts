@@ -51,6 +51,7 @@ type Args = {
   setFeedFilterPreset: FeedColumnHandlers['onSetFeedFilterPreset'];
   removeOldInFeed: FeedColumnHandlers['onRemoveOldInFeed'];
   copyLink: FeedColumnHandlers['onCopyLink'];
+  shareNews: FeedColumnHandlers['onShareNews'];
   copyNewsPayload: FeedColumnHandlers['onCopyNewsPayload'];
   hideItem: FeedColumnHandlers['onHideItem'];
   requestSummary: FeedColumnHandlers['onRequestSummary'];
@@ -90,6 +91,7 @@ export function useColumnsPresentation({
   setFeedFilterPreset,
   removeOldInFeed,
   copyLink,
+  shareNews,
   copyNewsPayload,
   hideItem,
   requestSummary,
@@ -130,6 +132,7 @@ export function useColumnsPresentation({
     setFeedFilterPreset,
     removeOldInFeed,
     copyLink,
+    shareNews,
     copyNewsPayload,
     hideItem,
     requestSummary,

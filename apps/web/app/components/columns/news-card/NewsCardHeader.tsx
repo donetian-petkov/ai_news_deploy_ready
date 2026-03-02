@@ -1,8 +1,14 @@
 'use client';
 
+import { useState } from 'react';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import FacebookIcon from '@mui/icons-material/Facebook';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import PushPinIcon from '@mui/icons-material/PushPin';
-import { Box, Button, Chip, Link as MuiLink, Stack, Tooltip, Typography } from '@mui/material';
+import RedditIcon from '@mui/icons-material/Reddit';
+import XIcon from '@mui/icons-material/X';
+import MusicNoteIcon from '@mui/icons-material/MusicNote';
+import { Box, Button, Chip, Link as MuiLink, Menu, MenuItem, Stack, Tooltip, Typography } from '@mui/material';
 import { formatTime } from '../reactColumns.utils';
 import { NEWS_CARD_COLOR_TOKENS } from '../designTokens';
 import { useNewsCardContext } from './context/NewsCardContext';
@@ -17,8 +23,10 @@ export function NewsCardHeader() {
 
   const { labels, vibeIcons, connected, fontScale, matchAccent } = view;
   const { item, isPinnedNews } = state;
-  const { onTogglePinnedNews, onCopyLink, onCopyNews, onHideItem } = handlers;
+  const { onTogglePinnedNews, onShareNews, onCopyNews, onHideItem } = handlers;
   const { iconOnly, hasBodyBlock, actionSx, matchActionSx } = ui;
+  const [shareAnchorEl, setShareAnchorEl] = useState<null | HTMLElement>(null);
+  const shareMenuOpen = Boolean(shareAnchorEl);
 
   const ShareIconComp = vibeIcons.share;
   const HideIconComp = vibeIcons.hide;
@@ -44,16 +52,44 @@ export function NewsCardHeader() {
               <PushPinIcon sx={{ fontSize: 15 }} aria-hidden />
             </Button>
           </Tooltip>
-          <Tooltip title={labels.shareLink}>
+          <Tooltip title={labels.shareOn}>
             <Button
               size="small"
               variant="outlined"
               sx={actionSx}
-              onClick={() => onCopyLink(item.link)}
+              onClick={(e) => setShareAnchorEl(e.currentTarget)}
             >
               {iconOnly ? <ShareIconComp sx={{ fontSize: 15 }} aria-hidden /> : labels.shareLink}
             </Button>
           </Tooltip>
+          <Menu
+            anchorEl={shareAnchorEl}
+            open={shareMenuOpen}
+            onClose={() => setShareAnchorEl(null)}
+            anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+            transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+          >
+            <MenuItem onClick={() => { onShareNews(item, 'copy'); setShareAnchorEl(null); }}>
+              <ContentCopyIcon sx={{ fontSize: 16, mr: 1 }} />
+              {labels.shareCopyLink}
+            </MenuItem>
+            <MenuItem onClick={() => { onShareNews(item, 'facebook'); setShareAnchorEl(null); }}>
+              <FacebookIcon sx={{ fontSize: 16, mr: 1 }} />
+              {labels.shareFacebook}
+            </MenuItem>
+            <MenuItem onClick={() => { onShareNews(item, 'reddit'); setShareAnchorEl(null); }}>
+              <RedditIcon sx={{ fontSize: 16, mr: 1 }} />
+              {labels.shareReddit}
+            </MenuItem>
+            <MenuItem onClick={() => { onShareNews(item, 'x'); setShareAnchorEl(null); }}>
+              <XIcon sx={{ fontSize: 16, mr: 1 }} />
+              {labels.shareX}
+            </MenuItem>
+            <MenuItem onClick={() => { onShareNews(item, 'tiktok'); setShareAnchorEl(null); }}>
+              <MusicNoteIcon sx={{ fontSize: 16, mr: 1 }} />
+              {labels.shareTikTok}
+            </MenuItem>
+          </Menu>
           <Tooltip title={labels.copyNews}>
             <Button
               size="small"

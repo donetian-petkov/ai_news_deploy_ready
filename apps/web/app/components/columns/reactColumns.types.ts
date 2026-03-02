@@ -36,6 +36,13 @@ export type CardLabels = {
   unpinNews: string;
   match: string;
   shareLink: string;
+  shareOn: string;
+  shareCopyLink: string;
+  shareFacebook: string;
+  shareReddit: string;
+  shareX: string;
+  shareTikTok: string;
+  shareTikTokHint: string;
   copyNews: string;
   hideNews: string;
   generatingSummary: string;
@@ -133,6 +140,7 @@ export type FeedColumnHandlers = {
   onResetNewsToTen: (feedUrl: string) => void;
   onTogglePinnedNews: (id: string) => void;
   onCopyLink: (url: string) => void;
+  onShareNews: (it: NewsItem, platform: 'copy' | 'facebook' | 'reddit' | 'x' | 'tiktok') => void;
   onCopyNewsPayload: (it: NewsItem) => void;
   onHideItem: (it: NewsItem) => void;
   onRequestSummary: (it: NewsItem) => void;

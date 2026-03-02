@@ -91,6 +91,7 @@ export function FeedColumnItemsList({
     setBodyMode,
     onTogglePinnedNews,
     onCopyLink,
+    onShareNews,
     onCopyNewsPayload,
     onHideItem,
     onRequestSummary,
@@ -149,6 +150,7 @@ export function FeedColumnItemsList({
   const sharedCardHandlers = useMemo<NewsCardHandlers>(() => ({
     onTogglePinnedNews,
     onCopyLink,
+    onShareNews,
     onCopyNews: onCopyNewsPayload,
     onHideItem,
     onRequestSummary,
@@ -158,7 +160,7 @@ export function FeedColumnItemsList({
     onAskSubmit,
     onSetSummaryMode: () => {},
     onSetResearchMode: () => {}
-  }), [onAskSubmit, onCopyLink, onCopyNewsPayload, onHideItem, onRequestResearch, onRequestSummary, onSetAskDraft, onToggleAsk, onTogglePinnedNews]);
+  }), [onAskSubmit, onCopyLink, onCopyNewsPayload, onHideItem, onRequestResearch, onRequestSummary, onSetAskDraft, onShareNews, onToggleAsk, onTogglePinnedNews]);
 
   if (!isHydrated) {
     return (
