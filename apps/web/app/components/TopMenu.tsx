@@ -182,6 +182,8 @@ export default function TopMenu() {
     connected,
     status,
     totalTokens,
+    language: ui.language,
+    timezone: ui.timezone,
     menuItemsAsIcons,
     vibe: ui.vibe,
     hideAllResearch: ui.hideAllResearch,

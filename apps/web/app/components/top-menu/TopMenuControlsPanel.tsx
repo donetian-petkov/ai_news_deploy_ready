@@ -30,6 +30,7 @@ type TopMenuControlsPanelProps = {
     font?: RootState['ui']['font'];
     fontSize?: RootState['ui']['fontSize'];
     scheme?: RootState['ui']['scheme'];
+    timezone?: RootState['ui']['timezone'];
     buttonMode?: RootState['ui']['buttonMode'];
     menuHintMode?: RootState['ui']['menuHintMode'];
     effectIntensity?: RootState['ui']['effectIntensity'];
@@ -119,6 +120,7 @@ export function TopMenuControlsPanel({
           font={ui.font}
           fontSize={ui.fontSize}
           scheme={ui.scheme}
+          timezone={ui.timezone}
           buttonMode={ui.buttonMode}
           menuHintMode={ui.menuHintMode}
           effectIntensity={ui.effectIntensity}

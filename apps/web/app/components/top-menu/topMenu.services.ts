@@ -2,6 +2,7 @@ import type { RootState } from '../../store/store';
 
 export type TopMenuVibe = RootState['ui']['vibe'];
 export type TopMenuColorMode = RootState['ui']['colorMode'];
+export type TopMenuTimezone = RootState['ui']['timezone'];
 export type TopMenuDeleteAge = 'yesterday' | 'week' | 'month' | 'year';
 export type TopMenuAiProvider = RootState['ui']['aiProvider'];
 
@@ -31,4 +32,3 @@ export function getProviderKeyLabel(provider: TopMenuAiProvider): string {
   if (provider === 'openrouter') return 'OPENROUTER_API_KEY';
   return 'OPENAI_API_KEY';
 }
-

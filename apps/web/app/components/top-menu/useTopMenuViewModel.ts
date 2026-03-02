@@ -13,6 +13,8 @@ type Args = {
   connected: boolean;
   status: string;
   totalTokens: number;
+  language: 'en' | 'bg';
+  timezone: 'system' | 'UTC' | 'Europe/Sofia' | 'Europe/London' | 'Europe/Berlin' | 'America/New_York' | 'America/Chicago' | 'America/Denver' | 'America/Los_Angeles' | 'Asia/Tokyo';
   menuItemsAsIcons: boolean;
   vibe: TopMenuVibe;
   hideAllResearch: boolean;
@@ -45,6 +47,8 @@ export function useTopMenuViewModel({
   connected,
   status,
   totalTokens,
+  language,
+  timezone,
   menuItemsAsIcons,
   vibe,
   hideAllResearch,
@@ -96,6 +100,8 @@ export function useTopMenuViewModel({
     connected,
     status,
     totalTokens,
+    language,
+    timezone,
     menuItemsAsIcons,
     vibe,
     searchLabel,
@@ -120,7 +126,7 @@ export function useTopMenuViewModel({
     onChangeVibe,
     onPlayToggleSound,
     onReorderFeeds
-  }), [addStreamLabel, addStreamVisible, allColumnLabel, connected, controlsLabel, hideAllResearch, hideAllSummaries, isMobile, labels, menuItemsAsIcons, menuLabel, onChangeVibe, onOpenHelp, onPlayToggleSound, onReorderFeeds, onScrollToColumns, onToggleAddStream, onToggleAllColumnControls, onToggleControls, onToggleHideAllResearch, onToggleHideAllSummaries, onToggleMenu, onToggleSearch, orderedFeeds, searchLabel, searchVisible, status, topHintAsButtons, totalTokens, vibe]);
+  }), [addStreamLabel, addStreamVisible, allColumnLabel, connected, controlsLabel, hideAllResearch, hideAllSummaries, isMobile, labels, language, menuItemsAsIcons, menuLabel, onChangeVibe, onOpenHelp, onPlayToggleSound, onReorderFeeds, onScrollToColumns, onToggleAddStream, onToggleAllColumnControls, onToggleControls, onToggleHideAllResearch, onToggleHideAllSummaries, onToggleMenu, onToggleSearch, orderedFeeds, searchLabel, searchVisible, status, timezone, topHintAsButtons, totalTokens, vibe]);
 
   return {
     searchLabel,

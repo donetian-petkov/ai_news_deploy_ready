@@ -1,7 +1,7 @@
 'use client';
 
 import { Alert } from '@mui/material';
-import type { TopMenuVibe } from './topMenu.services';
+import type { TopMenuTimezone, TopMenuVibe } from './topMenu.services';
 import { TopMenuSelectField } from './TopMenuSelectField';
 import {
   buildButtonModeOptions,
@@ -12,6 +12,7 @@ import {
   buildMenuHintOptions,
   buildSchemeOptions,
   buildSoundThemeOptions,
+  buildTimezoneOptions,
   buildVibeOptions
 } from './topMenuOptionBuilders';
 
@@ -29,6 +30,7 @@ type TopMenuAppearanceSectionProps = {
   font: FontValue;
   fontSize: FontSizeValue;
   scheme: SchemeValue;
+  timezone: TopMenuTimezone;
   buttonMode: ButtonModeValue;
   menuHintMode: MenuHintModeValue;
   effectIntensity: EffectIntensityValue;
@@ -42,6 +44,7 @@ type TopMenuAppearanceSectionProps = {
     font?: FontValue;
     fontSize?: FontSizeValue;
     scheme?: SchemeValue;
+    timezone?: TopMenuTimezone;
     buttonMode?: ButtonModeValue;
     menuHintMode?: MenuHintModeValue;
     effectIntensity?: EffectIntensityValue;
@@ -61,6 +64,7 @@ export function TopMenuAppearanceSection({
   font,
   fontSize,
   scheme,
+  timezone,
   buttonMode,
   menuHintMode,
   effectIntensity,
@@ -114,6 +118,15 @@ export function TopMenuAppearanceSection({
           value={buttonMode}
           onChange={next => onSetAppearance({ buttonMode: next })}
           options={buildButtonModeOptions(labels)}
+        />
+
+        <TopMenuSelectField
+          id="timezoneSelect"
+          title="Date/time timezone"
+          label={labels.timezonePrefix}
+          value={timezone}
+          onChange={next => onSetAppearance({ timezone: next })}
+          options={buildTimezoneOptions(labels)}
         />
 
         <TopMenuSelectField

@@ -42,6 +42,7 @@ export function useTopMenuUiPersistence({ dispatch, ui, resolvedColorMode }: Use
     font: ui.font,
     fontSize: ui.fontSize,
     scheme: ui.scheme,
+    timezone: ui.timezone,
     performanceMode: ui.performanceMode,
     buttonMode: ui.buttonMode,
     menuHintMode: ui.menuHintMode,
@@ -58,6 +59,7 @@ export function useTopMenuUiPersistence({ dispatch, ui, resolvedColorMode }: Use
     ui.effectIntensity,
     ui.font,
     ui.fontSize,
+    ui.timezone,
     ui.hideAllResearch,
     ui.hideAllSummaries,
     ui.language,
@@ -107,4 +109,3 @@ export function useTopMenuUiPersistence({ dispatch, ui, resolvedColorMode }: Use
     } catch {}
   }, [persistedUiPrefs]);
 }
-

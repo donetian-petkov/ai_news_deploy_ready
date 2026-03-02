@@ -11,6 +11,8 @@ export type TopMenuContextValue = {
   connected: boolean;
   status: string;
   totalTokens: number;
+  language: 'en' | 'bg';
+  timezone: 'system' | 'UTC' | 'Europe/Sofia' | 'Europe/London' | 'Europe/Berlin' | 'America/New_York' | 'America/Chicago' | 'America/Denver' | 'America/Los_Angeles' | 'Asia/Tokyo';
   menuItemsAsIcons: boolean;
   vibe: TopMenuVibe;
   searchLabel: string;

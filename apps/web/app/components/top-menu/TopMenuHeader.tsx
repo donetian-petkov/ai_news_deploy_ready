@@ -22,6 +22,8 @@ export function TopMenuHeader() {
     connected,
     status,
     totalTokens,
+    language,
+    timezone,
     menuItemsAsIcons,
     vibe,
     searchLabel,
@@ -76,7 +78,7 @@ export function TopMenuHeader() {
         <Stack className="headerRight mobileTopActions mobileTopActionsStack" spacing={1.1}>
           <Stack className="mobileStatusRow" direction="row" spacing={1} alignItems="center" justifyContent="space-between">
             <Stack className="mobileStatusPills" direction="row" spacing={0.8}>
-              <StatusPills connected={connected} status={status} totalTokens={totalTokens} />
+              <StatusPills connected={connected} status={status} totalTokens={totalTokens} language={language} timezone={timezone} />
             </Stack>
             <IconButton
               id="menuToggle"
@@ -90,7 +92,7 @@ export function TopMenuHeader() {
         </Stack>
       ) : (
         <Stack className="headerRight" direction="row" flexWrap="wrap" gap={1.1} alignItems="center">
-          <StatusPills connected={connected} status={status} totalTokens={totalTokens} />
+          <StatusPills connected={connected} status={status} totalTokens={totalTokens} language={language} timezone={timezone} />
           <QuickVibeSelect value={vibe} labels={labels} onChange={onChangeVibe} />
           <TopMenuActionButton id="quickSearchBtn" label={searchLabel} icon={<SearchIcon fontSize="small" />} menuItemsAsIcons={menuItemsAsIcons} onClick={onToggleSearch} onBeforeClick={onPlayToggleSound} />
           <TopMenuActionButton id="quickAddStreamBtn" label={addStreamLabel} icon={<AddIcon fontSize="small" />} menuItemsAsIcons={menuItemsAsIcons} onClick={onToggleAddStream} onBeforeClick={onPlayToggleSound} />

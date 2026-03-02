@@ -167,6 +167,16 @@
   border-color: var(--panel-border) !important;
 }
 
+.statusPillDateTime {
+  max-width: 280px;
+}
+
+.statusPillDateTime .MuiChip-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .topbar .MuiButton-root.btn,
 .topbar .MuiButton-root.btn.ghost {
   color: var(--text-main) !important;
