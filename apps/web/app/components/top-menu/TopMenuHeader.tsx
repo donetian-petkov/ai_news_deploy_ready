@@ -9,6 +9,7 @@ import OpenWithIcon from '@mui/icons-material/OpenWith';
 import SearchIcon from '@mui/icons-material/Search';
 import SummarizeIcon from '@mui/icons-material/Summarize';
 import TuneIcon from '@mui/icons-material/Tune';
+import { DateTimePill } from './DateTimePill';
 import { StatusPills } from './StatusPills';
 import { QuickVibeSelect } from './QuickVibeSelect';
 import { TopMenuActionButton } from './TopMenuActionButton';
@@ -24,6 +25,7 @@ export function TopMenuHeader() {
     totalTokens,
     language,
     timezone,
+    dateFormat,
     menuItemsAsIcons,
     vibe,
     searchLabel,
@@ -78,7 +80,7 @@ export function TopMenuHeader() {
         <Stack className="headerRight mobileTopActions mobileTopActionsStack" spacing={1.1}>
           <Stack className="mobileStatusRow" direction="row" spacing={1} alignItems="center" justifyContent="space-between">
             <Stack className="mobileStatusPills" direction="row" spacing={0.8}>
-              <StatusPills connected={connected} status={status} totalTokens={totalTokens} language={language} timezone={timezone} />
+              <StatusPills connected={connected} status={status} totalTokens={totalTokens} />
             </Stack>
             <IconButton
               id="menuToggle"
@@ -89,10 +91,13 @@ export function TopMenuHeader() {
               <MenuIcon fontSize="small" />
             </IconButton>
           </Stack>
+          <div className="mobileDateTimeRow">
+            <DateTimePill language={language} timezone={timezone} dateFormat={dateFormat} />
+          </div>
         </Stack>
       ) : (
         <Stack className="headerRight" direction="row" flexWrap="wrap" gap={1.1} alignItems="center">
-          <StatusPills connected={connected} status={status} totalTokens={totalTokens} language={language} timezone={timezone} />
+          <StatusPills connected={connected} status={status} totalTokens={totalTokens} />
           <QuickVibeSelect value={vibe} labels={labels} onChange={onChangeVibe} />
           <TopMenuActionButton id="quickSearchBtn" label={searchLabel} icon={<SearchIcon fontSize="small" />} menuItemsAsIcons={menuItemsAsIcons} onClick={onToggleSearch} onBeforeClick={onPlayToggleSound} />
           <TopMenuActionButton id="quickAddStreamBtn" label={addStreamLabel} icon={<AddIcon fontSize="small" />} menuItemsAsIcons={menuItemsAsIcons} onClick={onToggleAddStream} onBeforeClick={onPlayToggleSound} />
@@ -101,6 +106,7 @@ export function TopMenuHeader() {
           <TopMenuActionButton id="hideAllResearchBtn" label={hideAllResearchLabel} icon={<AutoAwesomeIcon fontSize="small" />} menuItemsAsIcons={menuItemsAsIcons} onClick={onToggleHideAllResearch} onBeforeClick={onPlayToggleSound} />
           <TopMenuActionButton id="hideAllSummariesBtn" label={hideAllSummariesLabel} icon={<SummarizeIcon fontSize="small" />} menuItemsAsIcons={menuItemsAsIcons} onClick={onToggleHideAllSummaries} onBeforeClick={onPlayToggleSound} />
           <TopMenuActionButton id="menuToggle" label={menuLabel} icon={<MenuIcon fontSize="small" />} menuItemsAsIcons={menuItemsAsIcons} onClick={onToggleMenu} onBeforeClick={onPlayToggleSound} />
+          <DateTimePill language={language} timezone={timezone} dateFormat={dateFormat} />
         </Stack>
       )}
     </div>

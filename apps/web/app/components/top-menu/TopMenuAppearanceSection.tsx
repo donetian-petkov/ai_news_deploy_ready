@@ -1,10 +1,11 @@
 'use client';
 
 import { Alert } from '@mui/material';
-import type { TopMenuTimezone, TopMenuVibe } from './topMenu.services';
+import type { TopMenuDateFormat, TopMenuTimezone, TopMenuVibe } from './topMenu.services';
 import { TopMenuSelectField } from './TopMenuSelectField';
 import {
   buildButtonModeOptions,
+  buildDateFormatOptions,
   buildEffectIntensityOptions,
   buildFontOptions,
   buildFontSizeOptions,
@@ -31,6 +32,7 @@ type TopMenuAppearanceSectionProps = {
   fontSize: FontSizeValue;
   scheme: SchemeValue;
   timezone: TopMenuTimezone;
+  dateFormat: TopMenuDateFormat;
   buttonMode: ButtonModeValue;
   menuHintMode: MenuHintModeValue;
   effectIntensity: EffectIntensityValue;
@@ -45,6 +47,7 @@ type TopMenuAppearanceSectionProps = {
     fontSize?: FontSizeValue;
     scheme?: SchemeValue;
     timezone?: TopMenuTimezone;
+    dateFormat?: TopMenuDateFormat;
     buttonMode?: ButtonModeValue;
     menuHintMode?: MenuHintModeValue;
     effectIntensity?: EffectIntensityValue;
@@ -65,6 +68,7 @@ export function TopMenuAppearanceSection({
   fontSize,
   scheme,
   timezone,
+  dateFormat,
   buttonMode,
   menuHintMode,
   effectIntensity,
@@ -127,6 +131,15 @@ export function TopMenuAppearanceSection({
           value={timezone}
           onChange={next => onSetAppearance({ timezone: next })}
           options={buildTimezoneOptions(labels)}
+        />
+
+        <TopMenuSelectField
+          id="dateFormatSelect"
+          title="Date format"
+          label={labels.dateFormatPrefix}
+          value={dateFormat}
+          onChange={next => onSetAppearance({ dateFormat: next })}
+          options={buildDateFormatOptions(labels)}
         />
 
         <TopMenuSelectField

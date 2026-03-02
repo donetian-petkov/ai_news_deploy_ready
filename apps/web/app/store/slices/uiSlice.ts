@@ -58,6 +58,7 @@ type UiState = {
   fontSize: 'sm' | 'md' | 'lg' | 'xl';
   scheme: 'classic' | 'vivid' | 'sunset' | 'neon' | 'ocean' | 'forest';
   timezone: 'system' | 'UTC' | 'Europe/Sofia' | 'Europe/London' | 'Europe/Berlin' | 'America/New_York' | 'America/Chicago' | 'America/Denver' | 'America/Los_Angeles' | 'Asia/Tokyo';
+  dateFormat: 'ddmmyy' | 'mmddyy' | 'yyyymmdd';
   performanceMode: boolean;
   buttonMode: 'icons' | 'text';
   menuHintMode: 'text' | 'buttons';
@@ -97,6 +98,7 @@ const initialState: UiState = {
   fontSize: 'md',
   scheme: 'classic',
   timezone: 'system',
+  dateFormat: 'ddmmyy',
   performanceMode: false,
   buttonMode: 'icons',
   menuHintMode: 'text',
@@ -185,7 +187,7 @@ const uiSlice = createSlice({
         state.typeFilter = next;
       }
     },
-    setAppearanceSettings(state, action: PayloadAction<Partial<Pick<UiState, 'font' | 'fontSize' | 'scheme' | 'timezone' | 'performanceMode' | 'buttonMode' | 'menuHintMode' | 'effectIntensity' | 'soundEnabled' | 'soundTheme' | 'vibe' | 'colorMode'>>>) {
+    setAppearanceSettings(state, action: PayloadAction<Partial<Pick<UiState, 'font' | 'fontSize' | 'scheme' | 'timezone' | 'dateFormat' | 'performanceMode' | 'buttonMode' | 'menuHintMode' | 'effectIntensity' | 'soundEnabled' | 'soundTheme' | 'vibe' | 'colorMode'>>>) {
       const next = action.payload;
       if (next.font === 'system' || next.font === 'manrope' || next.font === 'grotesk' || next.font === 'sora' || next.font === 'plex' || next.font === 'serif' || next.font === 'mono') {
         state.font = next.font;
@@ -198,6 +200,9 @@ const uiSlice = createSlice({
       }
       if (typeof next.timezone === 'string' && isTimezone(next.timezone)) {
         state.timezone = next.timezone;
+      }
+      if (next.dateFormat === 'ddmmyy' || next.dateFormat === 'mmddyy' || next.dateFormat === 'yyyymmdd') {
+        state.dateFormat = next.dateFormat;
       }
       if (typeof next.performanceMode === 'boolean') {
         state.performanceMode = next.performanceMode;
@@ -240,7 +245,7 @@ const uiSlice = createSlice({
         state.soundEnabled = false;
       }
     },
-    hydrateUiSettings(state, action: PayloadAction<Partial<Pick<UiState, 'language' | 'colorMode' | 'menuCollapsed' | 'controlsCollapsed' | 'searchVisible' | 'addStreamVisible' | 'allColumnControlsHidden' | 'hideAllResearch' | 'hideAllSummaries' | 'notifyEnabled' | 'notifyMode' | 'moodFilter' | 'typeFilter' | 'font' | 'fontSize' | 'scheme' | 'timezone' | 'performanceMode' | 'buttonMode' | 'menuHintMode' | 'effectIntensity' | 'soundEnabled' | 'soundTheme' | 'vibe'>>>) {
+    hydrateUiSettings(state, action: PayloadAction<Partial<Pick<UiState, 'language' | 'colorMode' | 'menuCollapsed' | 'controlsCollapsed' | 'searchVisible' | 'addStreamVisible' | 'allColumnControlsHidden' | 'hideAllResearch' | 'hideAllSummaries' | 'notifyEnabled' | 'notifyMode' | 'moodFilter' | 'typeFilter' | 'font' | 'fontSize' | 'scheme' | 'timezone' | 'dateFormat' | 'performanceMode' | 'buttonMode' | 'menuHintMode' | 'effectIntensity' | 'soundEnabled' | 'soundTheme' | 'vibe'>>>) {
       const next = action.payload;
       if (next.language === 'en' || next.language === 'bg') state.language = next.language;
       if (next.colorMode === 'system' || next.colorMode === 'dark' || next.colorMode === 'light') state.colorMode = next.colorMode;
@@ -259,6 +264,7 @@ const uiSlice = createSlice({
       if (next.fontSize === 'sm' || next.fontSize === 'md' || next.fontSize === 'lg' || next.fontSize === 'xl') state.fontSize = next.fontSize;
       if (next.scheme === 'classic' || next.scheme === 'vivid' || next.scheme === 'sunset' || next.scheme === 'neon' || next.scheme === 'ocean' || next.scheme === 'forest') state.scheme = next.scheme;
       if (typeof next.timezone === 'string' && isTimezone(next.timezone)) state.timezone = next.timezone;
+      if (next.dateFormat === 'ddmmyy' || next.dateFormat === 'mmddyy' || next.dateFormat === 'yyyymmdd') state.dateFormat = next.dateFormat;
       if (typeof next.performanceMode === 'boolean') state.performanceMode = next.performanceMode;
       if (state.performanceMode) {
         state.moodFilter = NewsMoodFilterValue.All;

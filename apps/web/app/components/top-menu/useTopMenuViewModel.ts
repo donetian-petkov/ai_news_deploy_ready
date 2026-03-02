@@ -15,6 +15,7 @@ type Args = {
   totalTokens: number;
   language: 'en' | 'bg';
   timezone: 'system' | 'UTC' | 'Europe/Sofia' | 'Europe/London' | 'Europe/Berlin' | 'America/New_York' | 'America/Chicago' | 'America/Denver' | 'America/Los_Angeles' | 'Asia/Tokyo';
+  dateFormat: 'ddmmyy' | 'mmddyy' | 'yyyymmdd';
   menuItemsAsIcons: boolean;
   vibe: TopMenuVibe;
   hideAllResearch: boolean;
@@ -49,6 +50,7 @@ export function useTopMenuViewModel({
   totalTokens,
   language,
   timezone,
+  dateFormat,
   menuItemsAsIcons,
   vibe,
   hideAllResearch,
@@ -102,6 +104,7 @@ export function useTopMenuViewModel({
     totalTokens,
     language,
     timezone,
+    dateFormat,
     menuItemsAsIcons,
     vibe,
     searchLabel,
@@ -126,7 +129,7 @@ export function useTopMenuViewModel({
     onChangeVibe,
     onPlayToggleSound,
     onReorderFeeds
-  }), [addStreamLabel, addStreamVisible, allColumnLabel, connected, controlsLabel, hideAllResearch, hideAllSummaries, isMobile, labels, language, menuItemsAsIcons, menuLabel, onChangeVibe, onOpenHelp, onPlayToggleSound, onReorderFeeds, onScrollToColumns, onToggleAddStream, onToggleAllColumnControls, onToggleControls, onToggleHideAllResearch, onToggleHideAllSummaries, onToggleMenu, onToggleSearch, orderedFeeds, searchLabel, searchVisible, status, timezone, topHintAsButtons, totalTokens, vibe]);
+  }), [addStreamLabel, addStreamVisible, allColumnLabel, connected, controlsLabel, dateFormat, hideAllResearch, hideAllSummaries, isMobile, labels, language, menuItemsAsIcons, menuLabel, onChangeVibe, onOpenHelp, onPlayToggleSound, onReorderFeeds, onScrollToColumns, onToggleAddStream, onToggleAllColumnControls, onToggleControls, onToggleHideAllResearch, onToggleHideAllSummaries, onToggleMenu, onToggleSearch, orderedFeeds, searchLabel, searchVisible, status, timezone, topHintAsButtons, totalTokens, vibe]);
 
   return {
     searchLabel,

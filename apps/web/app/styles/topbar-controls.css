@@ -168,7 +168,7 @@
 }
 
 .statusPillDateTime {
-  max-width: 280px;
+  max-width: 360px;
 }
 
 .statusPillDateTime .MuiChip-label {
@@ -203,6 +203,10 @@
 }
 
 .mobileTopActionsStack {
+  width: 100%;
+}
+
+.mobileDateTimeRow {
   width: 100%;
 }
 

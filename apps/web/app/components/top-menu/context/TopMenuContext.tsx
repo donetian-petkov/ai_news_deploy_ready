@@ -13,6 +13,7 @@ export type TopMenuContextValue = {
   totalTokens: number;
   language: 'en' | 'bg';
   timezone: 'system' | 'UTC' | 'Europe/Sofia' | 'Europe/London' | 'Europe/Berlin' | 'America/New_York' | 'America/Chicago' | 'America/Denver' | 'America/Los_Angeles' | 'Asia/Tokyo';
+  dateFormat: 'ddmmyy' | 'mmddyy' | 'yyyymmdd';
   menuItemsAsIcons: boolean;
   vibe: TopMenuVibe;
   searchLabel: string;

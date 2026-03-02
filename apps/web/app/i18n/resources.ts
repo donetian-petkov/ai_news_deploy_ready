@@ -161,6 +161,10 @@ export const resources = {
         timezoneDenver: 'America/Denver',
         timezoneLosAngeles: 'America/Los_Angeles',
         timezoneTokyo: 'Asia/Tokyo',
+        dateFormatPrefix: 'Date format:',
+        dateFormatDdmmyy: 'DD/MM/YY',
+        dateFormatMmddyy: 'MM/DD/YY',
+        dateFormatYyyymmdd: 'YYYY-MM-DD',
         addStreamTypeRss: 'RSS',
         addStreamTypeReddit: 'Reddit (subreddit)',
         addStreamTypeYoutube: 'YouTube (channel)'
@@ -429,6 +433,10 @@ export const resources = {
         timezoneDenver: 'America/Denver',
         timezoneLosAngeles: 'America/Los_Angeles',
         timezoneTokyo: 'Asia/Tokyo',
+        dateFormatPrefix: 'Формат дата:',
+        dateFormatDdmmyy: 'ДД/ММ/ГГ',
+        dateFormatMmddyy: 'ММ/ДД/ГГ',
+        dateFormatYyyymmdd: 'ГГГГ-ММ-ДД',
         addStreamTypeRss: 'RSS',
         addStreamTypeReddit: 'Reddit (subreddit)',
         addStreamTypeYoutube: 'YouTube (канал)'

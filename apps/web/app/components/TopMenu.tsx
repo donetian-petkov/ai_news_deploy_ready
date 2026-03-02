@@ -184,6 +184,7 @@ export default function TopMenu() {
     totalTokens,
     language: ui.language,
     timezone: ui.timezone,
+    dateFormat: ui.dateFormat,
     menuItemsAsIcons,
     vibe: ui.vibe,
     hideAllResearch: ui.hideAllResearch,

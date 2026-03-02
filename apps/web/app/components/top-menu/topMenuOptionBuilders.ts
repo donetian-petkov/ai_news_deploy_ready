@@ -2,7 +2,7 @@
 
 import { NewsMoodFilterValue, NewsTypeFilterValue } from '../../store/types';
 import type { Option } from './TopMenuSelectField';
-import type { TopMenuTimezone, TopMenuVibe } from './topMenu.services';
+import type { TopMenuDateFormat, TopMenuTimezone, TopMenuVibe } from './topMenu.services';
 
 export function buildAiProviderOptions(labels: Record<string, string>): Option<'openai' | 'claude' | 'openrouter'>[] {
   return [
@@ -166,5 +166,13 @@ export function buildTimezoneOptions(labels: Record<string, string>): Option<Top
     { value: 'America/Denver', label: labels.timezoneDenver },
     { value: 'America/Los_Angeles', label: labels.timezoneLosAngeles },
     { value: 'Asia/Tokyo', label: labels.timezoneTokyo }
+  ];
+}
+
+export function buildDateFormatOptions(labels: Record<string, string>): Option<TopMenuDateFormat>[] {
+  return [
+    { value: 'ddmmyy', label: labels.dateFormatDdmmyy },
+    { value: 'mmddyy', label: labels.dateFormatMmddyy },
+    { value: 'yyyymmdd', label: labels.dateFormatYyyymmdd }
   ];
 }
