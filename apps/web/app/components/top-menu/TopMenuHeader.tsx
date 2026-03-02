@@ -51,9 +51,14 @@ export function TopMenuHeader() {
   return (
     <div className="headerRow">
       <Box className="headerLeft">
-        <Typography id="appTitle" className="appTitleText" component="h1">
-          {labels.title}
-        </Typography>
+        <Stack direction="row" alignItems="center" spacing={1.1} className="headerTitleRow">
+          {!isMobile ? (
+            <DateTimePill language={language} timezone={timezone} dateFormat={dateFormat} />
+          ) : null}
+          <Typography id="appTitle" className="appTitleText" component="h1">
+            {labels.title}
+          </Typography>
+        </Stack>
         {topHintAsButtons ? (
           <Stack className="subHintButtons" id="subHintButtons" direction="row" spacing={0.7} flexWrap="wrap">
             <Button className="subHintBtn" size="small" variant="outlined" type="button" onClick={onScrollToColumns} startIcon={<OpenWithIcon fontSize="small" />}>
@@ -91,9 +96,6 @@ export function TopMenuHeader() {
               <MenuIcon fontSize="small" />
             </IconButton>
           </Stack>
-          <div className="mobileDateTimeRow">
-            <DateTimePill language={language} timezone={timezone} dateFormat={dateFormat} />
-          </div>
         </Stack>
       ) : (
         <Stack className="headerRight" direction="row" flexWrap="wrap" gap={1.1} alignItems="center">
@@ -106,7 +108,6 @@ export function TopMenuHeader() {
           <TopMenuActionButton id="hideAllResearchBtn" label={hideAllResearchLabel} icon={<AutoAwesomeIcon fontSize="small" />} menuItemsAsIcons={menuItemsAsIcons} onClick={onToggleHideAllResearch} onBeforeClick={onPlayToggleSound} />
           <TopMenuActionButton id="hideAllSummariesBtn" label={hideAllSummariesLabel} icon={<SummarizeIcon fontSize="small" />} menuItemsAsIcons={menuItemsAsIcons} onClick={onToggleHideAllSummaries} onBeforeClick={onPlayToggleSound} />
           <TopMenuActionButton id="menuToggle" label={menuLabel} icon={<MenuIcon fontSize="small" />} menuItemsAsIcons={menuItemsAsIcons} onClick={onToggleMenu} onBeforeClick={onPlayToggleSound} />
-          <DateTimePill language={language} timezone={timezone} dateFormat={dateFormat} />
         </Stack>
       )}
     </div>

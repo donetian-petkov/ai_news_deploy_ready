@@ -26,6 +26,11 @@
   min-width: 320px;
 }
 
+.headerTitleRow {
+  flex-wrap: nowrap;
+  min-width: 0;
+}
+
 .headerLeft h1 {
   font-size: calc(1.6rem * var(--ui-font-scale));
   color: var(--text-main);
@@ -175,6 +180,10 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.headerTitleRow .statusPillDateTime {
+  max-width: 210px;
 }
 
 .topbar .MuiButton-root.btn,
