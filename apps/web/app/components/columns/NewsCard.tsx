@@ -85,6 +85,8 @@ export const NewsCard = memo(function NewsCard({ view, state, handlers }: NewsCa
       <Card
         className="news-item-card"
         data-match={item.isMatch ? '1' : '0'}
+        data-news-id={item.id}
+        data-news-feed-url={item.feedUrl}
         variant="outlined"
         sx={{
           '--ornament-accent': item.isMatch ? matchAccent : accent,

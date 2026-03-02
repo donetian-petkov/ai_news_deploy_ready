@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { Alert, Button, Skeleton, Stack } from '@mui/material';
 import type { FeedInfo, NewsItem } from '../../../store/types';
 import type { BodyMode, FeedAskState } from '../reactColumns.types';
@@ -37,6 +37,16 @@ function getDefaultAskState(): FeedAskState {
     remaining: 5,
     messages: []
   };
+}
+
+type PendingScrollTarget =
+  | { mode: 'news'; newsId: string }
+  | { mode: 'top' };
+
+function cssEscape(value: string): string {
+  const esc = (globalThis as { CSS?: { escape?: (input: string) => string } }).CSS?.escape;
+  if (typeof esc === 'function') return esc(value);
+  return value.replace(/["\\]/g, '\\$&');
 }
 
 export function FeedColumnItemsList({
@@ -91,6 +101,34 @@ export function FeedColumnItemsList({
     onShowMoreNews,
     onResetNewsToTen
   } = handlers;
+
+  const pendingScrollRef = useRef<PendingScrollTarget | null>(null);
+
+  useEffect(() => {
+    const pending = pendingScrollRef.current;
+    if (!pending) return;
+    if (!shownItems.length) return;
+
+    const feedUrlEscaped = cssEscape(feed.url);
+    const columnRoot = document.querySelector(`[data-feed-url="${feedUrlEscaped}"]`) as HTMLElement | null;
+    if (!columnRoot) return;
+
+    const targetId = pending.mode === 'news'
+      ? pending.newsId
+      : shownItems[0]?.id;
+    if (!targetId) return;
+
+    const newsIdEscaped = cssEscape(targetId);
+    const target = columnRoot.querySelector(`.news-item-card[data-news-id="${newsIdEscaped}"]`) as HTMLElement | null;
+    if (!target) return;
+
+    pendingScrollRef.current = null;
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        target.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' });
+      });
+    });
+  }, [feed.url, shownItems]);
 
   const sharedCardView = useMemo<NewsCardViewModel>(() => ({
     labels: cardLabels,
@@ -194,7 +232,13 @@ export function FeedColumnItemsList({
         <Button
           size="small"
           variant="outlined"
-          onClick={() => onShowMoreNews(feed.url)}
+          onClick={() => {
+            const target = itemsVisible[shownItems.length];
+            if (target?.id) {
+              pendingScrollRef.current = { mode: 'news', newsId: target.id };
+            }
+            onShowMoreNews(feed.url);
+          }}
         >
           {labels.showFiveMore}
         </Button>
@@ -204,7 +248,10 @@ export function FeedColumnItemsList({
           size="small"
           variant="outlined"
           color="secondary"
-          onClick={() => onResetNewsToTen(feed.url)}
+          onClick={() => {
+            pendingScrollRef.current = { mode: 'top' };
+            onResetNewsToTen(feed.url);
+          }}
         >
           {labels.resetToTenItems}
         </Button>
