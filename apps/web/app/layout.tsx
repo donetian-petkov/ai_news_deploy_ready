@@ -9,9 +9,13 @@ export const metadata: Metadata = {
   title: 'Live News Stream',
   description: 'Live AI news stream with summaries, research, and ask-agent workflows',
   icons: {
-    icon: [{ url: '/favicon.svg', type: 'image/svg+xml' }],
-    shortcut: '/favicon.svg',
-    apple: '/favicon.svg'
+    icon: [
+      { url: '/favicon.ico', type: 'image/x-icon' },
+      { url: '/favicon.png', type: 'image/png' },
+      { url: '/favicon.svg', type: 'image/svg+xml' }
+    ],
+    shortcut: '/favicon.ico',
+    apple: '/favicon.png'
   }
 };
 
