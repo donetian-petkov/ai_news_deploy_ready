@@ -99,6 +99,7 @@ export const NewsCard = memo(function NewsCard({ view, state, handlers }: NewsCa
             : `linear-gradient(155deg, ${NEWS_CARD_COLOR_TOKENS.gradientStart}, ${NEWS_CARD_COLOR_TOKENS.gradientEnd}), radial-gradient(550px 180px at 0% 0%, ${soft}, transparent 72%), var(--news-card-overlay)`,
           borderColor: duplicateMatch ? '#ffb26b' : (item.isMatch ? matchAccent : `${accent}88`),
           borderStyle: duplicateMatch ? 'dashed' : 'solid',
+          opacity: duplicateMatch ? 0.82 : 1,
           color: NEWS_CARD_COLOR_TOKENS.textMain,
           contentVisibility: 'auto',
           containIntrinsicSize: `${COLUMN_LAYOUT_TOKENS.newsCardIntrinsicHeightPx}px`,
