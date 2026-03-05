@@ -105,27 +105,31 @@ export function useReactColumnsPreviewController({ wsUrl }: Args) {
   const summariesLoading = useMemo(() => {
     if (!ui.aiEnabled || !ui.aiAvailable) return { count: 0, items: [] as string[] };
 
-    const summaryEnabledFeeds = renderedFeeds.filter(feed =>
-      feed.url !== FILTERED_FEED_URL && !!feed.summaryEnabled
-    );
-    if (!summaryEnabledFeeds.length) return { count: 0, items: [] as string[] };
+    const pendingIds = Object.keys(summaryPendingById);
+    if (!pendingIds.length) return { count: 0, items: [] as string[] };
 
-    let missingSummaryCount = 0;
-    const items: string[] = [];
-    for (const feed of summaryEnabledFeeds) {
-      const feedItems = Array.isArray(itemsByFeed[feed.url]) ? itemsByFeed[feed.url] : [];
-      for (const item of feedItems) {
-        if (!String(item.summary || '').trim()) {
-          missingSummaryCount += 1;
-          const title = String(item.title || '').trim() || item.id;
-          const pending = !!summaryPendingById[item.id];
-          items.push(`${pending ? '(pending) ' : ''}[${feed.label}] ${title}`);
-        }
-      }
-    }
+    const feedLabelByUrl = new Map(renderedFeeds.map(feed => [feed.url, feed.label]));
+    const itemMetaById = new Map<string, { title: string; feedUrl: string }>();
+    Object.entries(itemsByFeed).forEach(([feedUrl, feedItems]) => {
+      if (!Array.isArray(feedItems)) return;
+      feedItems.forEach(item => {
+        if (!item?.id || itemMetaById.has(item.id)) return;
+        itemMetaById.set(item.id, {
+          title: String(item.title || '').trim(),
+          feedUrl: String(item.feedUrl || feedUrl)
+        });
+      });
+    });
+
+    const items = pendingIds.map(id => {
+      const meta = itemMetaById.get(id);
+      if (!meta) return `[unknown] ${id}`;
+      const feedLabel = feedLabelByUrl.get(meta.feedUrl) || meta.feedUrl;
+      return `[${feedLabel}] ${meta.title || id}`;
+    });
 
     return {
-      count: Math.max(missingSummaryCount, Object.keys(summaryPendingById).length),
+      count: pendingIds.length,
       items
     };
   }, [itemsByFeed, renderedFeeds, summaryPendingById, ui.aiAvailable, ui.aiEnabled]);
