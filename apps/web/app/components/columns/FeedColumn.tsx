@@ -1,13 +1,12 @@
 'use client';
 
 import { Box, Card, CardContent } from '@mui/material';
-import { FILTERED_FEED_URL } from '../../store/constants';
 import type { FeedColumnDragState } from './reactColumns.types';
-import { useFeedColumnsContext } from './context/useFeedColumnsContext';
 import { FeedColumnControlsPanel } from './feed-column/FeedColumnControlsPanel';
 import { FeedColumnItemsList } from './feed-column/FeedColumnItemsList';
 import { FeedColumnHeader } from './feed-column/FeedColumnHeader';
-import { useFeedColumnItems } from './feed-column/hooks/useFeedColumnItems';
+import { FeedColumnProvider } from './feed-column/context/FeedColumnProvider';
+import { useFeedColumnModel } from './feed-column/hooks/useFeedColumnModel';
 import { COLUMN_COLOR_TOKENS, COLUMN_LAYOUT_TOKENS, COLUMN_STYLE_TOKENS } from './designTokens';
 import type { FeedInfo } from '../../store/types';
 
@@ -18,29 +17,20 @@ type FeedColumnProps = {
 };
 
 export function FeedColumn({ feed, columnIdx, drag }: FeedColumnProps) {
-  const { view, state } = useFeedColumnsContext();
-  const { palette, performanceMode, moodFilter, typeFilter, searchQuery, fontScale } = view;
   const {
-    filteredColumnItems,
-    itemsByFeed,
-    visibleByFeed
-  } = state;
-
-  const isMatchColumn = feed.url === FILTERED_FEED_URL || String(feed.label || '').toLowerCase().startsWith('filtered');
-  const colTheme: 'a' | 'b' | 'match' = isMatchColumn ? 'match' : (columnIdx % 2 === 0 ? 'a' : 'b');
-  const accent = colTheme === 'a' ? palette.a : colTheme === 'b' ? palette.b : palette.m;
-  const soft = colTheme === 'a' ? palette.aSoft : colTheme === 'b' ? palette.bSoft : palette.mSoft;
-
-  const { items, itemsVisible, shownItems } = useFeedColumnItems({
-    feed,
     isMatchColumn,
-    filteredColumnItems,
-    itemsByFeed,
-    moodFilter,
-    typeFilter,
-    searchQuery,
+    colTheme,
+    accent,
+    soft,
+    fontScale,
+    palette,
     performanceMode,
-    visibleByFeed
+    items,
+    itemsVisible,
+    shownItems
+  } = useFeedColumnModel({
+    feed,
+    columnIdx
   });
 
   return (
@@ -104,21 +94,24 @@ export function FeedColumn({ feed, columnIdx, drag }: FeedColumnProps) {
           <span className="glyphBR" />
         </div>
         <CardContent sx={{ pb: COLUMN_LAYOUT_TOKENS.cardContentPaddingBottom, px: COLUMN_LAYOUT_TOKENS.cardContentPaddingX }}>
-          <FeedColumnHeader feed={feed} itemsCount={itemsVisible.length} accent={accent} fontScale={fontScale} />
+          <FeedColumnProvider
+            value={{
+              feed,
+              isMatchColumn,
+              accent,
+              soft,
+              fontScale,
+              items,
+              itemsVisible,
+              shownItems
+            }}
+          >
+            <FeedColumnHeader />
 
-          <FeedColumnControlsPanel
-            feed={feed}
-          />
+            <FeedColumnControlsPanel />
 
-          <FeedColumnItemsList
-            feed={feed}
-            items={items}
-            itemsVisible={itemsVisible}
-            shownItems={shownItems}
-            isMatchColumn={isMatchColumn}
-            accent={accent}
-            soft={soft}
-          />
+            <FeedColumnItemsList />
+          </FeedColumnProvider>
         </CardContent>
       </Card>
     </Box>

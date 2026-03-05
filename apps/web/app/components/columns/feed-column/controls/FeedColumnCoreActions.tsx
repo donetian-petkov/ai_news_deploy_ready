@@ -5,15 +5,11 @@ import PushPinIcon from '@mui/icons-material/PushPin';
 import PushPinOutlinedIcon from '@mui/icons-material/PushPinOutlined';
 import TuneIcon from '@mui/icons-material/Tune';
 import { Button, Stack } from '@mui/material';
-import type { FeedInfo } from '../../../../store/types';
 import { useFeedColumnsContext } from '../../context/useFeedColumnsContext';
+import { useFeedColumnContext } from '../context/useFeedColumnContext';
 
-type Props = {
-  feed: FeedInfo;
-  isMatchColumn: boolean;
-};
-
-export function FeedColumnCoreActions({ feed, isMatchColumn }: Props) {
+export function FeedColumnCoreActions() {
+  const { feed, isMatchColumn } = useFeedColumnContext();
   const { view, state, handlers } = useFeedColumnsContext();
   const { connected, compactBtnSx, labels } = view;
   const { pinnedByUrl, controlsOpenByUrl } = state;

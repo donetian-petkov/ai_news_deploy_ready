@@ -2,14 +2,11 @@
 
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import { Button, FormControl, MenuItem, Select, Stack } from '@mui/material';
-import type { FeedInfo } from '../../../../store/types';
 import { useFeedColumnsContext } from '../../context/useFeedColumnsContext';
+import { useFeedColumnContext } from '../context/useFeedColumnContext';
 
-type Props = {
-  feed: FeedInfo;
-};
-
-export function FeedColumnAdvancedSettings({ feed }: Props) {
+export function FeedColumnAdvancedSettings() {
+  const { feed } = useFeedColumnContext();
   const { view, state, handlers } = useFeedColumnsContext();
   const { compactBtnSx, compactFormSx, labels } = view;
   const { onSetDeleteAge, onRemoveOldInFeed } = handlers;

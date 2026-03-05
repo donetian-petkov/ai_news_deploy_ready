@@ -1,14 +1,12 @@
 'use client';
 
 import { Alert, Button, FormControl, MenuItem, Select } from '@mui/material';
-import type { BudgetMode, FeedInfo } from '../../../../store/types';
+import type { BudgetMode } from '../../../../store/types';
 import { useFeedColumnsContext } from '../../context/useFeedColumnsContext';
+import { useFeedColumnContext } from '../context/useFeedColumnContext';
 
-type Props = {
-  feed: FeedInfo;
-};
-
-export function FeedColumnAiSettings({ feed }: Props) {
+export function FeedColumnAiSettings() {
+  const { feed } = useFeedColumnContext();
   const { view, handlers } = useFeedColumnsContext();
   const { aiAvailable, connected, compactBtnSx, compactFormSx, labels } = view;
   const { onToggleFeedSummary, onToggleFeedResearch, onSetFeedBudget } = handlers;

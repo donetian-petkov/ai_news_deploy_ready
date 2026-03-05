@@ -2,34 +2,17 @@
 
 import { useEffect, useMemo, useRef } from 'react';
 import { Alert, Button, Skeleton, Stack } from '@mui/material';
-import type { FeedInfo, NewsItem } from '../../../store/types';
 import type { BodyMode, FeedAskState } from '../reactColumns.types';
 import { collapseText, compactResearch, extractConfidence } from '../reactColumns.utils';
 import { NewsCard } from '../NewsCard';
 import { useFeedColumnsContext } from '../context/useFeedColumnsContext';
+import { useFeedColumnContext } from './context/useFeedColumnContext';
 import { COLUMN_COLOR_TOKENS, COLUMN_LAYOUT_TOKENS } from '../designTokens';
 import type { NewsCardHandlers, NewsCardStateModel, NewsCardViewModel } from '../news-card/newsCard.types';
 import { askKey, bodyKey, cssEscape, getDefaultAskState, type PendingScrollTarget } from './feedColumnItems.utils';
 
-type Props = {
-  feed: FeedInfo;
-  items: NewsItem[];
-  itemsVisible: NewsItem[];
-  shownItems: NewsItem[];
-  isMatchColumn: boolean;
-  accent: string;
-  soft: string;
-};
-
-export function FeedColumnItemsList({
-  feed,
-  items,
-  itemsVisible,
-  shownItems,
-  isMatchColumn,
-  accent,
-  soft
-}: Props) {
+export function FeedColumnItemsList() {
+  const { feed, items, itemsVisible, shownItems, isMatchColumn, accent, soft } = useFeedColumnContext();
   const { view, state, handlers } = useFeedColumnsContext();
 
   const {

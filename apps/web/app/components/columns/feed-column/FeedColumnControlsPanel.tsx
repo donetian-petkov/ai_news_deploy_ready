@@ -1,29 +1,24 @@
 'use client';
 
 import { Box } from '@mui/material';
-import { FILTERED_FEED_URL } from '../../../store/constants';
-import type { FeedInfo } from '../../../store/types';
 import { useFeedColumnsContext } from '../context/useFeedColumnsContext';
+import { useFeedColumnContext } from './context/useFeedColumnContext';
 import { FeedColumnAdvancedSettings } from './controls/FeedColumnAdvancedSettings';
 import { FeedColumnAiSettings } from './controls/FeedColumnAiSettings';
 import { FeedColumnCoreActions } from './controls/FeedColumnCoreActions';
 import { FeedColumnGeneralSettings } from './controls/FeedColumnGeneralSettings';
 
-type Props = {
-  feed: FeedInfo;
-};
-
-export function FeedColumnControlsPanel({ feed }: Props) {
+export function FeedColumnControlsPanel() {
   const { state } = useFeedColumnsContext();
+  const { feed } = useFeedColumnContext();
   const { hydratedColumns, controlsOpenByUrl, advancedControlsByUrl } = state;
-  const isMatchColumn = feed.url === FILTERED_FEED_URL || String(feed.label || '').toLowerCase().startsWith('filtered');
   const isHydrated = !!hydratedColumns[feed.url];
   const controlsOpen = typeof controlsOpenByUrl[feed.url] === 'boolean' ? !!controlsOpenByUrl[feed.url] : true;
   const advancedControlsOpen = !!advancedControlsByUrl[feed.url];
 
   return (
     <>
-      <FeedColumnCoreActions feed={feed} isMatchColumn={isMatchColumn} />
+      <FeedColumnCoreActions />
 
       {isHydrated && controlsOpen ? (
         <Box
@@ -37,9 +32,9 @@ export function FeedColumnControlsPanel({ feed }: Props) {
             }
           }}
         >
-          <FeedColumnAiSettings feed={feed} />
-          <FeedColumnGeneralSettings feed={feed} />
-          {advancedControlsOpen ? <FeedColumnAdvancedSettings feed={feed} /> : null}
+          <FeedColumnAiSettings />
+          <FeedColumnGeneralSettings />
+          {advancedControlsOpen ? <FeedColumnAdvancedSettings /> : null}
         </Box>
       ) : null}
     </>

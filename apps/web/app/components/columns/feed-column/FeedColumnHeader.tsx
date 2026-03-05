@@ -4,17 +4,12 @@ import RedditIcon from '@mui/icons-material/Reddit';
 import RssFeedIcon from '@mui/icons-material/RssFeed';
 import SmartDisplayIcon from '@mui/icons-material/SmartDisplay';
 import { Chip, Stack, Typography } from '@mui/material';
-import type { FeedInfo } from '../../../store/types';
+import { useFeedColumnContext } from './context/useFeedColumnContext';
 import { COLUMN_COLOR_TOKENS, COLUMN_LAYOUT_TOKENS } from '../designTokens';
 
-type Props = {
-  feed: FeedInfo;
-  itemsCount: number;
-  accent: string;
-  fontScale: number;
-};
-
-export function FeedColumnHeader({ feed, itemsCount, accent, fontScale }: Props) {
+export function FeedColumnHeader() {
+  const { feed, itemsVisible, accent, fontScale } = useFeedColumnContext();
+  const itemsCount = itemsVisible.length;
   return (
     <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: COLUMN_LAYOUT_TOKENS.columnHeaderMarginBottom }}>
       <Typography
