@@ -22,7 +22,7 @@ export function NewsCardHeader() {
   } = useNewsCardContext();
 
   const { labels, vibeIcons, connected, fontScale, matchAccent } = view;
-  const { item, isPinnedNews, isDuplicateMatch } = state;
+  const { item, isPinnedNews } = state;
   const { onTogglePinnedNews, onShareNews, onCopyNews, onHideItem } = handlers;
   const { iconOnly, hasBodyBlock, actionSx, matchActionSx } = ui;
   const [shareAnchorEl, setShareAnchorEl] = useState<null | HTMLElement>(null);
@@ -43,21 +43,17 @@ export function NewsCardHeader() {
             {formatTime(item.publishedMs)}
           </Typography>
           {item.isMatch ? (
-            <Tooltip title={isDuplicateMatch ? labels.duplicatedMatch : labels.match}>
-              <Chip
-                size="small"
-                label={labels.match}
-                variant="outlined"
-                sx={{
-                  color: isDuplicateMatch ? '#ffb26b' : matchAccent,
-                  borderColor: isDuplicateMatch ? '#ffb26b' : matchAccent,
-                  fontWeight: 800,
-                  whiteSpace: 'nowrap',
-                  borderStyle: isDuplicateMatch ? 'dashed' : 'solid',
-                  bgcolor: isDuplicateMatch ? 'rgba(255,178,107,0.14)' : 'transparent'
-                }}
-              />
-            </Tooltip>
+            <Chip
+              size="small"
+              label={labels.match}
+              variant="outlined"
+              sx={{
+                color: matchAccent,
+                borderColor: matchAccent,
+                fontWeight: 800,
+                whiteSpace: 'nowrap'
+              }}
+            />
           ) : null}
         </Stack>
         <Stack direction="row" spacing={0.6} alignItems="center" sx={{ pr: 0.2 }}>

@@ -13,6 +13,7 @@ import type { NewsCardProps } from './news-card/newsCard.types';
 export const NewsCard = memo(function NewsCard({ view, state, handlers }: NewsCardProps) {
   const { item, summaryMode, researchMode } = state;
   const { hideAllResearch, hideAllSummaries, performanceMode, accent, soft, matchAccent } = view;
+  const duplicateMatch = item.isMatch && state.isDuplicateMatch;
 
   const hasSummaryBlock = !!item.summary && !hideAllSummaries;
   const hasResearchBlock = !!item.research && !hideAllResearch;
@@ -96,12 +97,17 @@ export const NewsCard = memo(function NewsCard({ view, state, handlers }: NewsCa
           background: performanceMode
             ? NEWS_CARD_COLOR_TOKENS.perfBackground
             : `linear-gradient(155deg, ${NEWS_CARD_COLOR_TOKENS.gradientStart}, ${NEWS_CARD_COLOR_TOKENS.gradientEnd}), radial-gradient(550px 180px at 0% 0%, ${soft}, transparent 72%), var(--news-card-overlay)`,
-          borderColor: item.isMatch ? matchAccent : `${accent}88`,
+          borderColor: duplicateMatch ? '#ffb26b' : (item.isMatch ? matchAccent : `${accent}88`),
+          borderStyle: duplicateMatch ? 'dashed' : 'solid',
           color: NEWS_CARD_COLOR_TOKENS.textMain,
           contentVisibility: 'auto',
           containIntrinsicSize: `${COLUMN_LAYOUT_TOKENS.newsCardIntrinsicHeightPx}px`,
           borderRadius: COLUMN_STYLE_TOKENS.newsCardRadius,
-          boxShadow: performanceMode ? 'none' : `${COLUMN_STYLE_TOKENS.newsCardShadowOffset} ${NEWS_CARD_COLOR_TOKENS.shadowColor}, inset 0 1px 0 ${NEWS_CARD_COLOR_TOKENS.insetHighlight}`
+          boxShadow: performanceMode
+            ? 'none'
+            : duplicateMatch
+              ? `0 0 0 1px rgba(255,178,107,0.32), ${COLUMN_STYLE_TOKENS.newsCardShadowOffset} ${NEWS_CARD_COLOR_TOKENS.shadowColor}, inset 0 1px 0 ${NEWS_CARD_COLOR_TOKENS.insetHighlight}`
+              : `${COLUMN_STYLE_TOKENS.newsCardShadowOffset} ${NEWS_CARD_COLOR_TOKENS.shadowColor}, inset 0 1px 0 ${NEWS_CARD_COLOR_TOKENS.insetHighlight}`
         }}
       >
         <div className="cardOrnamentLayer" aria-hidden="true">
