@@ -35,21 +35,28 @@ export function NewsCardHeader() {
   return (
     <>
       <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 0.9, pt: 0.35, px: 0.8 }}>
-        <Stack direction="row" spacing={0.8} alignItems="center">
-          <Typography variant="caption" sx={{ color: NEWS_CARD_COLOR_TOKENS.headerMuted }}>
+        <Stack direction="row" spacing={0.8} alignItems="center" sx={{ minWidth: 0 }}>
+          <Typography
+            variant="caption"
+            sx={{ color: NEWS_CARD_COLOR_TOKENS.headerMuted, whiteSpace: 'nowrap', flexShrink: 0 }}
+          >
             {formatTime(item.publishedMs)}
           </Typography>
           {item.isMatch ? (
-            <Chip
-              size="small"
-              label={isDuplicateMatch ? labels.duplicatedMatch : labels.match}
-              variant="outlined"
-              sx={{
-                color: isDuplicateMatch ? '#ffb26b' : matchAccent,
-                borderColor: isDuplicateMatch ? '#ffb26b' : matchAccent,
-                fontWeight: 800
-              }}
-            />
+            <Tooltip title={isDuplicateMatch ? labels.duplicatedMatch : labels.match}>
+              <Chip
+                size="small"
+                label={labels.match}
+                icon={isDuplicateMatch ? <ContentCopyIcon sx={{ fontSize: 13 }} /> : undefined}
+                variant="outlined"
+                sx={{
+                  color: isDuplicateMatch ? '#ffb26b' : matchAccent,
+                  borderColor: isDuplicateMatch ? '#ffb26b' : matchAccent,
+                  fontWeight: 800,
+                  whiteSpace: 'nowrap'
+                }}
+              />
+            </Tooltip>
           ) : null}
         </Stack>
         <Stack direction="row" spacing={0.6} alignItems="center" sx={{ pr: 0.2 }}>
