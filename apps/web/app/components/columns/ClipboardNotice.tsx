@@ -1,14 +1,11 @@
 'use client';
 
 import { Snackbar } from '@mui/material';
+import { useFeedColumnsContext } from './context/useFeedColumnsContext';
 
-type Props = {
-  open: boolean;
-  message: string;
-  onClose: () => void;
-};
-
-export function ClipboardNotice({ open, message, onClose }: Props) {
+export function ClipboardNotice() {
+  const { clipboard } = useFeedColumnsContext();
+  const { open, message, onClose } = clipboard;
   return (
     <Snackbar
       open={open}

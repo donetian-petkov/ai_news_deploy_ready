@@ -20,6 +20,11 @@ export type FeedColumnsContextValue = {
     summariesLoadingCount: number;
     summariesLoadingLabel: string;
   };
+  clipboard: {
+    open: boolean;
+    message: string;
+    onClose: () => void;
+  };
   view: FeedColumnViewModel;
   state: FeedColumnStateModel;
   handlers: FeedColumnHandlers;

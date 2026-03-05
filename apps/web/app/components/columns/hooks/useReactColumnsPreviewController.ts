@@ -254,6 +254,11 @@ export function useReactColumnsPreviewController({ wsUrl }: Args) {
         summariesLoadingCount,
         summariesLoadingLabel: labels.summariesLoading
       },
+      clipboard: {
+        open: clipboardNoticeOpen,
+        message: clipboardNotice || labels.linkCopied,
+        onClose: () => setClipboardNoticeOpen(false)
+      },
       view: viewModel,
       state: stateModel,
       handlers: handlersModel,
@@ -262,14 +267,10 @@ export function useReactColumnsPreviewController({ wsUrl }: Args) {
       onGridDrop,
       buildDragState
     }),
-    [buildDragState, connected, handlersModel, labels.disconnected, labels.live, labels.previewTitle, labels.summariesLoading, onGridDragOver, onGridDrop, renderedFeeds, stateModel, status, summariesLoadingCount, viewModel]
+    [buildDragState, clipboardNotice, clipboardNoticeOpen, connected, handlersModel, labels.disconnected, labels.linkCopied, labels.live, labels.previewTitle, labels.summariesLoading, onGridDragOver, onGridDrop, renderedFeeds, stateModel, status, summariesLoadingCount, viewModel]
   );
 
   return {
-    labels,
-    columnsContextValue,
-    clipboardNoticeOpen,
-    clipboardNotice,
-    setClipboardNoticeOpen
+    columnsContextValue
   };
 }

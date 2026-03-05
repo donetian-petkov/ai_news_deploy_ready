@@ -142,6 +142,7 @@ export function useTopMenuController() {
   const onOpenHelp = () => dispatch(setHelpOpen(true));
   const onCloseHelp = () => dispatch(setHelpOpen(false));
   const onDismissToast = (id: string) => dispatch(dismissToast(id));
+  const onCloseMobileDrawer = () => setMobileDrawerOpen(false);
   const onToggleHideAllResearch = () => dispatch(setHideAllResearch(!ui.hideAllResearch));
   const onToggleHideAllSummaries = () => dispatch(setHideAllSummaries(!ui.hideAllSummaries));
   const onChangeVibe = (nextVibe: TopMenuVibe) => dispatch(setAppearanceSettings({ vibe: nextVibe }));
@@ -267,6 +268,8 @@ export function useTopMenuController() {
     onCloseHelp,
     toasts,
     onDismissToast,
+    mobileDrawerOpen,
+    onCloseMobileDrawer,
     onScrollToColumns,
     onOpenHelp,
     onToggleMenu: toggleMenu,
@@ -282,9 +285,6 @@ export function useTopMenuController() {
   });
 
   return {
-    isMobile,
-    mobileDrawerOpen,
-    setMobileDrawerOpen,
     topbarInnerRef,
     contextValue
   };

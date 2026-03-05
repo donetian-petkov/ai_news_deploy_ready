@@ -14,16 +14,9 @@ import { TopMenuControlsPanel } from './TopMenuControlsPanel';
 import { FILTERED_FEED_URL } from '../../store/constants';
 import { useTopMenuContext } from './context/useTopMenuContext';
 
-type TopMenuMobileDrawerProps = {
-  open: boolean;
-  onClose: () => void;
-};
-
-export function TopMenuMobileDrawer({
-  open,
-  onClose
-}: TopMenuMobileDrawerProps) {
+export function TopMenuMobileDrawer() {
   const {
+    isMobile,
     labels,
     searchLabel,
     addStreamLabel,
@@ -40,8 +33,12 @@ export function TopMenuMobileDrawer({
     onToggleAllColumnControls,
     onToggleHideAllResearch,
     onToggleHideAllSummaries,
-    onReorderFeeds
+    onReorderFeeds,
+    mobileDrawer
   } = useTopMenuContext();
+  const { open, onClose } = mobileDrawer;
+
+  if (!isMobile) return null;
 
   return (
     <Drawer anchor="left" open={open} onClose={onClose} PaperProps={{ className: 'mobileDrawerPaper' }}>

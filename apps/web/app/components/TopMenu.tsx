@@ -10,9 +10,6 @@ import { useTopMenuController } from './top-menu/useTopMenuController';
 
 export default function TopMenu() {
   const {
-    isMobile,
-    mobileDrawerOpen,
-    setMobileDrawerOpen,
     topbarInnerRef,
     contextValue
   } = useTopMenuController();
@@ -26,12 +23,7 @@ export default function TopMenu() {
           <TopMenuDesktopSections />
         </div>
 
-        {isMobile ? (
-          <TopMenuMobileDrawer
-            open={mobileDrawerOpen}
-            onClose={() => setMobileDrawerOpen(false)}
-          />
-        ) : null}
+        <TopMenuMobileDrawer />
 
         <HelpDialog />
         <ToastStack />

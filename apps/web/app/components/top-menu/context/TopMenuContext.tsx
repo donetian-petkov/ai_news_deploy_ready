@@ -50,6 +50,10 @@ export type TopMenuContextValue = {
     toasts: TopMenuToast[];
     onDismiss: (id: string) => void;
   };
+  mobileDrawer: {
+    open: boolean;
+    onClose: () => void;
+  };
   onScrollToColumns: () => void;
   onOpenHelp: () => void;
   onToggleMenu: () => void;

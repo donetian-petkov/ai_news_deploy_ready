@@ -12,26 +12,15 @@ type Props = {
 };
 
 export default function ReactColumnsPreview({ wsUrl }: Props) {
-  const {
-    labels,
-    columnsContextValue,
-    clipboardNoticeOpen,
-    clipboardNotice,
-    setClipboardNoticeOpen
-  } = useReactColumnsPreviewController({ wsUrl });
+  const { columnsContextValue } = useReactColumnsPreviewController({ wsUrl });
 
   return (
     <Box className="container" sx={{ pt: 1, pb: 0.5 }}>
       <FeedColumnsProvider value={columnsContextValue}>
         <ReactColumnsHeader />
         <FeedColumnsGrid />
+        <ClipboardNotice />
       </FeedColumnsProvider>
-
-      <ClipboardNotice
-        open={clipboardNoticeOpen}
-        message={clipboardNotice || labels.linkCopied}
-        onClose={() => setClipboardNoticeOpen(false)}
-      />
     </Box>
   );
 }
