@@ -22,9 +22,10 @@ type Args = {
   };
   labels: Record<string, string>;
   connected: boolean;
+  status: string;
 };
 
-export function useFeedColumnViewModel({ ui, labels, connected }: Args) {
+export function useFeedColumnViewModel({ ui, labels, connected, status }: Args) {
   const fontScale = ui.fontSize === 'xl' ? 1.17 : ui.fontSize === 'lg' ? 1.09 : ui.fontSize === 'sm' ? 0.93 : 1;
   const resolvedVibe: VibeValue = (VIBE_LIST.includes(ui.vibe as VibeValue) ? ui.vibe : 'default') as VibeValue;
   const resolvedScheme: SchemeValue = (SCHEME_LIST.includes(ui.scheme as SchemeValue) ? ui.scheme : 'classic') as SchemeValue;
@@ -93,6 +94,10 @@ export function useFeedColumnViewModel({ ui, labels, connected }: Args) {
     send: labels.send
   }), [labels]);
 
+  const connectionStatus: FeedColumnViewModel['connectionStatus'] = connected
+    ? 'connected'
+    : (status === 'connecting' || status === 'error' ? status : 'disconnected');
+
   const viewModel = useMemo<FeedColumnViewModel>(() => ({
     palette,
     performanceMode: ui.performanceMode,
@@ -106,12 +111,13 @@ export function useFeedColumnViewModel({ ui, labels, connected }: Args) {
     buttonMode: ui.buttonMode,
     fontScale,
     connected,
+    connectionStatus,
     compactBtnSx,
     compactFormSx,
     labels,
     cardLabels,
     vibeIcons
-  }), [cardLabels, compactBtnSx, compactFormSx, connected, fontScale, labels, palette, ui.aiAvailable, ui.aiEnabled, ui.buttonMode, ui.hideAllResearch, ui.hideAllSummaries, ui.moodFilter, ui.performanceMode, ui.searchQuery, ui.typeFilter, vibeIcons]);
+  }), [cardLabels, compactBtnSx, compactFormSx, connected, connectionStatus, fontScale, labels, palette, ui.aiAvailable, ui.aiEnabled, ui.buttonMode, ui.hideAllResearch, ui.hideAllSummaries, ui.moodFilter, ui.performanceMode, ui.searchQuery, ui.typeFilter, vibeIcons]);
 
   return viewModel;
 }

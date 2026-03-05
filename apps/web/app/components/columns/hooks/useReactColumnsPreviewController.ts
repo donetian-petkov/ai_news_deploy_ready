@@ -219,6 +219,7 @@ export function useReactColumnsPreviewController({ wsUrl }: Args) {
     },
     labels,
     connected,
+    status,
     filteredColumnItems,
     itemsByFeed,
     visibleByFeed,

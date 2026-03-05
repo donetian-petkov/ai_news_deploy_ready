@@ -12,7 +12,7 @@ type Args = {
 
 export function useFeedColumnModel({ feed, columnIdx }: Args) {
   const { view, state } = useFeedColumnsContext();
-  const { palette, performanceMode, moodFilter, typeFilter, searchQuery, fontScale } = view;
+  const { palette, performanceMode, moodFilter, typeFilter, searchQuery, fontScale, connectionStatus } = view;
   const { filteredColumnItems, itemsByFeed, visibleByFeed } = state;
 
   const isMatchColumn = feed.url === FILTERED_FEED_URL || String(feed.label || '').toLowerCase().startsWith('filtered');
@@ -40,6 +40,7 @@ export function useFeedColumnModel({ feed, columnIdx }: Args) {
     fontScale,
     palette,
     performanceMode,
+    connectionStatus,
     items,
     itemsVisible,
     shownItems

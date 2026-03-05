@@ -98,6 +98,7 @@ export type FeedColumnViewModel = {
   buttonMode: 'icons' | 'text';
   fontScale: number;
   connected: boolean;
+  connectionStatus: 'connected' | 'connecting' | 'disconnected' | 'error';
   compactBtnSx: Record<string, unknown>;
   compactFormSx: Record<string, unknown>;
   labels: Record<string, string>;

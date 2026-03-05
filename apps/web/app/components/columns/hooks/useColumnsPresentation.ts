@@ -24,6 +24,7 @@ type Args = {
   };
   labels: Record<string, string>;
   connected: boolean;
+  status: string;
   filteredColumnItems: FeedColumnStateModel['filteredColumnItems'];
   itemsByFeed: FeedColumnStateModel['itemsByFeed'];
   visibleByFeed: FeedColumnStateModel['visibleByFeed'];
@@ -64,6 +65,7 @@ export function useColumnsPresentation({
   ui,
   labels,
   connected,
+  status,
   filteredColumnItems,
   itemsByFeed,
   visibleByFeed,
@@ -98,7 +100,7 @@ export function useColumnsPresentation({
   requestResearch,
   requestAsk
 }: Args) {
-  const viewModel = useFeedColumnViewModel({ ui, labels, connected });
+  const viewModel = useFeedColumnViewModel({ ui, labels, connected, status });
 
   const stateModel = useFeedColumnStateModel({
     filteredColumnItems,
