@@ -27,6 +27,9 @@ type Args = {
 };
 
 const DUPLICATE_MATCH_SIMILARITY_THRESHOLD = 0.9;
+const BULGARIAN_NOISE_STEMS = new Set<string>([
+  '\u0441\u043b\u0443\u0436\u0435\u0431\u043d' // служебн
+]);
 
 type TextVector = {
   counts: Map<string, number>;
@@ -41,20 +44,35 @@ type TextSignature = {
 
 function normalizedTokens(text: string): string[] {
   return String(text || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
+    .replace(/\u045d/g, '\u0438') // ѝ -> и
+    .replace(/\u0439/g, '\u0438') // й -> и
+    .replace(/\u044a/g, '\u0430') // ъ -> а
+    .replace(/\u044c/g, '') // ь -> ''
+    .replace(/\u044e/g, '\u0443') // ю -> у
+    .replace(/\u044f/g, '\u0430') // я -> а
     .replace(/https?:\/\/\S+/g, ' ')
     .replace(/[^a-z0-9\u0400-\u04ff\s]+/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
     .split(' ')
-    .filter(token => token.length > 1);
+    .map(token => token.trim())
+    .filter(token => token.length > 2)
+    .map(token => token.slice(0, Math.min(7, token.length)));
+}
+
+function primarySimilarityText(item: NewsItem): string {
+  const summary = String(item.summary || '').trim();
+  if (summary) return summary;
+  const research = String(item.research || '').trim();
+  if (research) return research;
+  return String(item.title || '').trim();
 }
 
 function toVector(item: NewsItem): TextVector {
-  const sourceText = [item.summary, item.research, item.title]
-    .map(value => String(value || '').trim())
-    .filter(Boolean)
-    .join(' ');
+  const sourceText = primarySimilarityText(item);
   const counts = new Map<string, number>();
   normalizedTokens(sourceText).forEach(token => {
     counts.set(token, (counts.get(token) || 0) + 1);
@@ -64,11 +82,12 @@ function toVector(item: NewsItem): TextVector {
 }
 
 function toTokenSet(item: NewsItem): Set<string> {
-  const sourceText = [item.summary, item.research, item.title]
-    .map(value => String(value || '').trim())
-    .filter(Boolean)
-    .join(' ');
-  return new Set(normalizedTokens(sourceText).filter(token => token.length >= 4));
+  const sourceText = primarySimilarityText(item);
+  return new Set(
+    normalizedTokens(sourceText)
+      .filter(token => token.length >= 4)
+      .filter(token => !BULGARIAN_NOISE_STEMS.has(token))
+  );
 }
 
 function cosineSimilarity(a: TextVector, b: TextVector): number {
@@ -90,6 +109,59 @@ function tokenOverlapSimilarity(a: Set<string>, b: Set<string>): number {
     if (larger.has(token)) intersection += 1;
   });
   return intersection / smaller.size;
+}
+
+function oneEditApart(a: string, b: string): boolean {
+  const lenA = a.length;
+  const lenB = b.length;
+  if (Math.abs(lenA - lenB) > 1) return false;
+
+  let i = 0;
+  let j = 0;
+  let edits = 0;
+  while (i < lenA && j < lenB) {
+    if (a[i] === b[j]) {
+      i += 1;
+      j += 1;
+      continue;
+    }
+
+    edits += 1;
+    if (edits > 1) return false;
+
+    if (lenA > lenB) {
+      i += 1;
+    } else if (lenB > lenA) {
+      j += 1;
+    } else {
+      i += 1;
+      j += 1;
+    }
+  }
+
+  if (i < lenA || j < lenB) edits += 1;
+  return edits <= 1;
+}
+
+function fuzzyTokenOverlapSimilarity(a: Set<string>, b: Set<string>): number {
+  if (!a.size || !b.size) return 0;
+  const [smaller, larger] = a.size <= b.size ? [Array.from(a), Array.from(b)] : [Array.from(b), Array.from(a)];
+  let matches = 0;
+
+  smaller.forEach(token => {
+    if (larger.includes(token)) {
+      matches += 1;
+      return;
+    }
+
+    const hasNear = larger.some(candidate => {
+      if (Math.abs(candidate.length - token.length) > 1) return false;
+      return oneEditApart(token, candidate);
+    });
+    if (hasNear) matches += 1;
+  });
+
+  return matches / smaller.length;
 }
 
 export function useReactColumnsPreviewController({ wsUrl }: Args) {
@@ -220,7 +292,7 @@ export function useReactColumnsPreviewController({ wsUrl }: Args) {
       return b.publishedMs - a.publishedMs;
     });
 
-    const duplicateFilteringEnabled = !ui.performanceMode && (ui.allBudget === 'standard' || ui.allBudget === 'high');
+    const duplicateFilteringEnabled = !ui.performanceMode && ui.allBudget !== 'low';
     if (!duplicateFilteringEnabled) {
       return {
         filteredColumnItems: sortedMatched,
@@ -242,7 +314,9 @@ export function useReactColumnsPreviewController({ wsUrl }: Args) {
         if (cosine >= DUPLICATE_MATCH_SIMILARITY_THRESHOLD) return true;
 
         const overlap = tokenOverlapSimilarity(signature.tokens, kept.tokens);
-        if (overlap < DUPLICATE_MATCH_SIMILARITY_THRESHOLD) return false;
+        const fuzzyOverlap = fuzzyTokenOverlapSimilarity(signature.tokens, kept.tokens);
+        const maxOverlap = Math.max(overlap, fuzzyOverlap);
+        if (maxOverlap < DUPLICATE_MATCH_SIMILARITY_THRESHOLD) return false;
 
         if (!signature.publishedMs || !kept.publishedMs) return true;
         const timeDeltaMs = Math.abs(signature.publishedMs - kept.publishedMs);
