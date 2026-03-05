@@ -33,6 +33,12 @@ type TextVector = {
   norm: number;
 };
 
+type TextSignature = {
+  vector: TextVector;
+  tokens: Set<string>;
+  publishedMs: number;
+};
+
 function normalizedTokens(text: string): string[] {
   return String(text || '')
     .toLowerCase()
@@ -45,7 +51,7 @@ function normalizedTokens(text: string): string[] {
 }
 
 function toVector(item: NewsItem): TextVector {
-  const sourceText = [item.summary, item.title, item.research]
+  const sourceText = [item.summary, item.research, item.title]
     .map(value => String(value || '').trim())
     .filter(Boolean)
     .join(' ');
@@ -57,6 +63,14 @@ function toVector(item: NewsItem): TextVector {
   return { counts, norm };
 }
 
+function toTokenSet(item: NewsItem): Set<string> {
+  const sourceText = [item.summary, item.research, item.title]
+    .map(value => String(value || '').trim())
+    .filter(Boolean)
+    .join(' ');
+  return new Set(normalizedTokens(sourceText).filter(token => token.length >= 4));
+}
+
 function cosineSimilarity(a: TextVector, b: TextVector): number {
   if (!a.norm || !b.norm) return 0;
   let dot = 0;
@@ -66,6 +80,16 @@ function cosineSimilarity(a: TextVector, b: TextVector): number {
     dot += count * other;
   });
   return dot / (a.norm * b.norm);
+}
+
+function tokenOverlapSimilarity(a: Set<string>, b: Set<string>): number {
+  if (!a.size || !b.size) return 0;
+  const [smaller, larger] = a.size <= b.size ? [a, b] : [b, a];
+  let intersection = 0;
+  smaller.forEach(token => {
+    if (larger.has(token)) intersection += 1;
+  });
+  return intersection / smaller.size;
 }
 
 export function useReactColumnsPreviewController({ wsUrl }: Args) {
@@ -205,16 +229,30 @@ export function useReactColumnsPreviewController({ wsUrl }: Args) {
     }
 
     const duplicateMap: Record<string, true> = {};
-    const keptVectors: TextVector[] = [];
+    const keptSignatures: TextSignature[] = [];
     const uniqueMatched: NewsItem[] = [];
     for (const item of sortedMatched) {
-      const vector = toVector(item);
-      const isDuplicate = keptVectors.some(kept => cosineSimilarity(vector, kept) >= DUPLICATE_MATCH_SIMILARITY_THRESHOLD);
+      const signature: TextSignature = {
+        vector: toVector(item),
+        tokens: toTokenSet(item),
+        publishedMs: Number(item.publishedMs || 0)
+      };
+      const isDuplicate = keptSignatures.some(kept => {
+        const cosine = cosineSimilarity(signature.vector, kept.vector);
+        if (cosine >= DUPLICATE_MATCH_SIMILARITY_THRESHOLD) return true;
+
+        const overlap = tokenOverlapSimilarity(signature.tokens, kept.tokens);
+        if (overlap < DUPLICATE_MATCH_SIMILARITY_THRESHOLD) return false;
+
+        if (!signature.publishedMs || !kept.publishedMs) return true;
+        const timeDeltaMs = Math.abs(signature.publishedMs - kept.publishedMs);
+        return timeDeltaMs <= 12 * 60 * 60 * 1000;
+      });
       if (isDuplicate) {
         duplicateMap[item.id] = true;
       } else {
         uniqueMatched.push(item);
-        keptVectors.push(vector);
+        keptSignatures.push(signature);
       }
     }
 
