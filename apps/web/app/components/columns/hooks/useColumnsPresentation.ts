@@ -26,6 +26,7 @@ type Args = {
   connected: boolean;
   status: string;
   filteredColumnItems: FeedColumnStateModel['filteredColumnItems'];
+  duplicateMatchById: FeedColumnStateModel['duplicateMatchById'];
   itemsByFeed: FeedColumnStateModel['itemsByFeed'];
   visibleByFeed: FeedColumnStateModel['visibleByFeed'];
   hydratedColumns: FeedColumnStateModel['hydratedColumns'];
@@ -67,6 +68,7 @@ export function useColumnsPresentation({
   connected,
   status,
   filteredColumnItems,
+  duplicateMatchById,
   itemsByFeed,
   visibleByFeed,
   hydratedColumns,
@@ -104,6 +106,7 @@ export function useColumnsPresentation({
 
   const stateModel = useFeedColumnStateModel({
     filteredColumnItems,
+    duplicateMatchById,
     itemsByFeed,
     visibleByFeed,
     hydratedColumns,

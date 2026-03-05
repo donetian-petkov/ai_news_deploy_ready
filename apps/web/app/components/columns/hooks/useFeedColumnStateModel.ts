@@ -8,6 +8,7 @@ type Args = FeedColumnStateModel;
 export function useFeedColumnStateModel(args: Args) {
   return useMemo<FeedColumnStateModel>(() => ({
     filteredColumnItems: args.filteredColumnItems,
+    duplicateMatchById: args.duplicateMatchById,
     itemsByFeed: args.itemsByFeed,
     visibleByFeed: args.visibleByFeed,
     hydratedColumns: args.hydratedColumns,
@@ -26,6 +27,7 @@ export function useFeedColumnStateModel(args: Args) {
     args.bodyModes,
     args.controlsOpenByUrl,
     args.deleteAgeByUrl,
+    args.duplicateMatchById,
     args.filteredColumnItems,
     args.hydratedColumns,
     args.itemsByFeed,

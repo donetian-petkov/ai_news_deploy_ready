@@ -32,6 +32,7 @@ export function FeedColumnItemsList() {
   } = view;
 
   const {
+    duplicateMatchById,
     summaryPendingById,
     researchPendingById,
     pinnedNewsById,
@@ -160,6 +161,7 @@ export function FeedColumnItemsList() {
 
         const cardState: NewsCardStateModel = {
           item: it,
+          isDuplicateMatch: !!duplicateMatchById[it.id],
           askState,
           summaryPending: !!summaryPendingById[it.id],
           researchPending: !!researchPendingById[it.id],

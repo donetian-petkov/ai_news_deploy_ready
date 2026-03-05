@@ -35,6 +35,7 @@ export type CardLabels = {
   pinNews: string;
   unpinNews: string;
   match: string;
+  duplicatedMatch: string;
   shareLink: string;
   shareOn: string;
   shareCopyLink: string;
@@ -108,6 +109,7 @@ export type FeedColumnViewModel = {
 
 export type FeedColumnStateModel = {
   filteredColumnItems: NewsItem[];
+  duplicateMatchById: Record<string, true>;
   itemsByFeed: Record<string, NewsItem[]>;
   visibleByFeed: Record<string, number>;
   hydratedColumns: Record<string, true>;

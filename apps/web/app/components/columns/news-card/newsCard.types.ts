@@ -20,6 +20,7 @@ export type NewsCardViewModel = {
 
 export type NewsCardStateModel = {
   item: NewsItem;
+  isDuplicateMatch: boolean;
   askState: FeedAskState;
   summaryPending: boolean;
   researchPending: boolean;

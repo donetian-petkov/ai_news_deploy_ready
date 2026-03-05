@@ -63,6 +63,7 @@ export function useFeedColumnViewModel({ ui, labels, connected, status }: Args) 
     pinNews: labels.pinNews,
     unpinNews: labels.unpinNews,
     match: labels.match,
+    duplicatedMatch: labels.duplicatedMatch || labels.match,
     shareLink: labels.shareLink,
     shareOn: labels.shareOn,
     shareCopyLink: labels.shareCopyLink,

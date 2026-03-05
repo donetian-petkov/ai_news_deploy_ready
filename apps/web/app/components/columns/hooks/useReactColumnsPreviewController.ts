@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAppDispatch } from '../../../store/hooks';
 import { FILTERED_FEED_URL } from '../../../store/constants';
+import type { NewsItem } from '../../../store/types';
 import { startWsConnection, stopWsConnection } from '../../../store/wsClient';
 import {
   type SchemeValue,
@@ -24,6 +25,48 @@ import { useColumnsPresentation } from './useColumnsPresentation';
 type Args = {
   wsUrl: string;
 };
+
+const DUPLICATE_MATCH_SIMILARITY_THRESHOLD = 0.9;
+
+type TextVector = {
+  counts: Map<string, number>;
+  norm: number;
+};
+
+function normalizedTokens(text: string): string[] {
+  return String(text || '')
+    .toLowerCase()
+    .replace(/https?:\/\/\S+/g, ' ')
+    .replace(/[^a-z0-9\u0400-\u04ff\s]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .split(' ')
+    .filter(token => token.length > 1);
+}
+
+function toVector(item: NewsItem): TextVector {
+  const sourceText = [item.summary, item.title, item.research]
+    .map(value => String(value || '').trim())
+    .filter(Boolean)
+    .join(' ');
+  const counts = new Map<string, number>();
+  normalizedTokens(sourceText).forEach(token => {
+    counts.set(token, (counts.get(token) || 0) + 1);
+  });
+  const norm = Math.sqrt(Array.from(counts.values()).reduce((sum, value) => sum + value * value, 0));
+  return { counts, norm };
+}
+
+function cosineSimilarity(a: TextVector, b: TextVector): number {
+  if (!a.norm || !b.norm) return 0;
+  let dot = 0;
+  a.counts.forEach((count, token) => {
+    const other = b.counts.get(token);
+    if (!other) return;
+    dot += count * other;
+  });
+  return dot / (a.norm * b.norm);
+}
 
 export function useReactColumnsPreviewController({ wsUrl }: Args) {
   const { t } = useTranslation();
@@ -134,7 +177,7 @@ export function useReactColumnsPreviewController({ wsUrl }: Args) {
     };
   }, [itemsByFeed, renderedFeeds, summaryPendingById, ui.aiAvailable, ui.aiEnabled]);
 
-  const filteredColumnItems = useMemo(() => {
+  const { filteredColumnItems, duplicateMatchById } = useMemo(() => {
     const all = Object.values(itemsByFeed).flatMap(items => Array.isArray(items) ? items : []);
     const map = new Map<string, (typeof all)[number]>();
 
@@ -146,13 +189,40 @@ export function useReactColumnsPreviewController({ wsUrl }: Args) {
       }
     });
 
-    return Array.from(map.values()).sort((a, b) => {
+    const sortedMatched = Array.from(map.values()).sort((a, b) => {
       const aPinned = !!pinnedNewsById[a.id];
       const bPinned = !!pinnedNewsById[b.id];
       if (aPinned !== bPinned) return aPinned ? -1 : 1;
       return b.publishedMs - a.publishedMs;
     });
-  }, [itemsByFeed, pinnedNewsById]);
+
+    const duplicateFilteringEnabled = !ui.performanceMode && (ui.allBudget === 'standard' || ui.allBudget === 'high');
+    if (!duplicateFilteringEnabled) {
+      return {
+        filteredColumnItems: sortedMatched,
+        duplicateMatchById: {} as Record<string, true>
+      };
+    }
+
+    const duplicateMap: Record<string, true> = {};
+    const keptVectors: TextVector[] = [];
+    const uniqueMatched: NewsItem[] = [];
+    for (const item of sortedMatched) {
+      const vector = toVector(item);
+      const isDuplicate = keptVectors.some(kept => cosineSimilarity(vector, kept) >= DUPLICATE_MATCH_SIMILARITY_THRESHOLD);
+      if (isDuplicate) {
+        duplicateMap[item.id] = true;
+      } else {
+        uniqueMatched.push(item);
+        keptVectors.push(vector);
+      }
+    }
+
+    return {
+      filteredColumnItems: uniqueMatched,
+      duplicateMatchById: duplicateMap
+    };
+  }, [itemsByFeed, pinnedNewsById, ui.allBudget, ui.performanceMode]);
 
   const { onGridDragOver, onGridDrop, buildDragState, columnNodesRef } = useColumnDragDrop({
     dispatch,
@@ -221,6 +291,7 @@ export function useReactColumnsPreviewController({ wsUrl }: Args) {
     connected,
     status,
     filteredColumnItems,
+    duplicateMatchById,
     itemsByFeed,
     visibleByFeed,
     hydratedColumns,
