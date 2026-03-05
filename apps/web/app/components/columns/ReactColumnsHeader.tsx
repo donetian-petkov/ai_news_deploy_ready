@@ -12,8 +12,14 @@ export function ReactColumnsHeader() {
     connected,
     status,
     summariesLoadingCount,
-    summariesLoadingLabel
+    summariesLoadingLabel,
+    summariesLoadingItems
   } = header;
+  const tooltipLines = summariesLoadingItems.slice(0, 8);
+  const hasMore = summariesLoadingItems.length > tooltipLines.length;
+  const summariesTitle = tooltipLines.length
+    ? ['Currently loading summaries for:', ...tooltipLines.map((line, idx) => `${idx + 1}. ${line}`), hasMore ? `...and ${summariesLoadingItems.length - tooltipLines.length} more` : ''].filter(Boolean).join('\n')
+    : '';
 
   return (
     <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.25 }}>
@@ -27,6 +33,7 @@ export function ReactColumnsHeader() {
             label={`${summariesLoadingLabel}: ${summariesLoadingCount}`}
             color="info"
             variant="outlined"
+            title={summariesTitle}
           />
         ) : null}
         <Chip

@@ -102,25 +102,32 @@ export function useReactColumnsPreviewController({ wsUrl }: Args) {
     }));
   }, [feeds, itemsByFeed, orderByUrl]);
 
-  const summariesLoadingCount = useMemo(() => {
-    if (!ui.aiEnabled || !ui.aiAvailable) return 0;
+  const summariesLoading = useMemo(() => {
+    if (!ui.aiEnabled || !ui.aiAvailable) return { count: 0, items: [] as string[] };
 
     const summaryEnabledFeeds = renderedFeeds.filter(feed =>
       feed.url !== FILTERED_FEED_URL && !!feed.summaryEnabled
     );
-    if (!summaryEnabledFeeds.length) return 0;
+    if (!summaryEnabledFeeds.length) return { count: 0, items: [] as string[] };
 
     let missingSummaryCount = 0;
+    const items: string[] = [];
     for (const feed of summaryEnabledFeeds) {
       const feedItems = Array.isArray(itemsByFeed[feed.url]) ? itemsByFeed[feed.url] : [];
       for (const item of feedItems) {
         if (!String(item.summary || '').trim()) {
           missingSummaryCount += 1;
+          const title = String(item.title || '').trim() || item.id;
+          const pending = !!summaryPendingById[item.id];
+          items.push(`${pending ? '(pending) ' : ''}[${feed.label}] ${title}`);
         }
       }
     }
 
-    return Math.max(missingSummaryCount, Object.keys(summaryPendingById).length);
+    return {
+      count: Math.max(missingSummaryCount, Object.keys(summaryPendingById).length),
+      items
+    };
   }, [itemsByFeed, renderedFeeds, summaryPendingById, ui.aiAvailable, ui.aiEnabled]);
 
   const filteredColumnItems = useMemo(() => {
@@ -251,8 +258,9 @@ export function useReactColumnsPreviewController({ wsUrl }: Args) {
         disconnectedLabel: labels.disconnected,
         connected,
         status,
-        summariesLoadingCount,
-        summariesLoadingLabel: labels.summariesLoading
+        summariesLoadingCount: summariesLoading.count,
+        summariesLoadingLabel: labels.summariesLoading,
+        summariesLoadingItems: summariesLoading.items
       },
       clipboard: {
         open: clipboardNoticeOpen,
@@ -267,7 +275,7 @@ export function useReactColumnsPreviewController({ wsUrl }: Args) {
       onGridDrop,
       buildDragState
     }),
-    [buildDragState, clipboardNotice, clipboardNoticeOpen, connected, handlersModel, labels.disconnected, labels.linkCopied, labels.live, labels.previewTitle, labels.summariesLoading, onGridDragOver, onGridDrop, renderedFeeds, stateModel, status, summariesLoadingCount, viewModel]
+    [buildDragState, clipboardNotice, clipboardNoticeOpen, connected, handlersModel, labels.disconnected, labels.linkCopied, labels.live, labels.previewTitle, labels.summariesLoading, onGridDragOver, onGridDrop, renderedFeeds, stateModel, status, summariesLoading.count, summariesLoading.items, viewModel]
   );
 
   return {
