@@ -6,8 +6,13 @@ import './styles/vibe-ornaments.css';
 import Providers from './providers';
 
 export const metadata: Metadata = {
-  title: 'AI News Next + Node',
-  description: 'Live AI news stream with Next.js frontend and Node backend',
+  title: 'Live News Stream',
+  description: 'Live AI news stream with summaries, research, and ask-agent workflows',
+  icons: {
+    icon: [{ url: '/favicon.svg', type: 'image/svg+xml' }],
+    shortcut: '/favicon.svg',
+    apple: '/favicon.svg'
+  }
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
