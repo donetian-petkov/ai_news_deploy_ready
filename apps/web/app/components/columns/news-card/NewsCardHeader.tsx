@@ -47,13 +47,14 @@ export function NewsCardHeader() {
               <Chip
                 size="small"
                 label={labels.match}
-                icon={isDuplicateMatch ? <ContentCopyIcon sx={{ fontSize: 13 }} /> : undefined}
                 variant="outlined"
                 sx={{
                   color: isDuplicateMatch ? '#ffb26b' : matchAccent,
                   borderColor: isDuplicateMatch ? '#ffb26b' : matchAccent,
                   fontWeight: 800,
-                  whiteSpace: 'nowrap'
+                  whiteSpace: 'nowrap',
+                  borderStyle: isDuplicateMatch ? 'dashed' : 'solid',
+                  bgcolor: isDuplicateMatch ? 'rgba(255,178,107,0.14)' : 'transparent'
                 }}
               />
             </Tooltip>
