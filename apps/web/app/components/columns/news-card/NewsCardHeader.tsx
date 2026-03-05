@@ -22,7 +22,7 @@ export function NewsCardHeader() {
   } = useNewsCardContext();
 
   const { labels, vibeIcons, connected, fontScale, matchAccent } = view;
-  const { item, isPinnedNews } = state;
+  const { item, isPinnedNews, isDuplicateMatch } = state;
   const { onTogglePinnedNews, onShareNews, onCopyNews, onHideItem } = handlers;
   const { iconOnly, hasBodyBlock, actionSx, matchActionSx } = ui;
   const [shareAnchorEl, setShareAnchorEl] = useState<null | HTMLElement>(null);
@@ -45,13 +45,22 @@ export function NewsCardHeader() {
           {item.isMatch ? (
             <Chip
               size="small"
-              label={labels.match}
+              label={isDuplicateMatch ? labels.duplicatedMatch : labels.match}
               variant="outlined"
               sx={{
                 color: matchAccent,
                 borderColor: matchAccent,
                 fontWeight: 800,
-                whiteSpace: 'nowrap'
+                whiteSpace: isDuplicateMatch ? 'pre-line' : 'nowrap',
+                height: isDuplicateMatch ? 'auto' : undefined,
+                '& .MuiChip-label': isDuplicateMatch
+                  ? {
+                    px: 1.1,
+                    py: 0.2,
+                    lineHeight: 1.05,
+                    textAlign: 'center'
+                  }
+                  : undefined
               }}
             />
           ) : null}
