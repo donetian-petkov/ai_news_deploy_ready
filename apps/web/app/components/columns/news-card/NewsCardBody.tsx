@@ -2,7 +2,7 @@
 
 import { Box, Button, Chip, CircularProgress, Typography } from '@mui/material';
 import { NEWS_CARD_COLOR_TOKENS } from '../designTokens';
-import { useNewsCardContext } from './context/NewsCardContext';
+import { useNewsCardContext } from './context/useNewsCardContext';
 
 export function NewsCardBody() {
   const {
@@ -24,6 +24,7 @@ export function NewsCardBody() {
   const {
     item,
     showAutoResearching,
+    showAutoSummarizing,
     summaryPending,
     researchPending,
     summaryMode,
@@ -44,6 +45,16 @@ export function NewsCardBody() {
         <Chip
           size="small"
           label={labels.generatingSummary}
+          icon={<CircularProgress size={11} color="inherit" />}
+          variant="outlined"
+          sx={{ mb: 0.8, color: NEWS_CARD_COLOR_TOKENS.summaryPendingText, borderColor: NEWS_CARD_COLOR_TOKENS.summaryPendingBorder }}
+        />
+      ) : null}
+
+      {!summaryPending && showAutoSummarizing ? (
+        <Chip
+          size="small"
+          label={labels.autoSummarizing}
           icon={<CircularProgress size={11} color="inherit" />}
           variant="outlined"
           sx={{ mb: 0.8, color: NEWS_CARD_COLOR_TOKENS.summaryPendingText, borderColor: NEWS_CARD_COLOR_TOKENS.summaryPendingBorder }}

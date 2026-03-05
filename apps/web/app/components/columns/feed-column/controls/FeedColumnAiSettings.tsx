@@ -2,7 +2,7 @@
 
 import { Alert, Button, FormControl, MenuItem, Select } from '@mui/material';
 import type { BudgetMode, FeedInfo } from '../../../../store/types';
-import { useFeedColumnsContext } from '../../context/FeedColumnsContext';
+import { useFeedColumnsContext } from '../../context/useFeedColumnsContext';
 
 type Props = {
   feed: FeedInfo;

@@ -101,6 +101,26 @@ describe('wsClient', () => {
       aiProvider: 'claude',
       summaryLang: 'bg',
       researchLang: 'en',
+      summaryModel: 'claude-3-5-haiku-latest',
+      researchModel: 'claude-3-7-sonnet-latest',
+      askModel: 'claude-3-5-haiku-latest',
+      availableModels: {
+        openai: {
+          summary: ['gpt-4.1-nano'],
+          research: ['gpt-4.1-mini'],
+          ask: ['gpt-4.1-nano']
+        },
+        claude: {
+          summary: ['claude-3-5-haiku-latest'],
+          research: ['claude-3-7-sonnet-latest'],
+          ask: ['claude-3-5-haiku-latest']
+        },
+        openrouter: {
+          summary: ['openai/gpt-4.1-mini'],
+          research: ['openai/gpt-4.1'],
+          ask: ['openai/gpt-4.1-mini']
+        }
+      },
       feeds: [
         { url: 'https://a', label: 'A', kind: 'rss', intervalSec: 45 },
         { url: '__filtered__', label: 'Filtered', kind: 'rss', intervalSec: 45 }
@@ -150,7 +170,15 @@ describe('wsClient', () => {
       aiEnabled: true,
       aiProvider: 'claude',
       summaryLang: 'bg',
-      researchLang: 'en'
+      researchLang: 'en',
+      summaryModel: 'claude-3-5-haiku-latest',
+      researchModel: 'claude-3-7-sonnet-latest',
+      askModel: 'claude-3-5-haiku-latest',
+      availableModels: {
+        claude: {
+          summary: ['claude-3-5-haiku-latest']
+        }
+      }
     });
     expect(actions.find(a => a.type === 'aiUsage/setUsage')?.payload).toEqual({
       inputTokens: 10,

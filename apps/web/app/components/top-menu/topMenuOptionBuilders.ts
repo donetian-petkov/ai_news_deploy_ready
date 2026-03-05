@@ -27,6 +27,17 @@ export function buildResearchLangOptions(): Option<'bg' | 'en'>[] {
   ];
 }
 
+export function buildAiModelOptions(models: string[], selected?: string): Option<string>[] {
+  const values = new Set<string>();
+  if (selected && selected.trim()) values.add(selected.trim());
+  for (const model of models) {
+    const value = String(model || '').trim();
+    if (!value) continue;
+    values.add(value);
+  }
+  return Array.from(values).map(value => ({ value, label: value }));
+}
+
 export function buildMoodOptions(labels: Record<string, string>): Option<`${NewsMoodFilterValue}`>[] {
   return [
     { value: NewsMoodFilterValue.All, label: labels.moodAll },

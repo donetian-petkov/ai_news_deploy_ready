@@ -73,6 +73,7 @@ export function useFeedColumnViewModel({ ui, labels, connected }: Args) {
     copyNews: labels.copyNews,
     hideNews: labels.hideNews,
     generatingSummary: labels.generatingSummary,
+    autoSummarizing: labels.autoSummarizing,
     summary: labels.summary,
     researching: labels.researching,
     research: labels.research,

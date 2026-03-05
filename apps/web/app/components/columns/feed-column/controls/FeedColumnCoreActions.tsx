@@ -6,19 +6,20 @@ import PushPinOutlinedIcon from '@mui/icons-material/PushPinOutlined';
 import TuneIcon from '@mui/icons-material/Tune';
 import { Button, Stack } from '@mui/material';
 import type { FeedInfo } from '../../../../store/types';
-import { useFeedColumnsContext } from '../../context/FeedColumnsContext';
+import { useFeedColumnsContext } from '../../context/useFeedColumnsContext';
 
 type Props = {
   feed: FeedInfo;
   isMatchColumn: boolean;
-  pinned: boolean;
-  controlsOpen: boolean;
 };
 
-export function FeedColumnCoreActions({ feed, isMatchColumn, pinned, controlsOpen }: Props) {
-  const { view, handlers } = useFeedColumnsContext();
+export function FeedColumnCoreActions({ feed, isMatchColumn }: Props) {
+  const { view, state, handlers } = useFeedColumnsContext();
   const { connected, compactBtnSx, labels } = view;
+  const { pinnedByUrl, controlsOpenByUrl } = state;
   const { onTogglePinnedColumn, onRemoveFeed, onToggleFeedControls } = handlers;
+  const pinned = !!pinnedByUrl[feed.url];
+  const controlsOpen = typeof controlsOpenByUrl[feed.url] === 'boolean' ? !!controlsOpenByUrl[feed.url] : true;
 
   return (
     <Stack direction="row" spacing={1} sx={{ mb: 1.1 }} flexWrap="wrap">

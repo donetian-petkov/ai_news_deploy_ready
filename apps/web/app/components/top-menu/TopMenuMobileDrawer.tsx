@@ -1,6 +1,5 @@
 'use client';
 
-import type { ReactNode } from 'react';
 import { Box, Button, Divider, Drawer, IconButton, Stack, Typography } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
@@ -8,28 +7,24 @@ import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import CloseIcon from '@mui/icons-material/Close';
 import SearchIcon from '@mui/icons-material/Search';
 import TuneIcon from '@mui/icons-material/Tune';
+import { AddStreamSection } from './AddStreamSection';
 import { QuickVibeSelect } from './QuickVibeSelect';
+import { SearchSection } from './SearchSection';
+import { TopMenuControlsPanel } from './TopMenuControlsPanel';
 import { FILTERED_FEED_URL } from '../../store/constants';
-import { useTopMenuContext } from './context/TopMenuContext';
+import { useTopMenuContext } from './context/useTopMenuContext';
 
 type TopMenuMobileDrawerProps = {
   open: boolean;
-  searchSection: ReactNode;
-  addStreamSection: ReactNode;
-  controlsPanel: ReactNode;
   onClose: () => void;
 };
 
 export function TopMenuMobileDrawer({
   open,
-  searchSection,
-  addStreamSection,
-  controlsPanel,
   onClose
 }: TopMenuMobileDrawerProps) {
   const {
     labels,
-    vibe,
     searchLabel,
     addStreamLabel,
     controlsLabel,
@@ -39,7 +34,6 @@ export function TopMenuMobileDrawer({
     orderedFeeds,
     searchVisible,
     addStreamVisible,
-    onChangeVibe,
     onToggleSearch,
     onToggleAddStream,
     onToggleControls,
@@ -60,7 +54,7 @@ export function TopMenuMobileDrawer({
       <Divider className="mobileDrawerDivider" />
       <Box className="mobileDrawerBody">
         <Stack className="mobileDrawerVibeRow" direction="row" spacing={1} alignItems="center">
-          <QuickVibeSelect value={vibe} labels={labels} fullWidth onChange={onChangeVibe} />
+          <QuickVibeSelect fullWidth />
         </Stack>
         <Stack spacing={1}>
           <Button variant="outlined" onClick={onToggleSearch} startIcon={<SearchIcon fontSize="small" />}>
@@ -135,9 +129,9 @@ export function TopMenuMobileDrawer({
             })}
           </Stack>
         </Box>
-        {searchVisible ? searchSection : null}
-        {addStreamVisible ? addStreamSection : null}
-        {controlsPanel}
+        {searchVisible ? <SearchSection /> : null}
+        {addStreamVisible ? <AddStreamSection /> : null}
+        <TopMenuControlsPanel />
       </Box>
     </Drawer>
   );

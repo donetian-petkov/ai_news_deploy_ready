@@ -1,19 +1,11 @@
 'use client';
 
 import { Alert, Box } from '@mui/material';
+import { useTopMenuContext } from './context/useTopMenuContext';
 
-type ToastItem = {
-  id: string;
-  kind: 'success' | 'error' | 'warning' | 'info';
-  message: string;
-};
-
-type ToastStackProps = {
-  toasts: ToastItem[];
-  onDismiss: (id: string) => void;
-};
-
-export function ToastStack({ toasts, onDismiss }: ToastStackProps) {
+export function ToastStack() {
+  const { toast } = useTopMenuContext();
+  const { toasts, onDismiss } = toast;
   if (!toasts.length) return null;
 
   return (

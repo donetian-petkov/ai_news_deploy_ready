@@ -1,31 +1,20 @@
 'use client';
 
-import type { ReactNode } from 'react';
+import { AddStreamSection } from './AddStreamSection';
+import { SearchSection } from './SearchSection';
+import { TopMenuControlsPanel } from './TopMenuControlsPanel';
+import { useTopMenuContext } from './context/useTopMenuContext';
 
-type Props = {
-  showDesktopBody: boolean;
-  searchVisible: boolean;
-  addStreamVisible: boolean;
-  searchSection: ReactNode;
-  addStreamSection: ReactNode;
-  controlsPanel: ReactNode;
-};
+export function TopMenuDesktopSections() {
+  const { showDesktopBody, searchVisible, addStreamVisible } = useTopMenuContext();
 
-export function TopMenuDesktopSections({
-  showDesktopBody,
-  searchVisible,
-  addStreamVisible,
-  searchSection,
-  addStreamSection,
-  controlsPanel
-}: Props) {
   if (!showDesktopBody) return null;
 
   return (
     <>
-      {searchVisible ? searchSection : null}
-      {addStreamVisible ? addStreamSection : null}
-      {controlsPanel}
+      {searchVisible ? <SearchSection /> : null}
+      {addStreamVisible ? <AddStreamSection /> : null}
+      <TopMenuControlsPanel />
     </>
   );
 }

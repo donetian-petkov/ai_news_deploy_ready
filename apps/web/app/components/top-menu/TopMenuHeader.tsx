@@ -13,21 +13,13 @@ import { DateTimePill } from './DateTimePill';
 import { StatusPills } from './StatusPills';
 import { QuickVibeSelect } from './QuickVibeSelect';
 import { TopMenuActionButton } from './TopMenuActionButton';
-import { useTopMenuContext } from './context/TopMenuContext';
+import { useTopMenuContext } from './context/useTopMenuContext';
 
 export function TopMenuHeader() {
   const {
     labels,
     topHintAsButtons,
     isMobile,
-    connected,
-    status,
-    totalTokens,
-    language,
-    timezone,
-    dateFormat,
-    menuItemsAsIcons,
-    vibe,
     searchLabel,
     addStreamLabel,
     controlsLabel,
@@ -43,18 +35,13 @@ export function TopMenuHeader() {
     onToggleControls,
     onToggleAllColumnControls,
     onToggleHideAllResearch,
-    onToggleHideAllSummaries,
-    onChangeVibe,
-    onPlayToggleSound
+    onToggleHideAllSummaries
   } = useTopMenuContext();
 
   return (
     <div className="headerRow">
       <Box className="headerLeft">
         <Stack direction="row" alignItems="center" spacing={1.1} className="headerTitleRow">
-          {!isMobile ? (
-            <DateTimePill language={language} timezone={timezone} dateFormat={dateFormat} />
-          ) : null}
           <Typography id="appTitle" className="appTitleText" component="h1">
             {labels.title}
           </Typography>
@@ -81,11 +68,17 @@ export function TopMenuHeader() {
         )}
       </Box>
 
+      {!isMobile ? (
+        <Box className="headerCenter">
+          <DateTimePill />
+        </Box>
+      ) : null}
+
       {isMobile ? (
         <Stack className="headerRight mobileTopActions mobileTopActionsStack" spacing={1.1}>
           <Stack className="mobileStatusRow" direction="row" spacing={1} alignItems="center" justifyContent="space-between">
             <Stack className="mobileStatusPills" direction="row" spacing={0.8}>
-              <StatusPills connected={connected} status={status} totalTokens={totalTokens} />
+              <StatusPills />
             </Stack>
             <IconButton
               id="menuToggle"
@@ -99,15 +92,15 @@ export function TopMenuHeader() {
         </Stack>
       ) : (
         <Stack className="headerRight" direction="row" flexWrap="wrap" gap={1.1} alignItems="center">
-          <StatusPills connected={connected} status={status} totalTokens={totalTokens} />
-          <QuickVibeSelect value={vibe} labels={labels} onChange={onChangeVibe} />
-          <TopMenuActionButton id="quickSearchBtn" label={searchLabel} icon={<SearchIcon fontSize="small" />} menuItemsAsIcons={menuItemsAsIcons} onClick={onToggleSearch} onBeforeClick={onPlayToggleSound} />
-          <TopMenuActionButton id="quickAddStreamBtn" label={addStreamLabel} icon={<AddIcon fontSize="small" />} menuItemsAsIcons={menuItemsAsIcons} onClick={onToggleAddStream} onBeforeClick={onPlayToggleSound} />
-          <TopMenuActionButton id="controlsToggle" label={controlsLabel} icon={<TuneIcon fontSize="small" />} menuItemsAsIcons={menuItemsAsIcons} onClick={onToggleControls} onBeforeClick={onPlayToggleSound} />
-          <TopMenuActionButton id="allColControlsToggle" label={allColumnLabel} icon={<GridViewIcon fontSize="small" />} menuItemsAsIcons={menuItemsAsIcons} onClick={onToggleAllColumnControls} onBeforeClick={onPlayToggleSound} />
-          <TopMenuActionButton id="hideAllResearchBtn" label={hideAllResearchLabel} icon={<AutoAwesomeIcon fontSize="small" />} menuItemsAsIcons={menuItemsAsIcons} onClick={onToggleHideAllResearch} onBeforeClick={onPlayToggleSound} />
-          <TopMenuActionButton id="hideAllSummariesBtn" label={hideAllSummariesLabel} icon={<SummarizeIcon fontSize="small" />} menuItemsAsIcons={menuItemsAsIcons} onClick={onToggleHideAllSummaries} onBeforeClick={onPlayToggleSound} />
-          <TopMenuActionButton id="menuToggle" label={menuLabel} icon={<MenuIcon fontSize="small" />} menuItemsAsIcons={menuItemsAsIcons} onClick={onToggleMenu} onBeforeClick={onPlayToggleSound} />
+          <StatusPills />
+          <QuickVibeSelect />
+          <TopMenuActionButton id="quickSearchBtn" label={searchLabel} icon={<SearchIcon fontSize="small" />} onClick={onToggleSearch} />
+          <TopMenuActionButton id="quickAddStreamBtn" label={addStreamLabel} icon={<AddIcon fontSize="small" />} onClick={onToggleAddStream} />
+          <TopMenuActionButton id="controlsToggle" label={controlsLabel} icon={<TuneIcon fontSize="small" />} onClick={onToggleControls} />
+          <TopMenuActionButton id="allColControlsToggle" label={allColumnLabel} icon={<GridViewIcon fontSize="small" />} onClick={onToggleAllColumnControls} />
+          <TopMenuActionButton id="hideAllResearchBtn" label={hideAllResearchLabel} icon={<AutoAwesomeIcon fontSize="small" />} onClick={onToggleHideAllResearch} />
+          <TopMenuActionButton id="hideAllSummariesBtn" label={hideAllSummariesLabel} icon={<SummarizeIcon fontSize="small" />} onClick={onToggleHideAllSummaries} />
+          <TopMenuActionButton id="menuToggle" label={menuLabel} icon={<MenuIcon fontSize="small" />} onClick={onToggleMenu} />
         </Stack>
       )}
     </div>

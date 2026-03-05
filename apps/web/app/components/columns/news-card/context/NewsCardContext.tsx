@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext } from 'react';
+import { createContext } from 'react';
 import type { SxProps, Theme } from '@mui/material';
 import type { NewsCardHandlers, NewsCardStateModel, NewsCardViewModel } from '../newsCard.types';
 
@@ -22,11 +22,3 @@ export type NewsCardContextValue = {
 };
 
 export const NewsCardContext = createContext<NewsCardContextValue | null>(null);
-
-export function useNewsCardContext(): NewsCardContextValue {
-  const ctx = useContext(NewsCardContext);
-  if (!ctx) {
-    throw new Error('useNewsCardContext must be used within NewsCardProvider');
-  }
-  return ctx;
-}

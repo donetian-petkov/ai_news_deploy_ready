@@ -3,46 +3,27 @@
 import type { ChangeEvent } from 'react';
 import { UiButton } from '../design-system/UiButton';
 import { UiSelect } from '../design-system/UiSelect';
+import { useTopMenuContext } from './context/useTopMenuContext';
 
-type DeleteAge = 'yesterday' | 'week' | 'month' | 'year';
+export function TopMenuControlsQuickRow() {
+  const {
+    labels,
+    controls: {
+      model: { deleteAgeAll, quickRow },
+      actions
+    }
+  } = useTopMenuContext();
 
-type TopMenuControlsQuickRowProps = {
-  labels: Record<string, string>;
-  aiAvailable: boolean;
-  aiEnabled: boolean;
-  deleteAgeAll: DeleteAge;
-  onDeleteAgeAllChange: (age: DeleteAge) => void;
-  onResetAllNewest: () => void;
-  onShowMoreNewsAll: () => void;
-  onResetNewsShownAll: () => void;
-  onDeleteOldAllColumns: () => void;
-  onToggleAiEnabled: (enabled: boolean) => void;
-  onOpenHelp: () => void;
-};
-
-export function TopMenuControlsQuickRow({
-  labels,
-  aiAvailable,
-  aiEnabled,
-  deleteAgeAll,
-  onDeleteAgeAllChange,
-  onResetAllNewest,
-  onShowMoreNewsAll,
-  onResetNewsShownAll,
-  onDeleteOldAllColumns,
-  onToggleAiEnabled,
-  onOpenHelp
-}: TopMenuControlsQuickRowProps) {
-  const onDeleteAgeChange = (e: ChangeEvent<HTMLSelectElement>) => onDeleteAgeAllChange(e.target.value as DeleteAge);
+  const onDeleteAgeChange = (e: ChangeEvent<HTMLSelectElement>) => actions.onDeleteAgeAllChange(e.target.value as typeof deleteAgeAll);
 
   return (
     <div className="controlsCompactRow controlsRow">
       <div className="controlGroup">
-        <UiButton id="resetBtn" onClick={onResetAllNewest}>{labels.resetAllToNewestTen}</UiButton>
-        <UiButton id="showMoreNewsAllBtn" onClick={onShowMoreNewsAll}>
+        <UiButton id="resetBtn" onClick={actions.onResetAllNewest}>{labels.resetAllToNewestTen}</UiButton>
+        <UiButton id="showMoreNewsAllBtn" onClick={actions.onShowMoreNewsAll}>
           {labels.showMoreNewsAll}
         </UiButton>
-        <UiButton id="resetNewsShownAllBtn" onClick={onResetNewsShownAll}>
+        <UiButton id="resetNewsShownAllBtn" onClick={actions.onResetNewsShownAll}>
           {labels.resetNewsShownAll}
         </UiButton>
         <UiSelect
@@ -53,21 +34,21 @@ export function TopMenuControlsQuickRow({
           value={deleteAgeAll}
           onChange={onDeleteAgeChange}
         >
-            <option value="yesterday">{labels.ageYesterday}</option>
-            <option value="week">{labels.agePastWeek}</option>
-            <option value="month">{labels.agePastMonth}</option>
-            <option value="year">{labels.agePastYear}</option>
+          <option value="yesterday">{labels.ageYesterday}</option>
+          <option value="week">{labels.agePastWeek}</option>
+          <option value="month">{labels.agePastMonth}</option>
+          <option value="year">{labels.agePastYear}</option>
         </UiSelect>
-        <UiButton id="deleteAgeAllBtn" variant="danger" onClick={onDeleteOldAllColumns}>{labels.deleteOldAllColumns}</UiButton>
+        <UiButton id="deleteAgeAllBtn" variant="danger" onClick={actions.onDeleteOldAllColumns}>{labels.deleteOldAllColumns}</UiButton>
         <label className="checkbox" title="Embeddings matching, AI dedupe, summaries, research">
-          {aiAvailable ? (
+          {quickRow.aiAvailable ? (
             <>
               <input
                 id="aiEnabled"
                 type="checkbox"
-                checked={aiEnabled}
-                disabled={!aiAvailable}
-                onChange={e => onToggleAiEnabled(e.target.checked)}
+                checked={quickRow.aiEnabled}
+                disabled={!quickRow.aiAvailable}
+                onChange={e => actions.onToggleAiEnabled(e.target.checked)}
               />
               <span id="aiEnabledLabel">{labels.aiEnabledLabel}</span>
             </>
@@ -75,7 +56,7 @@ export function TopMenuControlsQuickRow({
             <span id="aiUnavailableLabel">{labels.aiUnavailable}</span>
           )}
         </label>
-        <UiButton id="helpBtn" onClick={onOpenHelp}>{labels.helpTitle}</UiButton>
+        <UiButton id="helpBtn" onClick={actions.onOpenHelp}>{labels.helpTitle}</UiButton>
       </div>
     </div>
   );

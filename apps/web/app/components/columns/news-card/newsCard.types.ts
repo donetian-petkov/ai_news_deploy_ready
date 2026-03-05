@@ -24,6 +24,7 @@ export type NewsCardStateModel = {
   summaryPending: boolean;
   researchPending: boolean;
   isPinnedNews: boolean;
+  showAutoSummarizing: boolean;
   showAutoResearching: boolean;
   summaryMode: BodyMode;
   summaryLong: boolean;

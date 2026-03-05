@@ -5,6 +5,8 @@ Put README images in this folder using these filenames:
 - vibe-video-game-columns.png
 - vibe-scifi-columns.png
 - vibe-fantasy-columns.png
+- vibe-cyber-witch-columns.png
+- performance-mode-view.png
 - top-controls-expanded.png
 - news-card-research-cyberwitch.png
 - news-card-ask-agent.png

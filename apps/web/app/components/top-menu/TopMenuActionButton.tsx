@@ -2,13 +2,14 @@
 
 import type { ReactNode } from 'react';
 import { Button, Tooltip } from '@mui/material';
+import { useTopMenuContext } from './context/useTopMenuContext';
 
 type TopMenuActionButtonProps = {
   id: string;
   label: string;
   icon: ReactNode;
-  menuItemsAsIcons: boolean;
   onClick: () => void;
+  menuItemsAsIcons?: boolean;
   onBeforeClick?: () => void;
 };
 
@@ -20,12 +21,16 @@ export function TopMenuActionButton({
   onClick,
   onBeforeClick
 }: TopMenuActionButtonProps) {
+  const topMenu = useTopMenuContext();
+  const iconMode = menuItemsAsIcons ?? topMenu.menuItemsAsIcons;
+  const beforeClick = onBeforeClick ?? topMenu.onPlayToggleSound;
+
   const onActionClick = () => {
-    onBeforeClick?.();
+    beforeClick?.();
     onClick();
   };
 
-  if (!menuItemsAsIcons) {
+  if (!iconMode) {
     return (
       <Button id={id} className="btn ghost" size="small" variant="outlined" type="button" onClick={onActionClick}>
         {label}

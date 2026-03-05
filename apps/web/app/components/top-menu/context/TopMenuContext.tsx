@@ -1,13 +1,21 @@
 'use client';
 
-import { createContext, useContext } from 'react';
+import { createContext } from 'react';
 import type { FeedInfo } from '../../../store/types';
 import type { TopMenuVibe } from '../topMenu.services';
+import type { TopMenuAddStreamModel, TopMenuControlsActions, TopMenuControlsModel, TopMenuSearchModel } from '../types';
+
+type TopMenuToast = {
+  id: string;
+  kind: 'success' | 'error' | 'warning' | 'info';
+  message: string;
+};
 
 export type TopMenuContextValue = {
   labels: Record<string, string>;
   topHintAsButtons: boolean;
   isMobile: boolean;
+  showDesktopBody: boolean;
   connected: boolean;
   status: string;
   totalTokens: number;
@@ -26,6 +34,22 @@ export type TopMenuContextValue = {
   orderedFeeds: FeedInfo[];
   searchVisible: boolean;
   addStreamVisible: boolean;
+  search: TopMenuSearchModel;
+  addStream: TopMenuAddStreamModel;
+  controls: {
+    model: TopMenuControlsModel;
+    actions: TopMenuControlsActions;
+  };
+  help: {
+    open: boolean;
+    title: string;
+    closeLabel: string;
+    onClose: () => void;
+  };
+  toast: {
+    toasts: TopMenuToast[];
+    onDismiss: (id: string) => void;
+  };
   onScrollToColumns: () => void;
   onOpenHelp: () => void;
   onToggleMenu: () => void;
@@ -41,11 +65,3 @@ export type TopMenuContextValue = {
 };
 
 export const TopMenuContext = createContext<TopMenuContextValue | null>(null);
-
-export function useTopMenuContext(): TopMenuContextValue {
-  const ctx = useContext(TopMenuContext);
-  if (!ctx) {
-    throw new Error('useTopMenuContext must be used within TopMenuProvider');
-  }
-  return ctx;
-}

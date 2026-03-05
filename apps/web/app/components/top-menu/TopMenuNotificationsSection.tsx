@@ -1,22 +1,16 @@
 'use client';
 
-type NotifyMode = 'matched' | 'matched_pinned' | 'pinned' | 'all';
+import { useTopMenuContext } from './context/useTopMenuContext';
 
-type TopMenuNotificationsSectionProps = {
-  labels: Record<string, string>;
-  notifyEnabled: boolean;
-  notifyMode: NotifyMode;
-  onNotifyEnabledChange: (enabled: boolean) => void;
-  onNotifyModeChange: (mode: NotifyMode) => void;
-};
+export function TopMenuNotificationsSection() {
+  const {
+    labels,
+    controls: {
+      model: { notifications },
+      actions
+    }
+  } = useTopMenuContext();
 
-export function TopMenuNotificationsSection({
-  labels,
-  notifyEnabled,
-  notifyMode,
-  onNotifyEnabledChange,
-  onNotifyModeChange
-}: TopMenuNotificationsSectionProps) {
   return (
     <details className="controlSection" open>
       <summary id="notificationsSummary">{labels.notificationsSummary}</summary>
@@ -25,8 +19,8 @@ export function TopMenuNotificationsSection({
           <input
             id="notifyEnabled"
             type="checkbox"
-            checked={notifyEnabled}
-            onChange={e => onNotifyEnabledChange(e.target.checked)}
+            checked={notifications.notifyEnabled}
+            onChange={e => actions.onNotifyEnabledChange(e.target.checked)}
           />
           <span id="notifyEnabledLabel">{labels.notifyEnabledLabel}</span>
         </label>
@@ -35,8 +29,8 @@ export function TopMenuNotificationsSection({
           <select
             id="notifyMode"
             className="select"
-            value={notifyMode}
-            onChange={e => onNotifyModeChange(e.target.value as NotifyMode)}
+            value={notifications.notifyMode}
+            onChange={e => actions.onNotifyModeChange(e.target.value as typeof notifications.notifyMode)}
           >
             <option value="matched">{labels.notifyOnlyMatched}</option>
             <option value="matched_pinned">{labels.notifyMatchedPinned}</option>

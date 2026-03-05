@@ -1,12 +1,9 @@
 'use client';
 
 import { Alert } from '@mui/material';
-import {
-  type MoodFilter,
-  type TypeFilter
-} from '../../store/types';
 import { TopMenuSelectField } from './TopMenuSelectField';
 import {
+  buildAiModelOptions,
   buildAiProviderOptions,
   buildBudgetOptions,
   buildMoodOptions,
@@ -14,47 +11,19 @@ import {
   buildSummaryLangOptions,
   buildTypeOptions
 } from './topMenuOptionBuilders';
+import { useTopMenuContext } from './context/useTopMenuContext';
 
-type AiProvider = 'openai' | 'claude' | 'openrouter';
-type SummaryLang = 'bilingual' | 'bg' | 'en';
-type ResearchLang = 'bg' | 'en';
-type Budget = 'mixed' | 'low' | 'standard' | 'high';
+export function TopMenuAiSettingsSection() {
+  const {
+    labels,
+    controls: {
+      model: { aiSettings },
+      actions
+    }
+  } = useTopMenuContext();
 
-type TopMenuAiSettingsSectionProps = {
-  labels: Record<string, string>;
-  aiAvailable: boolean;
-  performanceMode: boolean;
-  aiProvider: AiProvider;
-  summaryLang: SummaryLang;
-  researchLang: ResearchLang;
-  moodFilter: MoodFilter;
-  typeFilter: TypeFilter;
-  allBudget: Budget;
-  onChangeAiProvider: (provider: AiProvider) => void;
-  onSummaryLangChange: (lang: SummaryLang) => void;
-  onResearchLangChange: (lang: ResearchLang) => void;
-  onMoodFilterChange: (value: MoodFilter) => void;
-  onTypeFilterChange: (value: TypeFilter) => void;
-  onApplyAllBudget: (budget: 'low' | 'standard' | 'high') => void;
-};
+  const providerModels = aiSettings.availableModels[aiSettings.aiProvider];
 
-export function TopMenuAiSettingsSection({
-  labels,
-  aiAvailable,
-  performanceMode,
-  aiProvider,
-  summaryLang,
-  researchLang,
-  moodFilter,
-  typeFilter,
-  allBudget,
-  onChangeAiProvider,
-  onSummaryLangChange,
-  onResearchLangChange,
-  onMoodFilterChange,
-  onTypeFilterChange,
-  onApplyAllBudget
-}: TopMenuAiSettingsSectionProps) {
   return (
     <details className="controlSection" open>
       <summary id="aiSettingsSummary">{labels.aiSettingsSummary}</summary>
@@ -62,45 +31,72 @@ export function TopMenuAiSettingsSection({
         <TopMenuSelectField
           id="aiProviderSelect"
           label={labels.aiProvider}
-          value={aiProvider}
-          onChange={onChangeAiProvider}
+          value={aiSettings.aiProvider}
+          onChange={actions.onChangeAiProvider}
           options={buildAiProviderOptions(labels)}
         />
 
         <TopMenuSelectField
           id="summaryLang"
           label={labels.summaryPrefix}
-          value={summaryLang}
-          disabled={!aiAvailable}
-          onChange={onSummaryLangChange}
+          value={aiSettings.summaryLang}
+          disabled={!aiSettings.aiAvailable}
+          onChange={actions.onSummaryLangChange}
           options={buildSummaryLangOptions()}
         />
 
         <TopMenuSelectField
           id="researchLang"
           label={labels.researchPrefix}
-          value={researchLang}
-          disabled={!aiAvailable}
-          onChange={onResearchLangChange}
+          value={aiSettings.researchLang}
+          disabled={!aiSettings.aiAvailable}
+          onChange={actions.onResearchLangChange}
           options={buildResearchLangOptions()}
         />
 
-        {!performanceMode ? (
+        <TopMenuSelectField
+          id="summaryModel"
+          label={labels.summaryModelPrefix}
+          value={aiSettings.summaryModel}
+          disabled={!aiSettings.aiAvailable}
+          onChange={actions.onSummaryModelChange}
+          options={buildAiModelOptions(providerModels.summary, aiSettings.summaryModel)}
+        />
+
+        <TopMenuSelectField
+          id="researchModel"
+          label={labels.researchModelPrefix}
+          value={aiSettings.researchModel}
+          disabled={!aiSettings.aiAvailable}
+          onChange={actions.onResearchModelChange}
+          options={buildAiModelOptions(providerModels.research, aiSettings.researchModel)}
+        />
+
+        <TopMenuSelectField
+          id="askModel"
+          label={labels.askModelPrefix}
+          value={aiSettings.askModel}
+          disabled={!aiSettings.aiAvailable}
+          onChange={actions.onAskModelChange}
+          options={buildAiModelOptions(providerModels.ask, aiSettings.askModel)}
+        />
+
+        {!aiSettings.performanceMode ? (
           <>
             <TopMenuSelectField
               id="moodFilter"
               label={labels.moodFilter}
-              value={moodFilter}
-              disabled={!aiAvailable}
-              onChange={onMoodFilterChange}
+              value={aiSettings.moodFilter}
+              disabled={!aiSettings.aiAvailable}
+              onChange={actions.onMoodFilterChange}
               options={buildMoodOptions(labels)}
             />
             <TopMenuSelectField
               id="typeFilter"
               label={labels.typeFilter}
-              value={typeFilter}
-              disabled={!aiAvailable}
-              onChange={onTypeFilterChange}
+              value={aiSettings.typeFilter}
+              disabled={!aiSettings.aiAvailable}
+              onChange={actions.onTypeFilterChange}
               options={buildTypeOptions(labels)}
             />
           </>
@@ -114,15 +110,15 @@ export function TopMenuAiSettingsSection({
           id="allBudgetSelect"
           title="Apply one budget to all columns"
           label={labels.allBudgetPrefix}
-          value={allBudget}
-          disabled={!aiAvailable}
+          value={aiSettings.allBudget}
+          disabled={!aiSettings.aiAvailable}
           onChange={budget => {
-            if (budget !== 'mixed') onApplyAllBudget(budget);
+            if (budget !== 'mixed') actions.onApplyAllBudget(budget);
           }}
           options={buildBudgetOptions(labels)}
         />
 
-        {!aiAvailable ? (
+        {!aiSettings.aiAvailable ? (
           <Alert severity="info" sx={{ py: 0 }}>
             {labels.aiUnavailable}
           </Alert>

@@ -5,11 +5,13 @@ import { FILTERED_FEED_URL } from '../../store/constants';
 import type { FeedInfo } from '../../store/types';
 import type { TopMenuContextValue } from './context/TopMenuContext';
 import type { TopMenuVibe } from './topMenu.services';
+import type { TopMenuAddStreamModel, TopMenuControlsActions, TopMenuControlsModel, TopMenuSearchModel } from './types';
 
 type Args = {
   labels: Record<string, string>;
   topHintAsButtons: boolean;
   isMobile: boolean;
+  showDesktopBody: boolean;
   connected: boolean;
   status: string;
   totalTokens: number;
@@ -27,6 +29,16 @@ type Args = {
   allColumnControlsHidden: boolean;
   feeds: FeedInfo[];
   orderByUrl: string[];
+  search: TopMenuSearchModel;
+  addStream: TopMenuAddStreamModel;
+  controlsModel: TopMenuControlsModel;
+  controlsActions: TopMenuControlsActions;
+  helpOpen: boolean;
+  helpTitle: string;
+  helpCloseLabel: string;
+  onCloseHelp: () => void;
+  toasts: Array<{ id: string; kind: 'success' | 'error' | 'warning' | 'info'; message: string }>;
+  onDismissToast: (id: string) => void;
   onScrollToColumns: () => void;
   onOpenHelp: () => void;
   onToggleMenu: () => void;
@@ -45,6 +57,7 @@ export function useTopMenuViewModel({
   labels,
   topHintAsButtons,
   isMobile,
+  showDesktopBody,
   connected,
   status,
   totalTokens,
@@ -62,6 +75,16 @@ export function useTopMenuViewModel({
   allColumnControlsHidden,
   feeds,
   orderByUrl,
+  search,
+  addStream,
+  controlsModel,
+  controlsActions,
+  helpOpen,
+  helpTitle,
+  helpCloseLabel,
+  onCloseHelp,
+  toasts,
+  onDismissToast,
   onScrollToColumns,
   onOpenHelp,
   onToggleMenu,
@@ -99,6 +122,7 @@ export function useTopMenuViewModel({
     labels,
     topHintAsButtons,
     isMobile,
+    showDesktopBody,
     connected,
     status,
     totalTokens,
@@ -117,6 +141,22 @@ export function useTopMenuViewModel({
     orderedFeeds,
     searchVisible,
     addStreamVisible,
+    search,
+    addStream,
+    controls: {
+      model: controlsModel,
+      actions: controlsActions
+    },
+    help: {
+      open: helpOpen,
+      title: helpTitle,
+      closeLabel: helpCloseLabel,
+      onClose: onCloseHelp
+    },
+    toast: {
+      toasts,
+      onDismiss: onDismissToast
+    },
     onScrollToColumns,
     onOpenHelp,
     onToggleMenu,
@@ -129,15 +169,9 @@ export function useTopMenuViewModel({
     onChangeVibe,
     onPlayToggleSound,
     onReorderFeeds
-  }), [addStreamLabel, addStreamVisible, allColumnLabel, connected, controlsLabel, dateFormat, hideAllResearch, hideAllSummaries, isMobile, labels, language, menuItemsAsIcons, menuLabel, onChangeVibe, onOpenHelp, onPlayToggleSound, onReorderFeeds, onScrollToColumns, onToggleAddStream, onToggleAllColumnControls, onToggleControls, onToggleHideAllResearch, onToggleHideAllSummaries, onToggleMenu, onToggleSearch, orderedFeeds, searchLabel, searchVisible, status, timezone, topHintAsButtons, totalTokens, vibe]);
+  }), [addStream, addStreamLabel, addStreamVisible, allColumnLabel, connected, controlsActions, controlsLabel, controlsModel, dateFormat, helpCloseLabel, helpOpen, helpTitle, hideAllResearch, hideAllSummaries, isMobile, labels, language, menuItemsAsIcons, menuLabel, onChangeVibe, onCloseHelp, onDismissToast, onOpenHelp, onPlayToggleSound, onReorderFeeds, onScrollToColumns, onToggleAddStream, onToggleAllColumnControls, onToggleControls, onToggleHideAllResearch, onToggleHideAllSummaries, onToggleMenu, onToggleSearch, orderedFeeds, search, searchLabel, searchVisible, showDesktopBody, status, timezone, toasts, topHintAsButtons, totalTokens, vibe]);
 
   return {
-    searchLabel,
-    addStreamLabel,
-    controlsLabel,
-    allColumnLabel,
-    menuLabel,
-    orderedFeeds,
     contextValue
   };
 }

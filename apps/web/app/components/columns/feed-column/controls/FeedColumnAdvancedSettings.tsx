@@ -3,17 +3,17 @@
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import { Button, FormControl, MenuItem, Select, Stack } from '@mui/material';
 import type { FeedInfo } from '../../../../store/types';
-import { useFeedColumnsContext } from '../../context/FeedColumnsContext';
+import { useFeedColumnsContext } from '../../context/useFeedColumnsContext';
 
 type Props = {
   feed: FeedInfo;
-  deleteAge: 'yesterday' | 'week' | 'month' | 'year';
 };
 
-export function FeedColumnAdvancedSettings({ feed, deleteAge }: Props) {
-  const { view, handlers } = useFeedColumnsContext();
+export function FeedColumnAdvancedSettings({ feed }: Props) {
+  const { view, state, handlers } = useFeedColumnsContext();
   const { compactBtnSx, compactFormSx, labels } = view;
   const { onSetDeleteAge, onRemoveOldInFeed } = handlers;
+  const deleteAge = state.deleteAgeByUrl[feed.url] || 'week';
 
   return (
     <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ gridColumn: '1 / -1' }}>

@@ -6,9 +6,10 @@ import type { FeedInfo, NewsItem } from '../../../store/types';
 import type { BodyMode, FeedAskState } from '../reactColumns.types';
 import { collapseText, compactResearch, extractConfidence } from '../reactColumns.utils';
 import { NewsCard } from '../NewsCard';
-import { useFeedColumnsContext } from '../context/FeedColumnsContext';
+import { useFeedColumnsContext } from '../context/useFeedColumnsContext';
 import { COLUMN_COLOR_TOKENS, COLUMN_LAYOUT_TOKENS } from '../designTokens';
 import type { NewsCardHandlers, NewsCardStateModel, NewsCardViewModel } from '../news-card/newsCard.types';
+import { askKey, bodyKey, cssEscape, getDefaultAskState, type PendingScrollTarget } from './feedColumnItems.utils';
 
 type Props = {
   feed: FeedInfo;
@@ -18,36 +19,7 @@ type Props = {
   isMatchColumn: boolean;
   accent: string;
   soft: string;
-  isHydrated: boolean;
 };
-
-function askKey(it: NewsItem): string {
-  return `${it.feedUrl}::${it.id}`;
-}
-
-function bodyKey(it: NewsItem, kind: 'summary' | 'research'): string {
-  return `${it.feedUrl}::${it.id}::${kind}`;
-}
-
-function getDefaultAskState(): FeedAskState {
-  return {
-    open: false,
-    draft: '',
-    pending: false,
-    remaining: 5,
-    messages: []
-  };
-}
-
-type PendingScrollTarget =
-  | { mode: 'news'; newsId: string }
-  | { mode: 'top' };
-
-function cssEscape(value: string): string {
-  const esc = (globalThis as { CSS?: { escape?: (input: string) => string } }).CSS?.escape;
-  if (typeof esc === 'function') return esc(value);
-  return value.replace(/["\\]/g, '\\$&');
-}
 
 export function FeedColumnItemsList({
   feed,
@@ -56,8 +28,7 @@ export function FeedColumnItemsList({
   shownItems,
   isMatchColumn,
   accent,
-  soft,
-  isHydrated
+  soft
 }: Props) {
   const { view, state, handlers } = useFeedColumnsContext();
 
@@ -82,8 +53,10 @@ export function FeedColumnItemsList({
     researchPendingById,
     pinnedNewsById,
     askByItem,
-    bodyModes
+    bodyModes,
+    hydratedColumns
   } = state;
+  const isHydrated = !!hydratedColumns[feed.url];
 
   const {
     getBodyMode,
@@ -198,6 +171,9 @@ export function FeedColumnItemsList({
         const researchText = researchMode === 'collapsed'
           ? compactResearch(it.research || '')
           : String(it.research || '');
+        const hasSummaryText = String(it.summary || '').trim().length > 0;
+        const hasResearchText = String(it.research || '').trim().length > 0;
+        const researchInProgressOrVisible = !!researchPendingById[it.id] || hasResearchText;
 
         const cardState: NewsCardStateModel = {
           item: it,
@@ -205,6 +181,13 @@ export function FeedColumnItemsList({
           summaryPending: !!summaryPendingById[it.id],
           researchPending: !!researchPendingById[it.id],
           isPinnedNews: !!pinnedNewsById[it.id],
+          showAutoSummarizing: aiAvailable
+            && feed.summaryEnabled
+            && aiEnabled
+            && !hasSummaryText
+            && !summaryPendingById[it.id]
+            && !hideAllSummaries
+            && !researchInProgressOrVisible,
           showAutoResearching: aiAvailable && feed.researchEnabled && aiEnabled && !it.research && !researchPendingById[it.id] && !hideAllResearch,
           summaryMode,
           summaryLong,

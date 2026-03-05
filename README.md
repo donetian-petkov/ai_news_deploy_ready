@@ -76,6 +76,15 @@ Fantasy vibe:
 
 ![Fantasy vibe columns](./docs/screenshots/vibe-fantasy-columns.png)
 
+Cyber Witch vibe:
+
+![Cyber Witch vibe columns](./docs/screenshots/vibe-cyber-witch-columns.png)
+
+### Performance Mode
+Performance mode with reduced visual effects for lower render overhead:
+
+![Performance mode view](./docs/screenshots/performance-mode-view.png)
+
 ### Top Controls (expanded settings)
 Expanded top controls panel with AI/appearance sections:
 
@@ -101,6 +110,8 @@ Store screenshots in `docs/screenshots/` with these exact names:
 - `vibe-video-game-columns.png`
 - `vibe-scifi-columns.png`
 - `vibe-fantasy-columns.png`
+- `vibe-cyber-witch-columns.png`
+- `performance-mode-view.png`
 - `top-controls-expanded.png`
 - `news-card-research-cyberwitch.png`
 - `news-card-ask-agent.png`

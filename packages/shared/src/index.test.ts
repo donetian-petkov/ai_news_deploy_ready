@@ -41,6 +41,18 @@ describe('shared clientMsgSchema', () => {
     expect(clientMsgSchema.safeParse({ type: 'set_research_lang', lang: 'de' }).success).toBe(false);
   });
 
+  it('accepts model update payloads', () => {
+    expect(clientMsgSchema.safeParse({
+      type: 'set_ai_models',
+      summaryModel: 'gpt-4.1-nano'
+    }).success).toBe(true);
+    expect(clientMsgSchema.safeParse({
+      type: 'set_ai_models',
+      researchModel: 'gpt-4.1-mini',
+      askModel: 'gpt-4.1-nano'
+    }).success).toBe(true);
+  });
+
   it('accepts ask-agent research modes and rejects invalid mode', () => {
     const ok = clientMsgSchema.safeParse({
       type: 'ask_agent_item',

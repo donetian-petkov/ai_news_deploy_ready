@@ -220,7 +220,7 @@ const newsSlice = createSlice({
       let idx = -1;
       if (q) {
         for (let i = a.messages.length - 1; i >= 0; i--) {
-          if (a.messages[i].q === q && !a.messages[i].a && !a.messages[i].error) {
+          if (a.messages[i].q === q && !a.messages[i].a) {
             idx = i;
             break;
           }

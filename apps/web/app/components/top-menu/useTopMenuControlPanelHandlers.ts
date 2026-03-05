@@ -54,6 +54,24 @@ export function useTopMenuControlPanelHandlers({
       const ok = sendWsMessage({ type: 'set_research_lang', lang });
       if (ok) dispatch(setAiSettings({ researchLang: lang }));
     },
+    onSummaryModelChange: (model: string) => {
+      const next = String(model || '').trim();
+      if (!next) return;
+      const ok = sendWsMessage({ type: 'set_ai_models', summaryModel: next });
+      if (ok) dispatch(setAiSettings({ summaryModel: next }));
+    },
+    onResearchModelChange: (model: string) => {
+      const next = String(model || '').trim();
+      if (!next) return;
+      const ok = sendWsMessage({ type: 'set_ai_models', researchModel: next });
+      if (ok) dispatch(setAiSettings({ researchModel: next }));
+    },
+    onAskModelChange: (model: string) => {
+      const next = String(model || '').trim();
+      if (!next) return;
+      const ok = sendWsMessage({ type: 'set_ai_models', askModel: next });
+      if (ok) dispatch(setAiSettings({ askModel: next }));
+    },
     onMoodFilterChange: (value: RootState['ui']['moodFilter']) => dispatch(setMoodFilter(value)),
     onTypeFilterChange: (value: RootState['ui']['typeFilter']) => dispatch(setTypeFilter(value)),
     onApplyAllBudget: applyAllBudget,

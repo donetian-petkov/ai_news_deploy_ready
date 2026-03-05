@@ -11,7 +11,7 @@ import MusicNoteIcon from '@mui/icons-material/MusicNote';
 import { Box, Button, Chip, Link as MuiLink, Menu, MenuItem, Stack, Tooltip, Typography } from '@mui/material';
 import { formatTime } from '../reactColumns.utils';
 import { NEWS_CARD_COLOR_TOKENS } from '../designTokens';
-import { useNewsCardContext } from './context/NewsCardContext';
+import { useNewsCardContext } from './context/useNewsCardContext';
 
 export function NewsCardHeader() {
   const {

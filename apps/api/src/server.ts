@@ -161,6 +161,11 @@ type NewsInternal = News & {
   __linkText?: string; // extracted article text
 };
 
+type AiModelKind = 'summary' | 'research' | 'ask';
+type AiModelSelection = Record<AiModelKind, string>;
+type ProviderModelOptions = Record<AiModelKind, string[]>;
+type ModelOptionsByProvider = Record<AIProvider, ProviderModelOptions>;
+
 type Config = {
   type: 'config';
   keywords: string[];
@@ -171,6 +176,10 @@ type Config = {
 
   summaryLang: SummaryLang;
   researchLang: ResearchLang;
+  summaryModel: string;
+  researchModel: string;
+  askModel: string;
+  availableModels: ModelOptionsByProvider;
 
   matchThreshold: number;
   dedupeThreshold: number;
@@ -294,6 +303,11 @@ const OPENAI_RESEARCH_MODEL =
   process.env.RESEARCH_MODEL ||
   'gpt-4.1-mini';
 
+const OPENAI_ASK_MODEL =
+  process.env.OPENAI_ASK_MODEL ||
+  process.env.ASK_MODEL ||
+  'gpt-4.1-nano';
+
 const CLAUDE_SUMMARY_MODEL =
   process.env.CLAUDE_SUMMARY_MODEL ||
   process.env.SUMMARY_MODEL ||
@@ -303,6 +317,11 @@ const CLAUDE_RESEARCH_MODEL =
   process.env.CLAUDE_RESEARCH_MODEL ||
   process.env.RESEARCH_MODEL ||
   'claude-3-7-sonnet-latest';
+
+const CLAUDE_ASK_MODEL =
+  process.env.CLAUDE_ASK_MODEL ||
+  process.env.ASK_MODEL ||
+  'claude-3-5-haiku-latest';
 
 const OPENROUTER_SUMMARY_MODEL =
   process.env.OPENROUTER_SUMMARY_MODEL ||
@@ -314,8 +333,111 @@ const OPENROUTER_RESEARCH_MODEL =
   process.env.RESEARCH_MODEL ||
   'openai/gpt-4.1';
 
+const OPENROUTER_ASK_MODEL =
+  process.env.OPENROUTER_ASK_MODEL ||
+  process.env.ASK_MODEL ||
+  'openai/gpt-4.1-mini';
+
+function parseModelCsv(raw: string | undefined): string[] {
+  if (!raw) return [];
+  return raw
+    .split(',')
+    .map(x => x.trim())
+    .filter(Boolean);
+}
+
+function uniqueModels(models: string[]): string[] {
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const model of models) {
+    const id = String(model || '').trim();
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    out.push(id);
+  }
+  return out;
+}
+
+function buildModelOptions(primary: string, fallback: string[]): string[] {
+  return uniqueModels([primary, ...fallback]);
+}
+
+const modelOptionsByProvider: ModelOptionsByProvider = {
+  openai: {
+    summary: buildModelOptions(
+      OPENAI_SUMMARY_MODEL,
+      parseModelCsv(process.env.OPENAI_SUMMARY_MODEL_OPTIONS)
+        .concat(['gpt-4.1-nano', 'gpt-4.1-mini', 'gpt-4o-mini', 'gpt-4.1'])
+    ),
+    research: buildModelOptions(
+      OPENAI_RESEARCH_MODEL,
+      parseModelCsv(process.env.OPENAI_RESEARCH_MODEL_OPTIONS)
+        .concat(['gpt-4.1-mini', 'gpt-4.1', 'gpt-4o-mini'])
+    ),
+    ask: buildModelOptions(
+      OPENAI_ASK_MODEL,
+      parseModelCsv(process.env.OPENAI_ASK_MODEL_OPTIONS)
+        .concat(['gpt-4.1-nano', 'gpt-4.1-mini', 'gpt-4o-mini'])
+    )
+  },
+  claude: {
+    summary: buildModelOptions(
+      CLAUDE_SUMMARY_MODEL,
+      parseModelCsv(process.env.CLAUDE_SUMMARY_MODEL_OPTIONS)
+        .concat(['claude-3-5-haiku-latest', 'claude-3-7-sonnet-latest'])
+    ),
+    research: buildModelOptions(
+      CLAUDE_RESEARCH_MODEL,
+      parseModelCsv(process.env.CLAUDE_RESEARCH_MODEL_OPTIONS)
+        .concat(['claude-3-7-sonnet-latest', 'claude-3-5-haiku-latest'])
+    ),
+    ask: buildModelOptions(
+      CLAUDE_ASK_MODEL,
+      parseModelCsv(process.env.CLAUDE_ASK_MODEL_OPTIONS)
+        .concat(['claude-3-5-haiku-latest', 'claude-3-7-sonnet-latest'])
+    )
+  },
+  openrouter: {
+    summary: buildModelOptions(
+      OPENROUTER_SUMMARY_MODEL,
+      parseModelCsv(process.env.OPENROUTER_SUMMARY_MODEL_OPTIONS)
+        .concat(['openai/gpt-4.1-mini', 'openai/gpt-4.1', 'anthropic/claude-3.5-haiku'])
+    ),
+    research: buildModelOptions(
+      OPENROUTER_RESEARCH_MODEL,
+      parseModelCsv(process.env.OPENROUTER_RESEARCH_MODEL_OPTIONS)
+        .concat(['openai/gpt-4.1', 'openai/gpt-4.1-mini', 'anthropic/claude-3.7-sonnet'])
+    ),
+    ask: buildModelOptions(
+      OPENROUTER_ASK_MODEL,
+      parseModelCsv(process.env.OPENROUTER_ASK_MODEL_OPTIONS)
+        .concat(['openai/gpt-4.1-mini', 'openai/gpt-4.1-nano', 'anthropic/claude-3.5-haiku'])
+    )
+  }
+};
+
+const selectedModelsByProvider: Record<AIProvider, AiModelSelection> = {
+  openai: {
+    summary: modelOptionsByProvider.openai.summary[0] || OPENAI_SUMMARY_MODEL,
+    research: modelOptionsByProvider.openai.research[0] || OPENAI_RESEARCH_MODEL,
+    ask: modelOptionsByProvider.openai.ask[0] || OPENAI_ASK_MODEL
+  },
+  claude: {
+    summary: modelOptionsByProvider.claude.summary[0] || CLAUDE_SUMMARY_MODEL,
+    research: modelOptionsByProvider.claude.research[0] || CLAUDE_RESEARCH_MODEL,
+    ask: modelOptionsByProvider.claude.ask[0] || CLAUDE_ASK_MODEL
+  },
+  openrouter: {
+    summary: modelOptionsByProvider.openrouter.summary[0] || OPENROUTER_SUMMARY_MODEL,
+    research: modelOptionsByProvider.openrouter.research[0] || OPENROUTER_RESEARCH_MODEL,
+    ask: modelOptionsByProvider.openrouter.ask[0] || OPENROUTER_ASK_MODEL
+  }
+};
+
 const ASK_AGENT_MAX_QUESTIONS = 5;
 const ASK_AGENT_MAX_CHARS = 400;
+const ASK_AGENT_RESEARCH_TIMEOUT_MS = 8_000;
+const ASK_AGENT_ANSWER_TIMEOUT_MS = 22_000;
 
 const MATCH_THRESHOLD = parseFloat(process.env.MATCH_THRESHOLD || '0.72');
 const DEDUPE_THRESHOLD = parseFloat(process.env.DEDUPE_THRESHOLD || '0.92');
@@ -344,10 +466,16 @@ let openaiGenerationClient: OpenAI | null = null;
 let openrouterGenerationClient: OpenAI | null = null;
 let aiAvailable: boolean = false;
 
-function activeModel(kind: 'summary' | 'research'): string {
-  if (aiProvider === 'claude') return kind === 'summary' ? CLAUDE_SUMMARY_MODEL : CLAUDE_RESEARCH_MODEL;
-  if (aiProvider === 'openrouter') return kind === 'summary' ? OPENROUTER_SUMMARY_MODEL : OPENROUTER_RESEARCH_MODEL;
-  return kind === 'summary' ? OPENAI_SUMMARY_MODEL : OPENAI_RESEARCH_MODEL;
+function activeModel(kind: AiModelKind): string {
+  return selectedModelsByProvider[aiProvider][kind] || 'none';
+}
+
+function providerSupportsModel(provider: AIProvider, kind: AiModelKind, model: string): boolean {
+  return modelOptionsByProvider[provider][kind].includes(model);
+}
+
+function currentModelSelection(provider: AIProvider): AiModelSelection {
+  return { ...selectedModelsByProvider[provider] };
 }
 
 function activeOpenAiLikeClient(): OpenAI | null {
@@ -938,9 +1066,9 @@ function budgetToTokensResearch(b: BudgetMode) {
 }
 
 function budgetToTokensAsk(b: BudgetMode) {
-  if (b === 'low') return 170;
-  if (b === 'high') return 340;
-  return 250;
+  if (b === 'low') return 130;
+  if (b === 'high') return 260;
+  return 190;
 }
 
 function budgetAllowsAutoResearch(b: BudgetMode) {
@@ -1063,7 +1191,7 @@ async function generateWithClaude(
 }
 
 async function generateAiText(
-  kind: 'summary' | 'research',
+  kind: 'summary' | 'research' | 'ask',
   input: string,
   maxOutputTokens: number,
   temperature: number
@@ -1076,6 +1204,20 @@ async function generateAiText(
     return generateWithClaude(model, input, maxOutputTokens, temperature);
   }
   return generateWithOpenAiLike(model, input, maxOutputTokens, temperature);
+}
+
+async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string): Promise<T> {
+  let timeoutId: ReturnType<typeof setTimeout> | null = null;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<T>((_, reject) => {
+        timeoutId = setTimeout(() => reject(new Error(`${label} timeout`)), timeoutMs);
+      })
+    ]);
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
+  }
 }
 
 async function oneLineSummary(
@@ -1184,11 +1326,12 @@ async function askAgentAboutItem(
     (item.__ctx ? `RSS context: ${item.__ctx}\n` : '') +
     (item.__linkText ? `Article text (may be partial): ${item.__linkText}\n` : '');
 
-  return generateAiText('research', input, budgetToTokensAsk(budget), 0.2);
+  return generateAiText('ask', input, budgetToTokensAsk(budget), 0.2);
 }
 // -----------------------------------------
 
 function broadcastConfig() {
+  const activeSelection = currentModelSelection(aiProvider);
   const cfg: Config = {
     type: 'config',
     keywords,
@@ -1199,6 +1342,10 @@ function broadcastConfig() {
 
     summaryLang,
     researchLang,
+    summaryModel: activeSelection.summary,
+    researchModel: activeSelection.research,
+    askModel: activeSelection.ask,
+    availableModels: modelOptionsByProvider,
 
     matchThreshold: MATCH_THRESHOLD,
     dedupeThreshold: DEDUPE_THRESHOLD,
@@ -1766,6 +1913,7 @@ if (!feedSettings.has(FILTERED_FEED_URL)) {
 // ---------------- WebSocket handling ----------------
 wss.on('connection', (ws: WebSocket) => {
   const askAgentCountByItem = new Map<string, number>();
+  const activeSelection = currentModelSelection(aiProvider);
 
   ws.send(JSON.stringify({
     type: 'config',
@@ -1777,6 +1925,10 @@ wss.on('connection', (ws: WebSocket) => {
 
     summaryLang,
     researchLang,
+    summaryModel: activeSelection.summary,
+    researchModel: activeSelection.research,
+    askModel: activeSelection.ask,
+    availableModels: modelOptionsByProvider,
 
     matchThreshold: MATCH_THRESHOLD,
     dedupeThreshold: DEDUPE_THRESHOLD,
@@ -1852,6 +2004,61 @@ wss.on('connection', (ws: WebSocket) => {
         type: 'ok',
         message: `AI provider switched to ${provider}`
       }));
+      markDirty();
+      return;
+    }
+
+    if (msg.type === 'set_ai_models') {
+      const provider = aiProvider;
+      const current = selectedModelsByProvider[provider];
+      const updates: Partial<AiModelSelection> = {};
+      const rejected: string[] = [];
+      if (!msg.summaryModel && !msg.researchModel && !msg.askModel) {
+        ws.send(JSON.stringify({
+          type: 'error',
+          message: 'At least one model must be provided.'
+        }));
+        return;
+      }
+
+      if (msg.summaryModel) {
+        if (providerSupportsModel(provider, 'summary', msg.summaryModel)) {
+          updates.summary = msg.summaryModel;
+        } else {
+          rejected.push(`summary=${msg.summaryModel}`);
+        }
+      }
+      if (msg.researchModel) {
+        if (providerSupportsModel(provider, 'research', msg.researchModel)) {
+          updates.research = msg.researchModel;
+        } else {
+          rejected.push(`research=${msg.researchModel}`);
+        }
+      }
+      if (msg.askModel) {
+        if (providerSupportsModel(provider, 'ask', msg.askModel)) {
+          updates.ask = msg.askModel;
+        } else {
+          rejected.push(`ask=${msg.askModel}`);
+        }
+      }
+
+      if (rejected.length > 0) {
+        ws.send(JSON.stringify({
+          type: 'error',
+          message: `Unsupported model for ${provider}: ${rejected.join(', ')}`
+        }));
+        return;
+      }
+
+      if (updates.summary) current.summary = updates.summary;
+      if (updates.research) current.research = updates.research;
+      if (updates.ask) current.ask = updates.ask;
+
+      aiQueue.length = 0;
+      aiInFlight.clear();
+
+      broadcastConfig();
       markDirty();
       return;
     }
@@ -2119,7 +2326,7 @@ wss.on('connection', (ws: WebSocket) => {
     }
 
     if (msg.type === 'ask_agent_item') {
-      if (!aiEnabled || !aiAvailable || activeModel('research') === 'none') {
+      if (!aiEnabled || !aiAvailable || activeModel('ask') === 'none') {
         const unavailable: AskAgentReply = {
           type: 'ask_agent_reply',
           id: String(msg.id || ''),
@@ -2177,31 +2384,41 @@ wss.on('connection', (ws: WebSocket) => {
         ? msg.researchMode
         : 'auto';
       try {
-        // Budget rules:
-        // - standard: refresh on every Ask Agent question
-        // - high: refresh on every Ask Agent question
-        // - low/other: user decides (force vs reuse) from client prompt
-        const shouldRefreshResearch =
-          budget === 'high' || budget === 'standard'
-            ? true
-            : requestedResearchMode === 'force';
+        // Ask latency policy:
+        // - force: always refresh research first
+        // - reuse: never refresh research first
+        // - auto (default): refresh only for high budget OR when no research exists yet
+        const hasExistingResearch = !!String(it.research || '').trim();
+        const shouldRefreshResearch = requestedResearchMode === 'force'
+          ? true
+          : requestedResearchMode === 'reuse'
+            ? false
+            : (budget === 'high' || !hasExistingResearch);
 
         let chatResearch = '';
         if (shouldRefreshResearch) {
           const ctx = it.__ctx || '';
-          let linkText = it.__linkText || '';
-          if (!linkText) {
-            linkText = await fetchArticleText(it.link, 2600);
-            it.__linkText = linkText;
-          }
-          const refreshedResearch = await oneItemResearch(it.title, it.source, it.link, ctx, linkText, budget);
-          if (refreshedResearch) {
-            // Keep chat-triggered research private to Ask Agent panel.
-            chatResearch = refreshedResearch;
+          const linkText = it.__linkText || '';
+          try {
+            const refreshedResearch = await withTimeout(
+              oneItemResearch(it.title, it.source, it.link, ctx, linkText, budget),
+              ASK_AGENT_RESEARCH_TIMEOUT_MS,
+              'ask_agent_research'
+            );
+            if (refreshedResearch) {
+              // Keep chat-triggered research private to Ask Agent panel.
+              chatResearch = refreshedResearch;
+            }
+          } catch {
+            // Do not fail Ask Agent when optional refresh-research is slow.
           }
         }
 
-        const answer = await askAgentAboutItem(question, it, budget, chatResearch);
+        const answer = await withTimeout(
+          askAgentAboutItem(question, it, budget, chatResearch),
+          ASK_AGENT_ANSWER_TIMEOUT_MS,
+          'ask_agent_answer'
+        );
         const ok: AskAgentReply = {
           type: 'ask_agent_reply',
           id: it.id,

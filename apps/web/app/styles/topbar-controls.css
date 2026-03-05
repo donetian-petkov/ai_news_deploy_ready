@@ -18,12 +18,21 @@
 .headerRow {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   gap: 14px;
 }
 
 .headerLeft {
+  flex: 1 1 0;
   min-width: 320px;
+}
+
+.headerCenter {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 2px;
 }
 
 .headerTitleRow {
@@ -180,10 +189,6 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-.headerTitleRow .statusPillDateTime {
-  max-width: 210px;
 }
 
 .topbar .MuiButton-root.btn,
@@ -393,6 +398,11 @@
 
   .headerLeft {
     min-width: 100%;
+    flex: 1 1 auto;
+  }
+
+  .headerCenter {
+    display: none;
   }
 
   .headerLeft h1 {

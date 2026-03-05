@@ -1,41 +1,27 @@
 'use client';
 
-import type { RefObject } from 'react';
 import { Box, Button, Stack, TextField } from '@mui/material';
+import { useTopMenuContext } from './context/useTopMenuContext';
 
-type SearchSectionProps = {
-  isMobile: boolean;
-  searchDraft: string;
-  onSearchDraftChange: (value: string) => void;
-  onClear: () => void;
-  searchInputRef: RefObject<HTMLInputElement | null>;
-  labels: Record<string, string>;
-};
+export function SearchSection() {
+  const { labels, search } = useTopMenuContext();
 
-export function SearchSection({
-  isMobile,
-  searchDraft,
-  onSearchDraftChange,
-  onClear,
-  searchInputRef,
-  labels
-}: SearchSectionProps) {
   return (
     <Box className="topMenuSearchSection">
       <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
         <TextField
-          inputRef={searchInputRef}
-          size={isMobile ? 'medium' : 'small'}
+          inputRef={search.searchInputRef}
+          size={search.isMobile ? 'medium' : 'small'}
           fullWidth
-          value={searchDraft}
-          onChange={e => onSearchDraftChange(e.target.value)}
+          value={search.searchDraft}
+          onChange={e => search.onSearchDraftChange(e.target.value)}
           placeholder={labels.searchPlaceholder}
         />
         <Button
           variant="outlined"
-          size={isMobile ? 'medium' : 'small'}
-          onClick={onClear}
-          className={isMobile ? 'topMenuSearchClearBtn topMenuSearchClearBtnFull' : 'topMenuSearchClearBtn'}
+          size={search.isMobile ? 'medium' : 'small'}
+          onClick={search.onClear}
+          className={search.isMobile ? 'topMenuSearchClearBtn topMenuSearchClearBtnFull' : 'topMenuSearchClearBtn'}
         >
           {labels.clear}
         </Button>

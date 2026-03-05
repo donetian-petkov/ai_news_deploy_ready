@@ -27,6 +27,8 @@ type UseNewsItemActionsArgs = {
   labels: Record<string, string>;
 };
 
+const ASK_AGENT_REPLY_TIMEOUT_MS = 45_000;
+
 function askKey(it: NewsItem): string {
   return `${it.feedUrl}::${it.id}`;
 }
@@ -39,6 +41,7 @@ export function useNewsItemActions({
 }: UseNewsItemActionsArgs) {
   const summaryTimeoutsRef = useRef<Record<string, number>>({});
   const researchTimeoutsRef = useRef<Record<string, number>>({});
+  const askTimeoutsRef = useRef<Record<string, number>>({});
   const [clipboardNoticeOpen, setClipboardNoticeOpen] = useState(false);
   const [clipboardNotice, setClipboardNotice] = useState('');
 
@@ -46,10 +49,21 @@ export function useNewsItemActions({
     return () => {
       Object.values(summaryTimeoutsRef.current).forEach(id => window.clearTimeout(id));
       Object.values(researchTimeoutsRef.current).forEach(id => window.clearTimeout(id));
+      Object.values(askTimeoutsRef.current).forEach(id => window.clearTimeout(id));
       summaryTimeoutsRef.current = {};
       researchTimeoutsRef.current = {};
+      askTimeoutsRef.current = {};
     };
   }, []);
+
+  useEffect(() => {
+    Object.keys(askTimeoutsRef.current).forEach(k => {
+      const isPending = !!askByItem[k]?.pending;
+      if (isPending) return;
+      window.clearTimeout(askTimeoutsRef.current[k]);
+      delete askTimeoutsRef.current[k];
+    });
+  }, [askByItem]);
 
   const requestSummary = useCallback((it: NewsItem) => {
     if (!connected) return;
@@ -188,6 +202,10 @@ export function useNewsItemActions({
     const usedBefore = askState.used;
     const remainingBefore = askState.remaining;
     dispatch(enqueueAskQuestion({ id: it.id, feedUrl: it.feedUrl, question }));
+    if (askTimeoutsRef.current[k]) {
+      window.clearTimeout(askTimeoutsRef.current[k]);
+      delete askTimeoutsRef.current[k];
+    }
 
     const ok = sendWsMessage({
       type: 'ask_agent_item',
@@ -205,7 +223,20 @@ export function useNewsItemActions({
         used: usedBefore,
         remaining: remainingBefore
       }));
+      return;
     }
+
+    askTimeoutsRef.current[k] = window.setTimeout(() => {
+      dispatch(receiveAskReply({
+        id: it.id,
+        feedUrl: it.feedUrl,
+        question,
+        error: 'Ask Agent timed out. Please try again.',
+        used: usedBefore,
+        remaining: remainingBefore
+      }));
+      delete askTimeoutsRef.current[k];
+    }, ASK_AGENT_REPLY_TIMEOUT_MS);
   }, [askByItem, connected, dispatch]);
 
   return {

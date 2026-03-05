@@ -2,15 +2,11 @@
 
 import { Chip } from '@mui/material';
 import { useTranslation } from 'react-i18next';
+import { useTopMenuContext } from './context/useTopMenuContext';
 
-type StatusPillsProps = {
-  connected: boolean;
-  status: string;
-  totalTokens: number;
-};
-
-export function StatusPills({ connected, status, totalTokens }: StatusPillsProps) {
+export function StatusPills() {
   const { t, i18n } = useTranslation();
+  const { connected, status, totalTokens } = useTopMenuContext();
 
   const label = connected
     ? t('status.connected')

@@ -1,14 +1,9 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Chip } from '@mui/material';
 import type { TopMenuDateFormat, TopMenuTimezone } from './topMenu.services';
-
-type DateTimePillProps = {
-  language: 'en' | 'bg';
-  timezone: TopMenuTimezone;
-  dateFormat: TopMenuDateFormat;
-};
+import { useTopMenuContext } from './context/useTopMenuContext';
 
 function getDateAndTimeText(
   now: number,
@@ -51,21 +46,20 @@ function getDateAndTimeText(
   return `${hour}:${minute}:${second} · ${dateText}`;
 }
 
-export function DateTimePill({ language, timezone, dateFormat }: DateTimePillProps) {
-  const [now, setNow] = useState(() => Date.now());
+export function DateTimePill() {
+  const { language, timezone, dateFormat } = useTopMenuContext();
+  const locale = language === 'bg' ? 'bg-BG' : 'en-GB';
+  const [dateTimeText, setDateTimeText] = useState('--:--:-- · --/--/--');
 
   useEffect(() => {
-    const intervalId = window.setInterval(() => {
-      setNow(Date.now());
-    }, 1000);
-    return () => window.clearInterval(intervalId);
-  }, []);
+    const updateDateTime = () => {
+      setDateTimeText(getDateAndTimeText(Date.now(), locale, timezone, dateFormat));
+    };
 
-  const locale = language === 'bg' ? 'bg-BG' : 'en-GB';
-  const dateTimeText = useMemo(
-    () => getDateAndTimeText(now, locale, timezone, dateFormat),
-    [dateFormat, locale, now, timezone]
-  );
+    updateDateTime();
+    const intervalId = window.setInterval(updateDateTime, 1000);
+    return () => window.clearInterval(intervalId);
+  }, [dateFormat, locale, timezone]);
 
   return (
     <Chip

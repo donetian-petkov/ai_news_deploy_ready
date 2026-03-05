@@ -29,6 +29,42 @@ const isTimezone = (value: string): value is UiState['timezone'] =>
   || value === 'America/Los_Angeles'
   || value === 'Asia/Tokyo';
 
+type AiProvider = 'openai' | 'claude' | 'openrouter';
+type AiModelKind = 'summary' | 'research' | 'ask';
+type AiProviderModelOptions = Record<AiModelKind, string[]>;
+type AiModelsByProvider = Record<AiProvider, AiProviderModelOptions>;
+
+const DEFAULT_AI_MODELS: AiModelsByProvider = {
+  openai: {
+    summary: ['gpt-4.1-nano', 'gpt-4.1-mini', 'gpt-4o-mini', 'gpt-4.1'],
+    research: ['gpt-4.1-mini', 'gpt-4.1', 'gpt-4o-mini'],
+    ask: ['gpt-4.1-nano', 'gpt-4.1-mini', 'gpt-4o-mini']
+  },
+  claude: {
+    summary: ['claude-3-5-haiku-latest', 'claude-3-7-sonnet-latest'],
+    research: ['claude-3-7-sonnet-latest', 'claude-3-5-haiku-latest'],
+    ask: ['claude-3-5-haiku-latest', 'claude-3-7-sonnet-latest']
+  },
+  openrouter: {
+    summary: ['openai/gpt-4.1-mini', 'openai/gpt-4.1', 'anthropic/claude-3.5-haiku'],
+    research: ['openai/gpt-4.1', 'openai/gpt-4.1-mini', 'anthropic/claude-3.7-sonnet'],
+    ask: ['openai/gpt-4.1-mini', 'openai/gpt-4.1-nano', 'anthropic/claude-3.5-haiku']
+  }
+};
+
+function dedupeNonEmptyStrings(values: unknown): string[] {
+  if (!Array.isArray(values)) return [];
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const raw of values) {
+    const value = typeof raw === 'string' ? raw.trim() : '';
+    if (!value || seen.has(value)) continue;
+    seen.add(value);
+    out.push(value);
+  }
+  return out;
+}
+
 type UiState = {
   language: 'en' | 'bg';
   colorMode: 'system' | 'dark' | 'light';
@@ -48,11 +84,15 @@ type UiState = {
   notifyMode: 'matched' | 'matched_pinned' | 'pinned' | 'all';
   aiAvailable: boolean;
   aiEnabled: boolean;
-  aiProvider: 'openai' | 'claude' | 'openrouter';
+  aiProvider: AiProvider;
   moodFilter: MoodFilter;
   typeFilter: TypeFilter;
   summaryLang: 'bilingual' | 'bg' | 'en';
   researchLang: 'bg' | 'en';
+  summaryModel: string;
+  researchModel: string;
+  askModel: string;
+  availableModels: AiModelsByProvider;
   allBudget: 'mixed' | 'low' | 'standard' | 'high';
   font: 'system' | 'manrope' | 'grotesk' | 'sora' | 'plex' | 'serif' | 'mono';
   fontSize: 'sm' | 'md' | 'lg' | 'xl';
@@ -93,6 +133,10 @@ const initialState: UiState = {
   typeFilter: NewsTypeFilterValue.All,
   summaryLang: 'bilingual',
   researchLang: 'bg',
+  summaryModel: DEFAULT_AI_MODELS.openai.summary[0],
+  researchModel: DEFAULT_AI_MODELS.openai.research[0],
+  askModel: DEFAULT_AI_MODELS.openai.ask[0],
+  availableModels: DEFAULT_AI_MODELS,
   allBudget: 'standard',
   font: 'system',
   fontSize: 'md',
@@ -158,13 +202,44 @@ const uiSlice = createSlice({
         state.notifyMode = next.notifyMode;
       }
     },
-    setAiSettings(state, action: PayloadAction<Partial<Pick<UiState, 'aiAvailable' | 'aiEnabled' | 'aiProvider' | 'summaryLang' | 'researchLang' | 'allBudget'>>>) {
+    setAiSettings(state, action: PayloadAction<Partial<Pick<UiState, 'aiAvailable' | 'aiEnabled' | 'aiProvider' | 'summaryLang' | 'researchLang' | 'summaryModel' | 'researchModel' | 'askModel' | 'availableModels' | 'allBudget'>>>) {
       const next = action.payload;
       if (typeof next.aiAvailable === 'boolean') state.aiAvailable = next.aiAvailable;
       if (typeof next.aiEnabled === 'boolean') state.aiEnabled = next.aiEnabled;
       if (next.aiProvider === 'openai' || next.aiProvider === 'claude' || next.aiProvider === 'openrouter') state.aiProvider = next.aiProvider;
       if (next.summaryLang === 'bg' || next.summaryLang === 'en' || next.summaryLang === 'bilingual') state.summaryLang = next.summaryLang;
       if (next.researchLang === 'bg' || next.researchLang === 'en') state.researchLang = next.researchLang;
+      if (typeof next.summaryModel === 'string' && next.summaryModel.trim()) state.summaryModel = next.summaryModel.trim();
+      if (typeof next.researchModel === 'string' && next.researchModel.trim()) state.researchModel = next.researchModel.trim();
+      if (typeof next.askModel === 'string' && next.askModel.trim()) state.askModel = next.askModel.trim();
+      if (next.availableModels && typeof next.availableModels === 'object') {
+        const openaiSummary = dedupeNonEmptyStrings(next.availableModels.openai?.summary);
+        const openaiResearch = dedupeNonEmptyStrings(next.availableModels.openai?.research);
+        const openaiAsk = dedupeNonEmptyStrings(next.availableModels.openai?.ask);
+        const claudeSummary = dedupeNonEmptyStrings(next.availableModels.claude?.summary);
+        const claudeResearch = dedupeNonEmptyStrings(next.availableModels.claude?.research);
+        const claudeAsk = dedupeNonEmptyStrings(next.availableModels.claude?.ask);
+        const openrouterSummary = dedupeNonEmptyStrings(next.availableModels.openrouter?.summary);
+        const openrouterResearch = dedupeNonEmptyStrings(next.availableModels.openrouter?.research);
+        const openrouterAsk = dedupeNonEmptyStrings(next.availableModels.openrouter?.ask);
+        state.availableModels = {
+          openai: {
+            summary: openaiSummary.length ? openaiSummary : state.availableModels.openai.summary,
+            research: openaiResearch.length ? openaiResearch : state.availableModels.openai.research,
+            ask: openaiAsk.length ? openaiAsk : state.availableModels.openai.ask
+          },
+          claude: {
+            summary: claudeSummary.length ? claudeSummary : state.availableModels.claude.summary,
+            research: claudeResearch.length ? claudeResearch : state.availableModels.claude.research,
+            ask: claudeAsk.length ? claudeAsk : state.availableModels.claude.ask
+          },
+          openrouter: {
+            summary: openrouterSummary.length ? openrouterSummary : state.availableModels.openrouter.summary,
+            research: openrouterResearch.length ? openrouterResearch : state.availableModels.openrouter.research,
+            ask: openrouterAsk.length ? openrouterAsk : state.availableModels.openrouter.ask
+          }
+        };
+      }
       if (next.allBudget === 'mixed' || next.allBudget === 'low' || next.allBudget === 'standard' || next.allBudget === 'high') state.allBudget = next.allBudget;
     },
     setMoodFilter(state, action: PayloadAction<UiState['moodFilter']>) {

@@ -47,6 +47,70 @@ type FeedSettingsWire = {
   filters?: unknown;
 };
 
+type AiModelOptionsWire = {
+  summary?: unknown;
+  research?: unknown;
+  ask?: unknown;
+};
+
+type AiModelOptions = {
+  summary: string[];
+  research: string[];
+  ask: string[];
+};
+
+type AiModelsByProvider = {
+  openai: AiModelOptions;
+  claude: AiModelOptions;
+  openrouter: AiModelOptions;
+};
+
+function parseModelList(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return [];
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const item of raw) {
+    if (!isString(item)) continue;
+    const model = item.trim();
+    if (!model || seen.has(model)) continue;
+    seen.add(model);
+    out.push(model);
+  }
+  return out;
+}
+
+function parseAvailableModels(raw: unknown): AiModelsByProvider | undefined {
+  if (!isRecord(raw)) return undefined;
+  const modelMap = raw as {
+    openai?: AiModelOptionsWire;
+    claude?: AiModelOptionsWire;
+    openrouter?: AiModelOptionsWire;
+  };
+  return {
+    openai: isRecord(modelMap.openai)
+      ? {
+        summary: parseModelList(modelMap.openai.summary),
+        research: parseModelList(modelMap.openai.research),
+        ask: parseModelList(modelMap.openai.ask)
+      }
+      : { summary: [], research: [], ask: [] },
+    claude: isRecord(modelMap.claude)
+      ? {
+        summary: parseModelList(modelMap.claude.summary),
+        research: parseModelList(modelMap.claude.research),
+        ask: parseModelList(modelMap.claude.ask)
+      }
+      : { summary: [], research: [], ask: [] },
+    openrouter: isRecord(modelMap.openrouter)
+      ? {
+        summary: parseModelList(modelMap.openrouter.summary),
+        research: parseModelList(modelMap.openrouter.research),
+        ask: parseModelList(modelMap.openrouter.ask)
+      }
+      : { summary: [], research: [], ask: [] }
+  };
+}
+
 function parseFeedInfos(v: unknown, feedSettingsRaw: unknown): FeedInfo[] {
   if (!Array.isArray(v)) return [];
   const feedSettings = isRecord(feedSettingsRaw)
@@ -234,6 +298,7 @@ export function startWsConnection(dispatch: AppDispatch, explicitUrl: string) {
 
     if (msg.type === WsMessageType.Config) {
       const parsedFeeds = parseFeedInfos(msg.feeds, msg.feedSettings);
+      const parsedModels = parseAvailableModels(msg.availableModels);
       dispatch(setFeeds(parsedFeeds));
       dispatch(setAiSettings({
         aiAvailable: !!msg.aiAvailable,
@@ -247,6 +312,10 @@ export function startWsConnection(dispatch: AppDispatch, explicitUrl: string) {
         researchLang: isResearchLang(msg.researchLang)
           ? msg.researchLang
           : ResearchLangValue.Bg,
+        summaryModel: isString(msg.summaryModel) ? msg.summaryModel : undefined,
+        researchModel: isString(msg.researchModel) ? msg.researchModel : undefined,
+        askModel: isString(msg.askModel) ? msg.askModel : undefined,
+        availableModels: parsedModels,
         allBudget: deriveAllBudget(parsedFeeds)
       }));
 

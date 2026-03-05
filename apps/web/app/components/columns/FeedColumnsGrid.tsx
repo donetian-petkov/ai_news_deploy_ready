@@ -1,17 +1,13 @@
 'use client';
 
 import { Box } from '@mui/material';
-import type { FeedInfo } from '../../store/types';
 import { FILTERED_FEED_URL } from '../../store/constants';
-import { useFeedColumnsContext } from './context/FeedColumnsContext';
+import { useFeedColumnsContext } from './context/useFeedColumnsContext';
 import { FeedColumn } from './FeedColumn';
 
-type Props = {
-  feeds: FeedInfo[];
-};
-
-export function FeedColumnsGrid({ feeds }: Props) {
+export function FeedColumnsGrid() {
   const {
+    renderedFeeds,
     onGridDragOver,
     onGridDrop,
     buildDragState
@@ -34,7 +30,7 @@ export function FeedColumnsGrid({ feeds }: Props) {
       onDragOver={onGridDragOver}
       onDrop={onGridDrop}
     >
-      {feeds.map((feed, columnIdx) => {
+      {renderedFeeds.map((feed, columnIdx) => {
         const isMatchColumn = feed.url === FILTERED_FEED_URL || String(feed.label || '').toLowerCase().startsWith('filtered');
         const canDrag = !isMatchColumn;
 

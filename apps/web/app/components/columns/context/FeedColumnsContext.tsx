@@ -1,7 +1,7 @@
 'use client';
 
 import type { DragEvent } from 'react';
-import { createContext, useContext } from 'react';
+import { createContext } from 'react';
 import type { FeedInfo } from '../../../store/types';
 import type {
   FeedColumnDragState,
@@ -11,20 +11,22 @@ import type {
 } from '../reactColumns.types';
 
 export type FeedColumnsContextValue = {
+  header: {
+    title: string;
+    liveLabel: string;
+    disconnectedLabel: string;
+    connected: boolean;
+    status: string;
+    summariesLoadingCount: number;
+    summariesLoadingLabel: string;
+  };
   view: FeedColumnViewModel;
   state: FeedColumnStateModel;
   handlers: FeedColumnHandlers;
+  renderedFeeds: FeedInfo[];
   onGridDragOver: (e: DragEvent<HTMLDivElement>) => void;
   onGridDrop: (e: DragEvent<HTMLDivElement>) => void;
   buildDragState: (feed: FeedInfo, canDrag: boolean) => FeedColumnDragState;
 };
 
 export const FeedColumnsContext = createContext<FeedColumnsContextValue | null>(null);
-
-export function useFeedColumnsContext(): FeedColumnsContextValue {
-  const ctx = useContext(FeedColumnsContext);
-  if (!ctx) {
-    throw new Error('useFeedColumnsContext must be used within FeedColumnsProvider');
-  }
-  return ctx;
-}

@@ -29,10 +29,32 @@ describe('uiSlice', () => {
       typeFilter: NewsTypeFilterValue.All,
       summaryLang: 'bilingual',
       researchLang: 'bg',
+      summaryModel: 'gpt-4.1-nano',
+      researchModel: 'gpt-4.1-mini',
+      askModel: 'gpt-4.1-nano',
+      availableModels: {
+        openai: {
+          summary: ['gpt-4.1-nano', 'gpt-4.1-mini', 'gpt-4o-mini', 'gpt-4.1'],
+          research: ['gpt-4.1-mini', 'gpt-4.1', 'gpt-4o-mini'],
+          ask: ['gpt-4.1-nano', 'gpt-4.1-mini', 'gpt-4o-mini']
+        },
+        claude: {
+          summary: ['claude-3-5-haiku-latest', 'claude-3-7-sonnet-latest'],
+          research: ['claude-3-7-sonnet-latest', 'claude-3-5-haiku-latest'],
+          ask: ['claude-3-5-haiku-latest', 'claude-3-7-sonnet-latest']
+        },
+        openrouter: {
+          summary: ['openai/gpt-4.1-mini', 'openai/gpt-4.1', 'anthropic/claude-3.5-haiku'],
+          research: ['openai/gpt-4.1', 'openai/gpt-4.1-mini', 'anthropic/claude-3.7-sonnet'],
+          ask: ['openai/gpt-4.1-mini', 'openai/gpt-4.1-nano', 'anthropic/claude-3.5-haiku']
+        }
+      },
       allBudget: 'standard',
       font: 'system',
       fontSize: 'md',
       scheme: 'classic',
+      timezone: 'system',
+      dateFormat: 'ddmmyy',
       performanceMode: false,
       buttonMode: 'icons',
       menuHintMode: 'text',
@@ -120,6 +142,9 @@ describe('uiSlice', () => {
       aiProvider: 'claude',
       summaryLang: 'bg',
       researchLang: 'en',
+      summaryModel: 'claude-3-5-haiku-latest',
+      researchModel: 'claude-3-7-sonnet-latest',
+      askModel: 'claude-3-5-haiku-latest',
       allBudget: 'high'
     }));
     expect(state.aiAvailable).toBe(true);
@@ -127,10 +152,34 @@ describe('uiSlice', () => {
     expect(state.aiProvider).toBe('claude');
     expect(state.summaryLang).toBe('bg');
     expect(state.researchLang).toBe('en');
+    expect(state.summaryModel).toBe('claude-3-5-haiku-latest');
+    expect(state.researchModel).toBe('claude-3-7-sonnet-latest');
+    expect(state.askModel).toBe('claude-3-5-haiku-latest');
     expect(state.allBudget).toBe('high');
 
     state = uiReducer(state, setAiSettings({ aiProvider: 'invalid-provider' as never }));
     expect(state.aiProvider).toBe('claude');
+
+    state = uiReducer(state, setAiSettings({
+      availableModels: {
+        openai: {
+          summary: ['gpt-4.1-mini'],
+          research: ['gpt-4.1'],
+          ask: ['gpt-4.1-mini']
+        },
+        claude: {
+          summary: ['claude-3-7-sonnet-latest'],
+          research: ['claude-3-7-sonnet-latest'],
+          ask: ['claude-3-7-sonnet-latest']
+        },
+        openrouter: {
+          summary: ['openai/gpt-4.1'],
+          research: ['openai/gpt-4.1'],
+          ask: ['openai/gpt-4.1']
+        }
+      }
+    }));
+    expect(state.availableModels.claude.summary).toEqual(['claude-3-7-sonnet-latest']);
 
     state = uiReducer(state, setMoodFilter(NewsMoodFilterValue.Rage));
     expect(state.moodFilter).toBe(NewsMoodFilterValue.Rage);

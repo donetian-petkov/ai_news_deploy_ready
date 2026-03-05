@@ -46,6 +46,7 @@ export type CardLabels = {
   copyNews: string;
   hideNews: string;
   generatingSummary: string;
+  autoSummarizing: string;
   summary: string;
   researching: string;
   research: string;

@@ -3,7 +3,7 @@
 import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
 import { Button, Chip, CircularProgress, Stack, Tooltip } from '@mui/material';
 import { NEWS_CARD_COLOR_TOKENS } from '../designTokens';
-import { useNewsCardContext } from './context/NewsCardContext';
+import { useNewsCardContext } from './context/useNewsCardContext';
 
 export function NewsCardActions() {
   const {

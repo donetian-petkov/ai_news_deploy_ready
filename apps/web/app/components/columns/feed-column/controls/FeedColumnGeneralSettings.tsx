@@ -4,16 +4,16 @@ import { Button, FormControl, MenuItem, Select } from '@mui/material';
 import type { FeedInfo, SortMode } from '../../../../store/types';
 import type { FeedFilterPreset } from '../../reactColumns.types';
 import { getFeedFilterPreset } from '../../reactColumns.utils';
-import { useFeedColumnsContext } from '../../context/FeedColumnsContext';
+import { useFeedColumnsContext } from '../../context/useFeedColumnsContext';
 
 type Props = {
   feed: FeedInfo;
-  advancedControlsOpen: boolean;
 };
 
-export function FeedColumnGeneralSettings({ feed, advancedControlsOpen }: Props) {
-  const { view, handlers } = useFeedColumnsContext();
+export function FeedColumnGeneralSettings({ feed }: Props) {
+  const { view, state, handlers } = useFeedColumnsContext();
   const { connected, compactBtnSx, compactFormSx, labels } = view;
+  const advancedControlsOpen = !!state.advancedControlsByUrl[feed.url];
   const { onSetFeedInterval, onSetFeedSortMode, onSetFeedFilterPreset, onToggleAdvancedControls } = handlers;
 
   return (

@@ -2,7 +2,7 @@
 
 import { Box, Button, Stack, TextField, Typography } from '@mui/material';
 import { COLUMN_LAYOUT_TOKENS, NEWS_CARD_COLOR_TOKENS } from '../designTokens';
-import { useNewsCardContext } from './context/NewsCardContext';
+import { useNewsCardContext } from './context/useNewsCardContext';
 
 export function NewsCardAskPanel() {
   const {

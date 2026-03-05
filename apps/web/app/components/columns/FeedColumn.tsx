@@ -3,7 +3,7 @@
 import { Box, Card, CardContent } from '@mui/material';
 import { FILTERED_FEED_URL } from '../../store/constants';
 import type { FeedColumnDragState } from './reactColumns.types';
-import { useFeedColumnsContext } from './context/FeedColumnsContext';
+import { useFeedColumnsContext } from './context/useFeedColumnsContext';
 import { FeedColumnControlsPanel } from './feed-column/FeedColumnControlsPanel';
 import { FeedColumnItemsList } from './feed-column/FeedColumnItemsList';
 import { FeedColumnHeader } from './feed-column/FeedColumnHeader';
@@ -23,12 +23,7 @@ export function FeedColumn({ feed, columnIdx, drag }: FeedColumnProps) {
   const {
     filteredColumnItems,
     itemsByFeed,
-    visibleByFeed,
-    hydratedColumns,
-    pinnedByUrl,
-    controlsOpenByUrl,
-    advancedControlsByUrl,
-    deleteAgeByUrl
+    visibleByFeed
   } = state;
 
   const isMatchColumn = feed.url === FILTERED_FEED_URL || String(feed.label || '').toLowerCase().startsWith('filtered');
@@ -47,12 +42,6 @@ export function FeedColumn({ feed, columnIdx, drag }: FeedColumnProps) {
     performanceMode,
     visibleByFeed
   });
-
-  const isHydrated = !!hydratedColumns[feed.url];
-  const pinned = !!pinnedByUrl[feed.url];
-  const controlsOpen = typeof controlsOpenByUrl[feed.url] === 'boolean' ? !!controlsOpenByUrl[feed.url] : true;
-  const advancedControlsOpen = !!advancedControlsByUrl[feed.url];
-  const deleteAge = deleteAgeByUrl[feed.url] || 'week';
 
   return (
     <Box
@@ -119,12 +108,6 @@ export function FeedColumn({ feed, columnIdx, drag }: FeedColumnProps) {
 
           <FeedColumnControlsPanel
             feed={feed}
-            isMatchColumn={isMatchColumn}
-            isHydrated={isHydrated}
-            controlsOpen={controlsOpen}
-            advancedControlsOpen={advancedControlsOpen}
-            deleteAge={deleteAge}
-            pinned={pinned}
           />
 
           <FeedColumnItemsList
@@ -135,7 +118,6 @@ export function FeedColumn({ feed, columnIdx, drag }: FeedColumnProps) {
             isMatchColumn={isMatchColumn}
             accent={accent}
             soft={soft}
-            isHydrated={isHydrated}
           />
         </CardContent>
       </Card>
