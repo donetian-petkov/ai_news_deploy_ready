@@ -65,7 +65,7 @@ export function ReactColumnsHeader() {
                   Summary queue details
                 </Typography>
                 <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.6 }}>
-                  pending: {summariesLoadingCount} · auto candidates: {summariesAutoCandidateCount}
+                  pending: {summariesLoadingCount} · auto-summary eligible: {summariesAutoCandidateCount}
                 </Typography>
                 <Stack spacing={0.45}>
                   {summariesLoadingItems.length ? summariesLoadingItems.slice(0, 40).map((line, idx) => (
