@@ -65,7 +65,7 @@ export function DateTimePill() {
     <Chip
       id="dateTime"
       className="statusPill statusPillDateTime"
-      size="small"
+      size="medium"
       label={dateTimeText}
       variant="outlined"
     />

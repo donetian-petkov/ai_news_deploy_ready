@@ -182,13 +182,21 @@
 }
 
 .statusPillDateTime {
-  max-width: 360px;
+  max-width: 460px;
+  min-height: 38px !important;
+  border-radius: 999px !important;
 }
 
 .statusPillDateTime .MuiChip-label {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  font-size: calc(1.1rem * var(--ui-font-scale)) !important;
+  line-height: 1.1 !important;
+  font-weight: 820 !important;
+  letter-spacing: 0.01em;
+  padding-left: 14px !important;
+  padding-right: 14px !important;
 }
 
 .topbar .MuiButton-root.btn,
