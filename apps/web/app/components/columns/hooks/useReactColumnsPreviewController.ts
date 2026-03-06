@@ -520,7 +520,7 @@ export function useReactColumnsPreviewController({ wsUrl }: Args) {
         summariesStalledCount: summariesLoading.stalledCount,
         summariesAutoCandidateCount: summariesLoading.autoCandidateCount,
         summariesLoadingLabel: labels.summariesLoading,
-        summariesAutoCandidateLabel: labels.summariesAutoCandidates || 'Summaries loading',
+        summariesAutoCandidateLabel: labels.summariesAutoCandidates || 'Queued for summary',
         summariesLoadingItems: summariesLoading.items
       },
       clipboard: {
