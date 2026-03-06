@@ -155,10 +155,6 @@ export function FeedColumnItemsList() {
         const researchText = researchMode === 'collapsed'
           ? compactResearch(it.research || '')
           : String(it.research || '');
-        const hasSummaryText = String(it.summary || '').trim().length > 0;
-        const hasResearchText = String(it.research || '').trim().length > 0;
-        const researchInProgressOrVisible = !!researchPendingById[it.id] || hasResearchText;
-
         const cardState: NewsCardStateModel = {
           item: it,
           isDuplicateMatch: !!duplicateMatchById[it.id],
@@ -166,13 +162,7 @@ export function FeedColumnItemsList() {
           summaryPending: !!summaryPendingById[it.id],
           researchPending: !!researchPendingById[it.id],
           isPinnedNews: !!pinnedNewsById[it.id],
-          showAutoSummarizing: aiAvailable
-            && feed.summaryEnabled
-            && aiEnabled
-            && !hasSummaryText
-            && !summaryPendingById[it.id]
-            && !hideAllSummaries
-            && !researchInProgressOrVisible,
+          showAutoSummarizing: false,
           showAutoResearching: aiAvailable && feed.researchEnabled && aiEnabled && !it.research && !researchPendingById[it.id] && !hideAllResearch,
           summaryMode,
           summaryLong,

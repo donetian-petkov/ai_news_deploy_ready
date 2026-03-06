@@ -14,14 +14,11 @@ export function ReactColumnsHeader() {
     status,
     summariesLoadingCount,
     summariesStalledCount,
-    summariesAutoCandidateCount,
     summariesLoadingLabel,
-    summariesAutoCandidateLabel,
     summariesLoadingItems
   } = header;
   const [detailsAnchor, setDetailsAnchor] = useState<HTMLElement | null>(null);
   const detailsOpen = Boolean(detailsAnchor);
-  const hasSummaryQueueInfo = summariesLoadingCount > 0 || summariesAutoCandidateCount > 0;
 
   return (
     <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.25 }}>
@@ -29,30 +26,17 @@ export function ReactColumnsHeader() {
         {title}
       </Typography>
       <Stack direction="row" spacing={0.8} alignItems="center">
-        {hasSummaryQueueInfo && (summariesLoadingLabel || summariesAutoCandidateLabel) ? (
+        {summariesLoadingCount > 0 && summariesLoadingLabel ? (
           <>
-            {summariesLoadingCount > 0 && summariesLoadingLabel ? (
-              <Chip
-                size="small"
-                label={`${summariesLoadingLabel}: ${summariesLoadingCount}${summariesStalledCount > 0 ? ` • stuck: ${summariesStalledCount}` : ''}`}
-                color={summariesStalledCount > 0 ? 'warning' : 'info'}
-                variant="outlined"
-                onClick={e => setDetailsAnchor(e.currentTarget)}
-                clickable
-                title="Click to view summary queue details"
-              />
-            ) : null}
-            {summariesAutoCandidateCount > 0 && summariesAutoCandidateLabel ? (
-              <Chip
-                size="small"
-                label={`${summariesAutoCandidateLabel}: ${summariesAutoCandidateCount}`}
-                color="default"
-                variant="outlined"
-                onClick={e => setDetailsAnchor(e.currentTarget)}
-                clickable
-                title="Items eligible for auto summary but not currently running"
-              />
-            ) : null}
+            <Chip
+              size="small"
+              label={`${summariesLoadingLabel}: ${summariesLoadingCount}${summariesStalledCount > 0 ? ` • stuck: ${summariesStalledCount}` : ''}`}
+              color={summariesStalledCount > 0 ? 'warning' : 'info'}
+              variant="outlined"
+              onClick={e => setDetailsAnchor(e.currentTarget)}
+              clickable
+              title="Click to view summary queue details"
+            />
             <Popover
               open={detailsOpen}
               anchorEl={detailsAnchor}
@@ -62,10 +46,7 @@ export function ReactColumnsHeader() {
             >
               <Box sx={{ p: 1.2, maxWidth: 560, maxHeight: 360, overflow: 'auto' }}>
                 <Typography variant="subtitle2" sx={{ mb: 0.6 }}>
-                  Summary queue details
-                </Typography>
-                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.6 }}>
-                  loading now: {summariesLoadingCount} · queued: {summariesAutoCandidateCount}
+                  Summaries in progress ({summariesLoadingItems.length})
                 </Typography>
                 <Stack spacing={0.45}>
                   {summariesLoadingItems.length ? summariesLoadingItems.slice(0, 40).map((line, idx) => (
