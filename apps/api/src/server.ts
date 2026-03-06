@@ -151,6 +151,7 @@ type News = {
   filteredOk: boolean;
 
   summary?: string;
+  summaryPending?: boolean;
   research?: string;
   mood?: Mood;
   newsType?: NewsType;
@@ -1383,6 +1384,7 @@ function broadcastNewsUpdate(it: NewsInternal) {
     matchScore: it.matchScore,
     filteredOk: it.filteredOk,
     summary: it.summary,
+    summaryPending: hasSummaryJobQueuedOrRunning(it.id),
     research: it.research,
     mood: it.mood,
     newsType: it.newsType
@@ -1434,12 +1436,63 @@ type AiJob = { kind: AiJobKind; id: string; feedUrl: string; manual?: boolean };
 
 const aiQueue: AiJob[] = [];
 const aiInFlight = new Set<string>();
+const lastAiJobErrorAtMs = new Map<string, number>();
 
 const AI_MAX_CONCURRENCY = Math.max(1, parseInt(process.env.AI_MAX_CONCURRENCY || '1', 10));
 const AI_QUEUE_MAX = Math.max(200, parseInt(process.env.AI_QUEUE_MAX || '600', 10));
+const AI_SUMMARY_TIMEOUT_MS = Math.max(4_000, Number.parseInt(process.env.AI_SUMMARY_TIMEOUT_MS ?? '22_000', 10) || 22_000);
+const AI_RESEARCH_TIMEOUT_MS = Math.max(6_000, Number.parseInt(process.env.AI_RESEARCH_TIMEOUT_MS ?? '30_000', 10) || 30_000);
+const AI_CLASSIFY_TIMEOUT_MS = Math.max(3_000, Number.parseInt(process.env.AI_CLASSIFY_TIMEOUT_MS ?? '12_000', 10) || 12_000);
+const AI_ERROR_TOAST_COOLDOWN_MS = Math.max(5_000, Number.parseInt(process.env.AI_ERROR_TOAST_COOLDOWN_MS ?? '20_000', 10) || 20_000);
 
 function jobKey(j: AiJob) {
   return `${j.kind}:${j.id}`;
+}
+
+function hasSummaryJobQueuedOrRunning(id: string): boolean {
+  const k = `summary:${id}`;
+  if (aiInFlight.has(k)) return true;
+  return aiQueue.some(job => job.kind === 'summary' && job.id === id);
+}
+
+function jobPriority(j: AiJob): number {
+  if (j.kind === 'summary') return j.manual ? 0 : 1;
+  if (j.kind === 'research') return j.manual ? 2 : 3;
+  if (j.kind === 'mood') return 4;
+  return 5; // news_type
+}
+
+function dequeueNextJob(): AiJob | undefined {
+  if (!aiQueue.length) return undefined;
+  let bestIndex = 0;
+  let bestPriority = jobPriority(aiQueue[0]);
+  for (let i = 1; i < aiQueue.length; i += 1) {
+    const priority = jobPriority(aiQueue[i]);
+    if (priority < bestPriority) {
+      bestPriority = priority;
+      bestIndex = i;
+      if (bestPriority === 0) break;
+    }
+  }
+  return aiQueue.splice(bestIndex, 1)[0];
+}
+
+function broadcastAiJobError(job: AiJob, item: NewsInternal | undefined, error: unknown) {
+  const message = (error as Error)?.message || String(error || 'unknown error');
+  const dedupeKey = `${job.kind}:${job.id}:${message}`;
+  const now = Date.now();
+  const last = lastAiJobErrorAtMs.get(dedupeKey) || 0;
+  if (now - last < AI_ERROR_TOAST_COOLDOWN_MS) return;
+  lastAiJobErrorAtMs.set(dedupeKey, now);
+
+  const label = item?.source || item?.feedUrl || job.feedUrl || 'feed';
+  const payload = JSON.stringify({
+    type: 'error',
+    message: `AI ${job.kind} failed for ${label}: ${message}`
+  });
+  wss.clients.forEach((c: WebSocket) => {
+    if (c.readyState === WebSocket.OPEN) c.send(payload);
+  });
 }
 
 function enqueueJob(job: AiJob) {
@@ -1461,10 +1514,12 @@ function enqueueJob(job: AiJob) {
 async function runOneJob(job: AiJob) {
   const k = jobKey(job);
   aiInFlight.add(k);
+  let itemForError: NewsInternal | undefined;
 
   try {
     const it = recent.find(x => x.id === job.id);
     if (!it) return;
+    itemForError = it;
     if (hiddenIds.has(it.id)) return;
 
     const s = feedSettings.get(it.feedUrl) || defaultSettingsForFeed({ url: it.feedUrl, label: it.source, kind: 'rss', intervalSec: 120 });
@@ -1475,7 +1530,11 @@ async function runOneJob(job: AiJob) {
       if (activeModel('summary') === 'none') return;
 
       const ctx = it.__ctx || '';
-      const text = await oneLineSummary(it.title, it.source, ctx, budget);
+      const text = await withTimeout(
+        oneLineSummary(it.title, it.source, ctx, budget),
+        AI_SUMMARY_TIMEOUT_MS,
+        `summary:${it.id}`
+      );
       if (text) {
         it.summary = text;
         broadcastNewsUpdate(it);
@@ -1487,13 +1546,17 @@ async function runOneJob(job: AiJob) {
     if (job.kind === 'mood') {
       if (it.mood) return;
       if (activeModel('research') === 'none') return;
-      const mood = await classifyMoodForItem(
-        it.title,
-        it.source,
-        it.__ctx || '',
-        it.summary || '',
-        it.research || '',
-        budget
+      const mood = await withTimeout(
+        classifyMoodForItem(
+          it.title,
+          it.source,
+          it.__ctx || '',
+          it.summary || '',
+          it.research || '',
+          budget
+        ),
+        AI_CLASSIFY_TIMEOUT_MS,
+        `mood:${it.id}`
       );
       if (mood) {
         it.mood = mood;
@@ -1506,13 +1569,17 @@ async function runOneJob(job: AiJob) {
     if (job.kind === 'news_type') {
       if (it.newsType) return;
       if (activeModel('research') === 'none') return;
-      const newsType = await classifyNewsTypeForItem(
-        it.title,
-        it.source,
-        it.__ctx || '',
-        it.summary || '',
-        it.research || '',
-        budget
+      const newsType = await withTimeout(
+        classifyNewsTypeForItem(
+          it.title,
+          it.source,
+          it.__ctx || '',
+          it.summary || '',
+          it.research || '',
+          budget
+        ),
+        AI_CLASSIFY_TIMEOUT_MS,
+        `news_type:${it.id}`
       );
       if (newsType) {
         it.newsType = newsType;
@@ -1538,7 +1605,11 @@ async function runOneJob(job: AiJob) {
         it.__linkText = linkText;
       }
 
-      const text = await oneItemResearch(it.title, it.source, it.link, ctx, linkText, budget);
+      const text = await withTimeout(
+        oneItemResearch(it.title, it.source, it.link, ctx, linkText, budget),
+        AI_RESEARCH_TIMEOUT_MS,
+        `research:${it.id}`
+      );
       if (text) {
         it.research = text;
         broadcastNewsUpdate(it);
@@ -1546,6 +1617,10 @@ async function runOneJob(job: AiJob) {
       }
       return;
     }
+  } catch (err) {
+    const message = (err as Error)?.message || String(err);
+    console.error(`AI job failed (${job.kind}:${job.id})`, message);
+    broadcastAiJobError(job, itemForError, err);
   } finally {
     aiInFlight.delete(k);
   }
@@ -1556,7 +1631,8 @@ async function tickAiQueue() {
   if (!aiQueue.length) return;
 
   while (aiInFlight.size < AI_MAX_CONCURRENCY && aiQueue.length) {
-    const job = aiQueue.shift()!;
+    const job = dequeueNextJob();
+    if (!job) break;
     const k = jobKey(job);
     if (aiInFlight.has(k)) continue;
 
@@ -1766,13 +1842,6 @@ async function processFeed(fi: FeedInfo) {
       recent.push(pkt);
       if (recent.length > 520) recent.shift();
 
-      if (!hiddenIds.has(pkt.id)) {
-        const payload = JSON.stringify(pkt);
-        wss.clients.forEach((c: WebSocket) => {
-          if (c.readyState === WebSocket.OPEN) c.send(payload);
-        });
-      }
-
       // enqueue AI jobs (auto per-column)
       if (aiEnabled && aiAvailable) {
         const wantFeedSummary = s.summaryEnabled;
@@ -1788,6 +1857,8 @@ async function processFeed(fi: FeedInfo) {
         enqueueJob({ kind: 'news_type', id, feedUrl: fi.url });
         if (wantFeedResearch || wantFilteredResearch) enqueueJob({ kind: 'research', id, feedUrl: fi.url });
       }
+
+      broadcastNewsUpdate(pkt);
     }
 
     markDirty();
@@ -2082,8 +2153,8 @@ wss.on('connection', (ws: WebSocket) => {
             if (!it.summary || !it.summary.trim()) continue;
 
             it.summary = '';
-            broadcastNewsUpdate(it);
             enqueueJob({ kind: 'summary', id: it.id, feedUrl: it.feedUrl });
+            broadcastNewsUpdate(it);
             done++;
           }
           if (done > 0) {
@@ -2126,6 +2197,9 @@ wss.on('connection', (ws: WebSocket) => {
         if (!it.summary && !it.research) continue;
         it.summary = '';
         it.research = '';
+        if (enabled && aiEnabled && aiAvailable && activeModel('summary') !== 'none') {
+          enqueueJob({ kind: 'summary', id: it.id, feedUrl: it.feedUrl });
+        }
         broadcastNewsUpdate(it);
       }
 
@@ -2138,8 +2212,19 @@ wss.on('connection', (ws: WebSocket) => {
           if (done >= MAX) break;
           if (!eligibleForFeed(it, feedUrl)) continue;
           if (it.summary && it.summary.trim()) continue;
+          const before = hasSummaryJobQueuedOrRunning(it.id);
           enqueueJob({ kind: 'summary', id: it.id, feedUrl: it.feedUrl });
-          done++;
+          const after = hasSummaryJobQueuedOrRunning(it.id);
+          if (!before && after) done++;
+          broadcastNewsUpdate(it);
+        }
+      }
+
+      if (!enabled) {
+        // ensure summaryPending is cleared on UI for this feed when summary is turned off
+        for (const it of recent) {
+          if (!eligibleForFeed(it, feedUrl)) continue;
+          broadcastNewsUpdate(it);
         }
       }
 
@@ -2317,11 +2402,12 @@ wss.on('connection', (ws: WebSocket) => {
       if (it) {
         it.summary = '';
         it.research = '';
+      }
+      enqueueJob({ kind: 'summary', id, feedUrl: String(msg.feedUrl || ''), manual: true });
+      if (it) {
         broadcastNewsUpdate(it);
         markDirty();
       }
-
-      enqueueJob({ kind: 'summary', id, feedUrl: String(msg.feedUrl || ''), manual: true });
       return;
     }
 

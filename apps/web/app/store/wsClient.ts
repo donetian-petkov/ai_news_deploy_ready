@@ -217,6 +217,7 @@ function parseNews(v: unknown): NewsItem | null {
     publishedMs: isNumber(m.publishedMs) ? m.publishedMs : Date.now(),
     isMatch: !!m.isMatch,
     summary: isString(m.summary) ? m.summary : '',
+    summaryPending: isBoolean(m.summaryPending) ? m.summaryPending : undefined,
     research: isString(m.research) ? m.research : '',
     mood,
     newsType,

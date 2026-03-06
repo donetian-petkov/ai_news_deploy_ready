@@ -306,23 +306,18 @@ export function useReactColumnsPreviewController({ wsUrl }: Args) {
     summariesLoadCandidates.pendingIds.forEach(id => {
       next[id] = prev[id] || now;
     });
-    summariesLoadCandidates.autoIds.forEach(id => {
-      next[id] = prev[id] || now;
-    });
     summaryActiveSinceRef.current = next;
-  }, [summariesLoadCandidates.autoIds, summariesLoadCandidates.pendingIds]);
+  }, [summariesLoadCandidates.pendingIds]);
 
   const summariesLoading = useMemo(() => {
     if (!ui.aiEnabled || !ui.aiAvailable) {
-      return { count: 0, stalledCount: 0, items: [] as string[] };
+      return { count: 0, stalledCount: 0, autoCandidateCount: 0, items: [] as string[] };
     }
 
     const now = Date.now();
     const items: string[] = [];
     let stalledCount = 0;
-    const allIds = [...summariesLoadCandidates.pendingIds, ...summariesLoadCandidates.autoIds];
-
-    allIds.forEach(id => {
+    summariesLoadCandidates.pendingIds.forEach(id => {
       const meta = summariesLoadCandidates.itemMetaById.get(id);
       const feedLabel = meta ? (summariesLoadCandidates.feedLabelByUrl.get(meta.feedUrl) || meta.feedUrl) : 'unknown';
       const title = meta?.title || id;
@@ -330,13 +325,20 @@ export function useReactColumnsPreviewController({ wsUrl }: Args) {
       const ageMs = Math.max(0, now - sinceMs);
       const stalled = ageMs >= SUMMARY_STALL_THRESHOLD_MS;
       if (stalled) stalledCount += 1;
-      const mode = summariesLoadCandidates.pendingIds.includes(id) ? 'pending' : 'auto';
-      items.push(`${stalled ? 'STALLED' : mode.toUpperCase()} · [${feedLabel}] ${title}`);
+      items.push(`${stalled ? 'STALLED' : 'PENDING'} · [${feedLabel}] ${title}`);
+    });
+
+    summariesLoadCandidates.autoIds.forEach(id => {
+      const meta = summariesLoadCandidates.itemMetaById.get(id);
+      const feedLabel = meta ? (summariesLoadCandidates.feedLabelByUrl.get(meta.feedUrl) || meta.feedUrl) : 'unknown';
+      const title = meta?.title || id;
+      items.push(`AUTO-CANDIDATE · [${feedLabel}] ${title}`);
     });
 
     return {
-      count: allIds.length,
+      count: summariesLoadCandidates.pendingIds.length,
       stalledCount,
+      autoCandidateCount: summariesLoadCandidates.autoIds.length,
       items
     };
   }, [summariesLoadCandidates, summaryStatusTick, ui.aiAvailable, ui.aiEnabled]);
@@ -516,7 +518,9 @@ export function useReactColumnsPreviewController({ wsUrl }: Args) {
         status,
         summariesLoadingCount: summariesLoading.count,
         summariesStalledCount: summariesLoading.stalledCount,
+        summariesAutoCandidateCount: summariesLoading.autoCandidateCount,
         summariesLoadingLabel: labels.summariesLoading,
+        summariesAutoCandidateLabel: labels.summariesAutoCandidates || 'Auto candidates',
         summariesLoadingItems: summariesLoading.items
       },
       clipboard: {
@@ -532,7 +536,7 @@ export function useReactColumnsPreviewController({ wsUrl }: Args) {
       onGridDrop,
       buildDragState
     }),
-    [buildDragState, clipboardNotice, clipboardNoticeOpen, connected, handlersModel, labels.disconnected, labels.linkCopied, labels.live, labels.previewTitle, labels.summariesLoading, onGridDragOver, onGridDrop, renderedFeeds, stateModel, status, summariesLoading.count, summariesLoading.items, summariesLoading.stalledCount, viewModel]
+    [buildDragState, clipboardNotice, clipboardNoticeOpen, connected, handlersModel, labels.disconnected, labels.linkCopied, labels.live, labels.previewTitle, labels.summariesAutoCandidates, labels.summariesLoading, onGridDragOver, onGridDrop, renderedFeeds, stateModel, status, summariesLoading.autoCandidateCount, summariesLoading.count, summariesLoading.items, summariesLoading.stalledCount, viewModel]
   );
 
   return {

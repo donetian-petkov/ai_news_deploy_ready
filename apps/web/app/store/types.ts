@@ -93,6 +93,7 @@ export type NewsItem = {
   feedUrl: string;
   isMatch: boolean;
   summary?: string;
+  summaryPending?: boolean;
   research?: string;
   mood?: NewsMood;
   newsType?: NewsType;

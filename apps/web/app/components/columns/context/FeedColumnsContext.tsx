@@ -19,7 +19,9 @@ export type FeedColumnsContextValue = {
     status: string;
     summariesLoadingCount: number;
     summariesStalledCount: number;
+    summariesAutoCandidateCount: number;
     summariesLoadingLabel: string;
+    summariesAutoCandidateLabel: string;
     summariesLoadingItems: string[];
   };
   clipboard: {
