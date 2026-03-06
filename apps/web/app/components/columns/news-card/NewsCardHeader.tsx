@@ -34,8 +34,13 @@ export function NewsCardHeader() {
 
   return (
     <>
-      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 0.9, pt: 0.35, px: 0.8 }}>
-        <Stack direction="row" spacing={0.8} alignItems="center" sx={{ minWidth: 0 }}>
+      <Stack
+        direction="row"
+        justifyContent="space-between"
+        alignItems="flex-start"
+        sx={{ mb: 0.9, pt: 0.35, px: 0.8, flexWrap: 'wrap', rowGap: 0.6, columnGap: 0.7 }}
+      >
+        <Stack direction="row" spacing={0.8} alignItems="center" sx={{ minWidth: 0, flex: '1 1 auto', flexWrap: 'wrap', rowGap: 0.45 }}>
           <Typography
             variant="caption"
             sx={{ color: NEWS_CARD_COLOR_TOKENS.headerMuted, whiteSpace: 'nowrap', flexShrink: 0 }}
@@ -51,6 +56,7 @@ export function NewsCardHeader() {
                 color: matchAccent,
                 borderColor: matchAccent,
                 fontWeight: 800,
+                flexShrink: 0,
                 whiteSpace: isDuplicateMatch ? 'pre-line' : 'nowrap',
                 height: isDuplicateMatch ? 'auto' : undefined,
                 '& .MuiChip-label': isDuplicateMatch
@@ -65,7 +71,24 @@ export function NewsCardHeader() {
             />
           ) : null}
         </Stack>
-        <Stack direction="row" spacing={0.6} alignItems="center" sx={{ pr: 0.2 }}>
+        <Stack
+          direction="row"
+          spacing={0.6}
+          alignItems="center"
+          sx={{
+            pr: 0.2,
+            ml: 'auto',
+            flex: '0 0 auto',
+            flexWrap: 'wrap',
+            justifyContent: 'flex-end',
+            rowGap: 0.45,
+            '@media (max-width: 660px)': {
+              width: '100%',
+              justifyContent: 'flex-start',
+              ml: 0
+            }
+          }}
+        >
           <Tooltip title={isPinnedNews ? labels.unpinNews : labels.pinNews}>
             <Button
               size="small"
