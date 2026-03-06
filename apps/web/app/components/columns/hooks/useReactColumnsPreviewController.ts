@@ -332,7 +332,7 @@ export function useReactColumnsPreviewController({ wsUrl }: Args) {
       const meta = summariesLoadCandidates.itemMetaById.get(id);
       const feedLabel = meta ? (summariesLoadCandidates.feedLabelByUrl.get(meta.feedUrl) || meta.feedUrl) : 'unknown';
       const title = meta?.title || id;
-      items.push(`AUTO-ELIGIBLE · [${feedLabel}] ${title}`);
+      items.push(`LOADING-SOON · [${feedLabel}] ${title}`);
     });
 
     return {
@@ -520,7 +520,7 @@ export function useReactColumnsPreviewController({ wsUrl }: Args) {
         summariesStalledCount: summariesLoading.stalledCount,
         summariesAutoCandidateCount: summariesLoading.autoCandidateCount,
         summariesLoadingLabel: labels.summariesLoading,
-        summariesAutoCandidateLabel: labels.summariesAutoCandidates || 'Auto-summary eligible',
+        summariesAutoCandidateLabel: labels.summariesAutoCandidates || 'Summaries loading',
         summariesLoadingItems: summariesLoading.items
       },
       clipboard: {
