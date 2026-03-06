@@ -27,6 +27,8 @@ type Args = {
 };
 
 const DUPLICATE_MATCH_SIMILARITY_THRESHOLD = 0.9;
+const SUMMARY_STALL_THRESHOLD_MS = 90_000;
+const SUMMARY_STATUS_REFRESH_MS = 15_000;
 const BULGARIAN_NOISE_STEMS = new Set<string>([
   '\u0441\u043b\u0443\u0436\u0435\u0431\u043d' // служебн
 ]);
@@ -173,7 +175,9 @@ export function useReactColumnsPreviewController({ wsUrl }: Args) {
   const { itemsByFeed, summaryPendingById, researchPendingById, pinnedNewsById, askByItem } = newsState;
 
   const hydratedFeedUiRef = useRef(false);
+  const summaryActiveSinceRef = useRef<Record<string, number>>({});
   const [advancedControlsByUrl, setAdvancedControlsByUrl] = useState<Record<string, boolean>>({});
+  const [summaryStatusTick, setSummaryStatusTick] = useState(0);
   const labels = useMemo(
     () => t('columns', { returnObjects: true }) as Record<string, string>,
     [t]
@@ -188,6 +192,13 @@ export function useReactColumnsPreviewController({ wsUrl }: Args) {
       stopWsConnection();
     };
   }, [dispatch, wsUrl]);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setSummaryStatusTick(prev => prev + 1);
+    }, SUMMARY_STATUS_REFRESH_MS);
+    return () => window.clearInterval(timer);
+  }, []);
 
   useFeedUiPersistence({
     dispatch,
@@ -241,37 +252,94 @@ export function useReactColumnsPreviewController({ wsUrl }: Args) {
     }));
   }, [feeds, itemsByFeed, orderByUrl]);
 
-  const summariesLoading = useMemo(() => {
-    if (!ui.aiEnabled || !ui.aiAvailable) return { count: 0, items: [] as string[] };
-
-    const pendingIds = Object.keys(summaryPendingById);
-    if (!pendingIds.length) return { count: 0, items: [] as string[] };
+  const summariesLoadCandidates = useMemo(() => {
+    if (!ui.aiEnabled || !ui.aiAvailable) {
+      return {
+        pendingIds: [] as string[],
+        autoIds: [] as string[],
+        itemMetaById: new Map<string, { title: string; feedUrl: string }>(),
+        feedLabelByUrl: new Map<string, string>()
+      };
+    }
 
     const feedLabelByUrl = new Map(renderedFeeds.map(feed => [feed.url, feed.label]));
+    const feedSummaryEnabledByUrl = new Map(renderedFeeds.map(feed => [feed.url, !!feed.summaryEnabled]));
     const itemMetaById = new Map<string, { title: string; feedUrl: string }>();
+    const pendingSet = new Set(Object.keys(summaryPendingById));
+    const autoSet = new Set<string>();
+
     Object.entries(itemsByFeed).forEach(([feedUrl, feedItems]) => {
       if (!Array.isArray(feedItems)) return;
       feedItems.forEach(item => {
-        if (!item?.id || itemMetaById.has(item.id)) return;
-        itemMetaById.set(item.id, {
-          title: String(item.title || '').trim(),
-          feedUrl: String(item.feedUrl || feedUrl)
-        });
+        if (!item?.id) return;
+        const itemFeedUrl = String(item.feedUrl || feedUrl);
+        if (!itemMetaById.has(item.id)) {
+          itemMetaById.set(item.id, {
+            title: String(item.title || '').trim(),
+            feedUrl: itemFeedUrl
+          });
+        }
+
+        if (pendingSet.has(item.id)) return;
+        const summaryEnabled = !!feedSummaryEnabledByUrl.get(itemFeedUrl);
+        if (!summaryEnabled) return;
+        const hasSummary = String(item.summary || '').trim().length > 0;
+        const hasResearch = String(item.research || '').trim().length > 0;
+        const researchInProgressOrVisible = !!researchPendingById[item.id] || hasResearch;
+        const shouldAutoSummarize = !ui.hideAllSummaries && !hasSummary && !researchInProgressOrVisible;
+        if (shouldAutoSummarize) autoSet.add(item.id);
       });
     });
 
-    const items = pendingIds.map(id => {
-      const meta = itemMetaById.get(id);
-      if (!meta) return `[unknown] ${id}`;
-      const feedLabel = feedLabelByUrl.get(meta.feedUrl) || meta.feedUrl;
-      return `[${feedLabel}] ${meta.title || id}`;
+    return {
+      pendingIds: Array.from(pendingSet),
+      autoIds: Array.from(autoSet),
+      itemMetaById,
+      feedLabelByUrl
+    };
+  }, [itemsByFeed, renderedFeeds, researchPendingById, summaryPendingById, ui.aiAvailable, ui.aiEnabled, ui.hideAllSummaries]);
+
+  useEffect(() => {
+    const now = Date.now();
+    const prev = summaryActiveSinceRef.current;
+    const next: Record<string, number> = {};
+    summariesLoadCandidates.pendingIds.forEach(id => {
+      next[id] = prev[id] || now;
+    });
+    summariesLoadCandidates.autoIds.forEach(id => {
+      next[id] = prev[id] || now;
+    });
+    summaryActiveSinceRef.current = next;
+  }, [summariesLoadCandidates.autoIds, summariesLoadCandidates.pendingIds]);
+
+  const summariesLoading = useMemo(() => {
+    if (!ui.aiEnabled || !ui.aiAvailable) {
+      return { count: 0, stalledCount: 0, items: [] as string[] };
+    }
+
+    const now = Date.now();
+    const items: string[] = [];
+    let stalledCount = 0;
+    const allIds = [...summariesLoadCandidates.pendingIds, ...summariesLoadCandidates.autoIds];
+
+    allIds.forEach(id => {
+      const meta = summariesLoadCandidates.itemMetaById.get(id);
+      const feedLabel = meta ? (summariesLoadCandidates.feedLabelByUrl.get(meta.feedUrl) || meta.feedUrl) : 'unknown';
+      const title = meta?.title || id;
+      const sinceMs = summaryActiveSinceRef.current[id] || now;
+      const ageMs = Math.max(0, now - sinceMs);
+      const stalled = ageMs >= SUMMARY_STALL_THRESHOLD_MS;
+      if (stalled) stalledCount += 1;
+      const mode = summariesLoadCandidates.pendingIds.includes(id) ? 'pending' : 'auto';
+      items.push(`${stalled ? 'STALLED' : mode.toUpperCase()} · [${feedLabel}] ${title}`);
     });
 
     return {
-      count: pendingIds.length,
+      count: allIds.length,
+      stalledCount,
       items
     };
-  }, [itemsByFeed, renderedFeeds, summaryPendingById, ui.aiAvailable, ui.aiEnabled]);
+  }, [summariesLoadCandidates, summaryStatusTick, ui.aiAvailable, ui.aiEnabled]);
 
   const { filteredColumnItems, duplicateMatchById } = useMemo(() => {
     const all = Object.values(itemsByFeed).flatMap(items => Array.isArray(items) ? items : []);
@@ -447,6 +515,7 @@ export function useReactColumnsPreviewController({ wsUrl }: Args) {
         connected,
         status,
         summariesLoadingCount: summariesLoading.count,
+        summariesStalledCount: summariesLoading.stalledCount,
         summariesLoadingLabel: labels.summariesLoading,
         summariesLoadingItems: summariesLoading.items
       },
@@ -463,7 +532,7 @@ export function useReactColumnsPreviewController({ wsUrl }: Args) {
       onGridDrop,
       buildDragState
     }),
-    [buildDragState, clipboardNotice, clipboardNoticeOpen, connected, handlersModel, labels.disconnected, labels.linkCopied, labels.live, labels.previewTitle, labels.summariesLoading, onGridDragOver, onGridDrop, renderedFeeds, stateModel, status, summariesLoading.count, summariesLoading.items, viewModel]
+    [buildDragState, clipboardNotice, clipboardNoticeOpen, connected, handlersModel, labels.disconnected, labels.linkCopied, labels.live, labels.previewTitle, labels.summariesLoading, onGridDragOver, onGridDrop, renderedFeeds, stateModel, status, summariesLoading.count, summariesLoading.items, summariesLoading.stalledCount, viewModel]
   );
 
   return {

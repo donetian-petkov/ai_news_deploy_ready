@@ -18,6 +18,7 @@ export type FeedColumnsContextValue = {
     connected: boolean;
     status: string;
     summariesLoadingCount: number;
+    summariesStalledCount: number;
     summariesLoadingLabel: string;
     summariesLoadingItems: string[];
   };

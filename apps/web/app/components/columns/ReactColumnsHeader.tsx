@@ -13,6 +13,7 @@ export function ReactColumnsHeader() {
     connected,
     status,
     summariesLoadingCount,
+    summariesStalledCount,
     summariesLoadingLabel,
     summariesLoadingItems
   } = header;
@@ -29,12 +30,12 @@ export function ReactColumnsHeader() {
           <>
             <Chip
               size="small"
-              label={`${summariesLoadingLabel}: ${summariesLoadingCount}`}
-              color="info"
+              label={`${summariesLoadingLabel}: ${summariesLoadingCount}${summariesStalledCount > 0 ? ` • stuck: ${summariesStalledCount}` : ''}`}
+              color={summariesStalledCount > 0 ? 'warning' : 'info'}
               variant="outlined"
               onClick={e => setDetailsAnchor(e.currentTarget)}
               clickable
-              title="Click to view which summaries are pending"
+              title="Click to view summary queue details"
             />
             <Popover
               open={detailsOpen}
@@ -45,7 +46,7 @@ export function ReactColumnsHeader() {
             >
               <Box sx={{ p: 1.2, maxWidth: 560, maxHeight: 360, overflow: 'auto' }}>
                 <Typography variant="subtitle2" sx={{ mb: 0.6 }}>
-                  Pending summaries ({summariesLoadingItems.length})
+                  Summaries in progress ({summariesLoadingItems.length})
                 </Typography>
                 <Stack spacing={0.45}>
                   {summariesLoadingItems.length ? summariesLoadingItems.slice(0, 40).map((line, idx) => (
