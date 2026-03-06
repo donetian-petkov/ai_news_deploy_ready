@@ -1442,7 +1442,7 @@ const AI_MAX_CONCURRENCY = Math.max(1, parseInt(process.env.AI_MAX_CONCURRENCY |
 const AI_QUEUE_MAX = Math.max(200, parseInt(process.env.AI_QUEUE_MAX || '600', 10));
 const AI_SUMMARY_TIMEOUT_MS = Math.max(4_000, Number.parseInt(process.env.AI_SUMMARY_TIMEOUT_MS ?? '22_000', 10) || 22_000);
 const AI_RESEARCH_TIMEOUT_MS = Math.max(6_000, Number.parseInt(process.env.AI_RESEARCH_TIMEOUT_MS ?? '30_000', 10) || 30_000);
-const AI_CLASSIFY_TIMEOUT_MS = Math.max(3_000, Number.parseInt(process.env.AI_CLASSIFY_TIMEOUT_MS ?? '12_000', 10) || 12_000);
+const AI_CLASSIFY_TIMEOUT_MS = Math.max(6_000, Number.parseInt(process.env.AI_CLASSIFY_TIMEOUT_MS ?? '22_000', 10) || 22_000);
 const AI_ERROR_TOAST_COOLDOWN_MS = Math.max(5_000, Number.parseInt(process.env.AI_ERROR_TOAST_COOLDOWN_MS ?? '20_000', 10) || 20_000);
 
 function jobKey(j: AiJob) {
@@ -1493,6 +1493,11 @@ function broadcastAiJobError(job: AiJob, item: NewsInternal | undefined, error: 
   wss.clients.forEach((c: WebSocket) => {
     if (c.readyState === WebSocket.OPEN) c.send(payload);
   });
+}
+
+function isTimeoutError(error: unknown): boolean {
+  const message = (error as Error)?.message || String(error || '');
+  return message.toLowerCase().includes('timeout');
 }
 
 function enqueueJob(job: AiJob) {
@@ -1619,6 +1624,16 @@ async function runOneJob(job: AiJob) {
     }
   } catch (err) {
     const message = (err as Error)?.message || String(err);
+    const classifyJob = job.kind === 'mood' || job.kind === 'news_type';
+    if (classifyJob && isTimeoutError(err)) {
+      return;
+    }
+
+    if (classifyJob) {
+      console.warn(`AI classify job skipped (${job.kind}:${job.id})`, message);
+      return;
+    }
+
     console.error(`AI job failed (${job.kind}:${job.id})`, message);
     broadcastAiJobError(job, itemForError, err);
   } finally {
