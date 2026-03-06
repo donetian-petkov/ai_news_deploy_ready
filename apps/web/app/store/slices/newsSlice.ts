@@ -103,6 +103,36 @@ function ensureAskState(state: NewsState, id: string, feedUrl: string): AskItemS
   return state.askByItem[k];
 }
 
+function selectAskReplyTargetKey(
+  state: NewsState,
+  id: string,
+  feedUrl: string,
+  question: string
+): string {
+  const exactKey = askKey(id, feedUrl);
+  const exactState = state.askByItem[exactKey];
+  if (exactState?.pending) return exactKey;
+
+  const suffix = `::${id}`;
+  const pendingKeys = Object.keys(state.askByItem).filter(key => key.endsWith(suffix) && state.askByItem[key]?.pending);
+  if (!pendingKeys.length) return exactKey;
+  if (pendingKeys.length === 1) return pendingKeys[0];
+
+  const q = String(question || '').trim();
+  if (q) {
+    const byQuestion = pendingKeys.find(key => {
+      const messages = state.askByItem[key]?.messages || [];
+      for (let i = messages.length - 1; i >= 0; i -= 1) {
+        if (messages[i].q === q && !messages[i].a && !messages[i].error) return true;
+      }
+      return false;
+    });
+    if (byQuestion) return byQuestion;
+  }
+
+  return pendingKeys[0];
+}
+
 const newsSlice = createSlice({
   name: 'news',
   initialState,
@@ -215,7 +245,9 @@ const newsSlice = createSlice({
       remaining?: number;
     }>) {
       const { id, feedUrl, question, answer, error, used, remaining } = action.payload;
-      const a = ensureAskState(state, id, feedUrl);
+      const targetKey = selectAskReplyTargetKey(state, id, feedUrl, question || '');
+      const targetFeedUrl = targetKey.slice(0, Math.max(0, targetKey.lastIndexOf('::')));
+      const a = ensureAskState(state, id, targetFeedUrl || feedUrl);
       a.pending = false;
       if (isNumber(used)) a.used = Math.max(0, Math.min(5, Math.floor(used)));
       if (isNumber(remaining)) a.remaining = Math.max(0, Math.min(5, Math.floor(remaining)));

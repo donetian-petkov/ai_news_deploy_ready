@@ -1255,6 +1255,25 @@ async function oneItemResearch(
   return generateAiText('research', input, budgetToTokensResearch(budget), 0.25);
 }
 
+async function oneItemResearchFallback(
+  title: string,
+  source: string,
+  link: string,
+  context: string,
+  budget: BudgetMode
+): Promise<string | undefined> {
+  const input =
+    `${researchInstruction(researchLang)}\n` +
+    `Source: ${source}\n` +
+    `Headline: ${title}\n` +
+    `Link: ${link}\n` +
+    (context ? `RSS context: ${context}\n` : '') +
+    'Note: article body fetch was slow/unavailable. Use available context only.';
+
+  const maxTokens = Math.max(220, Math.floor(budgetToTokensResearch(budget) * 0.62));
+  return generateAiText('research', input, maxTokens, 0.2);
+}
+
 async function classifyMoodForItem(
   title: string,
   source: string,
@@ -1441,7 +1460,11 @@ const lastAiJobErrorAtMs = new Map<string, number>();
 const AI_MAX_CONCURRENCY = Math.max(1, parseInt(process.env.AI_MAX_CONCURRENCY || '1', 10));
 const AI_QUEUE_MAX = Math.max(200, parseInt(process.env.AI_QUEUE_MAX || '600', 10));
 const AI_SUMMARY_TIMEOUT_MS = Math.max(4_000, Number.parseInt(process.env.AI_SUMMARY_TIMEOUT_MS ?? '22_000', 10) || 22_000);
-const AI_RESEARCH_TIMEOUT_MS = Math.max(6_000, Number.parseInt(process.env.AI_RESEARCH_TIMEOUT_MS ?? '30_000', 10) || 30_000);
+const AI_RESEARCH_TIMEOUT_MS = Math.max(8_000, Number.parseInt(process.env.AI_RESEARCH_TIMEOUT_MS ?? '45_000', 10) || 45_000);
+const AI_RESEARCH_TIMEOUT_MANUAL_MS = Math.max(
+  AI_RESEARCH_TIMEOUT_MS,
+  Number.parseInt(process.env.AI_RESEARCH_TIMEOUT_MANUAL_MS ?? '60_000', 10) || 60_000
+);
 const AI_CLASSIFY_TIMEOUT_MS = Math.max(6_000, Number.parseInt(process.env.AI_CLASSIFY_TIMEOUT_MS ?? '22_000', 10) || 22_000);
 const AI_ERROR_TOAST_COOLDOWN_MS = Math.max(5_000, Number.parseInt(process.env.AI_ERROR_TOAST_COOLDOWN_MS ?? '20_000', 10) || 20_000);
 
@@ -1606,15 +1629,30 @@ async function runOneJob(job: AiJob) {
       // Optional article fetch for real research (bounded)
       let linkText = it.__linkText || '';
       if (!linkText) {
-        linkText = await fetchArticleText(it.link, 2600);
+        try {
+          linkText = await fetchArticleText(it.link, 2600);
+        } catch {
+          linkText = '';
+        }
         it.__linkText = linkText;
       }
 
-      const text = await withTimeout(
-        oneItemResearch(it.title, it.source, it.link, ctx, linkText, budget),
-        AI_RESEARCH_TIMEOUT_MS,
-        `research:${it.id}`
-      );
+      const timeoutMs = job.manual ? AI_RESEARCH_TIMEOUT_MANUAL_MS : AI_RESEARCH_TIMEOUT_MS;
+      let text: string | undefined;
+      try {
+        text = await withTimeout(
+          oneItemResearch(it.title, it.source, it.link, ctx, linkText, budget),
+          timeoutMs,
+          `research:${it.id}`
+        );
+      } catch (err) {
+        if (!isTimeoutError(err)) throw err;
+        text = await withTimeout(
+          oneItemResearchFallback(it.title, it.source, it.link, ctx, budget),
+          timeoutMs,
+          `research_fallback:${it.id}`
+        );
+      }
       if (text) {
         it.research = text;
         broadcastNewsUpdate(it);
@@ -2467,7 +2505,7 @@ wss.on('connection', (ws: WebSocket) => {
         const limit: AskAgentReply = {
           type: 'ask_agent_reply',
           id: it.id,
-          feedUrl: it.feedUrl,
+          feedUrl: feedUrl || it.feedUrl,
           question,
           error: `Question limit reached for this news (${ASK_AGENT_MAX_QUESTIONS}/${ASK_AGENT_MAX_QUESTIONS}).`,
           used: ASK_AGENT_MAX_QUESTIONS,
@@ -2523,7 +2561,7 @@ wss.on('connection', (ws: WebSocket) => {
         const ok: AskAgentReply = {
           type: 'ask_agent_reply',
           id: it.id,
-          feedUrl: it.feedUrl,
+          feedUrl: feedUrl || it.feedUrl,
           question,
           answer: answer || 'I can only answer questions about this specific news item.',
           used: usedNow,
@@ -2536,7 +2574,7 @@ wss.on('connection', (ws: WebSocket) => {
         const fail: AskAgentReply = {
           type: 'ask_agent_reply',
           id: it.id,
-          feedUrl: it.feedUrl,
+          feedUrl: feedUrl || it.feedUrl,
           question,
           error: 'Ask Agent failed. Please try again.',
           used: usedBefore,

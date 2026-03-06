@@ -99,4 +99,29 @@ describe('newsSlice', () => {
     expect(ask.messages).toEqual([{ q: 'Extra?', a: undefined, error: 'No data' }]);
     expect(ask.pending).toBe(false);
   });
+
+  it('receiveAskReply resolves pending ask when reply feed differs (filtered/source)', () => {
+    let state = newsReducer(undefined, enqueueAskQuestion({
+      id: 'id-3',
+      feedUrl: '__filtered__',
+      question: 'Who is this about?'
+    }));
+
+    state = newsReducer(
+      state,
+      receiveAskReply({
+        id: 'id-3',
+        feedUrl: 'https://actualno.com/rss',
+        question: 'Who is this about?',
+        answer: 'The story references local officials.'
+      })
+    );
+
+    const askFiltered = state.askByItem['__filtered__::id-3'];
+    expect(askFiltered.pending).toBe(false);
+    expect(askFiltered.messages).toEqual([
+      { q: 'Who is this about?', a: 'The story references local officials.', error: undefined }
+    ]);
+    expect(state.askByItem['https://actualno.com/rss::id-3']).toBeUndefined();
+  });
 });
