@@ -488,6 +488,26 @@ npm run prisma:migrate
 - `AUTH_TOKEN_SECRET` (required for account login token signing)
 - `KEY_ENCRYPTION_SECRET` (required for provider API key encryption at rest)
 
+### Security Secrets
+- `AUTH_TOKEN_SECRET` signs user auth/session tokens.
+- `KEY_ENCRYPTION_SECRET` encrypts saved provider API keys in the local database.
+- Use long random values and keep them private.
+- Use different values for each secret.
+
+Generate secrets:
+
+```bash
+openssl rand -hex 32
+openssl rand -hex 32
+```
+
+Then set in `.env`:
+
+```env
+AUTH_TOKEN_SECRET=<first-random-value>
+KEY_ENCRYPTION_SECRET=<second-random-value>
+```
+
 ### AI Behavior
 - `AI_ENABLED` (`true`/`false`)
 - `SUMMARY_LANG` (`bilingual` | `bg` | `en`)
