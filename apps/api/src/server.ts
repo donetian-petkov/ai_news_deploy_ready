@@ -955,7 +955,7 @@ function saveStateNow() {
     feedSettings: feedSettingsObj(),
     hiddenIds: Array.from(hiddenIds),
     feedRuntime: feedRuntimeObj(),
-    recent: recent.slice(-420) // bounded
+    recent: recent.slice(-PERSISTED_RECENT_ITEMS) // bounded
   };
 
   try {
@@ -1074,6 +1074,10 @@ type DedupeItem = { vec: number[]; publishedMs: number };
 let dedupeWindow: DedupeItem[] = [];
 const DEDUPE_WINDOW_MAX = 1400;
 const DEDUPE_COMPARE_LAST_N = 400;
+const MAX_RECENT_ITEMS = 5000;
+const PERSISTED_RECENT_ITEMS = 5000;
+const MAX_SEEN_IDS = 30000;
+const SEEN_TRIM_TO = 18000;
 
 // Filtered-only semantic dedupe window
 let filteredDedupeWindow: number[][] = [];
@@ -2184,8 +2188,8 @@ async function processFeed(fi: FeedInfo) {
       if (!id || seen.has(id)) continue;
       seen.add(id);
 
-      if (seen.size > 4200) {
-        seen = new Set(Array.from(seen).slice(-2400));
+      if (seen.size > MAX_SEEN_IDS) {
+        seen = new Set(Array.from(seen).slice(-SEEN_TRIM_TO));
       }
 
       const { published, publishedMs } = toPublishedMs(item);
@@ -2245,7 +2249,7 @@ async function processFeed(fi: FeedInfo) {
       };
 
       recent.push(pkt);
-      if (recent.length > 520) recent.shift();
+      if (recent.length > MAX_RECENT_ITEMS) recent.shift();
 
       // enqueue AI jobs (auto per-column)
       if (aiEnabled && aiAvailable) {
@@ -2433,6 +2437,30 @@ wss.on('connection', (ws: WebSocket) => {
   ws.on('message', async data => {
     let raw: unknown;
     try { raw = JSON.parse(String(data)); } catch { return; }
+
+    // Handle keyword updates directly from raw payload too, so this works
+    // even if a stale @ai-news/shared build is still in use at runtime.
+    if (raw && typeof raw === 'object' && (raw as { type?: unknown }).type === 'set_keywords') {
+      const beforeMatchCount = recent.reduce((acc, it) => acc + (it.isMatch ? 1 : 0), 0);
+      keywords = parseKeywordsPayload((raw as { keywords?: unknown }).keywords);
+
+      titleVecCache.clear();
+      filteredDedupeWindow = [];
+      keywordVecs = [];
+
+      await initKeywordEmbeddings();
+      await refreshMatchStateForRecent();
+      broadcastConfig();
+
+      const afterMatchCount = recent.reduce((acc, it) => acc + (it.isMatch ? 1 : 0), 0);
+      ws.send(JSON.stringify({
+        type: 'ok',
+        message: `Updated ${keywords.length} keywords. Reprocessed ${recent.length} stored news items (${beforeMatchCount} -> ${afterMatchCount} matches).`
+      }));
+      markDirty();
+      return;
+    }
+
     const parsed = clientMsgSchema.safeParse(raw);
     if (!parsed.success) return;
     const msg: ClientMsg = parsed.data;
@@ -2615,6 +2643,7 @@ wss.on('connection', (ws: WebSocket) => {
     }
 
     if (msg.type === 'set_keywords') {
+      const beforeMatchCount = recent.reduce((acc, it) => acc + (it.isMatch ? 1 : 0), 0);
       keywords = parseKeywordsPayload(msg.keywords);
 
       titleVecCache.clear();
@@ -2624,6 +2653,11 @@ wss.on('connection', (ws: WebSocket) => {
       await initKeywordEmbeddings();
       await refreshMatchStateForRecent();
       broadcastConfig();
+      const afterMatchCount = recent.reduce((acc, it) => acc + (it.isMatch ? 1 : 0), 0);
+      ws.send(JSON.stringify({
+        type: 'ok',
+        message: `Updated ${keywords.length} keywords. Reprocessed ${recent.length} stored news items (${beforeMatchCount} -> ${afterMatchCount} matches).`
+      }));
       markDirty();
       return;
     }
