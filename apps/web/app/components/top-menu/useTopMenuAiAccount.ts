@@ -116,13 +116,14 @@ export function useTopMenuAiAccount({ provider, labels, onSwitchProvider }: Args
       await saveProviderKey(getStoredAuthToken(), provider, nextKey);
       setApiKey('');
       setHasSavedKey(true);
-      setMessage({ kind: 'success', text: labels.authKeySaved || 'API key saved.' });
+      onSwitchProvider(provider);
+      setMessage({ kind: 'success', text: labels.authKeySavedAndApplied || labels.authKeySaved || 'API key saved and applied.' });
     } catch (error) {
       setMessage({ kind: 'error', text: (error as Error)?.message || (labels.authFailed || 'Request failed.') });
     } finally {
       setBusy(false);
     }
-  }, [apiKey, labels.authFailed, labels.authKeyRequired, labels.authKeySaved, labels.authSignInRequired, provider, user]);
+  }, [apiKey, labels.authFailed, labels.authKeyRequired, labels.authKeySaved, labels.authKeySavedAndApplied, labels.authSignInRequired, onSwitchProvider, provider, user]);
 
   const switchProviderWithSavedKey = useCallback((nextProvider: TopMenuAiProvider) => {
     if (!user) {
