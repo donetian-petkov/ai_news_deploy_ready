@@ -1,6 +1,6 @@
 'use client';
 
-import { Alert } from '@mui/material';
+import { Alert, Box, Button, Stack, TextField, Typography } from '@mui/material';
 import { TopMenuSelectField } from './TopMenuSelectField';
 import {
   buildAiModelOptions,
@@ -12,6 +12,7 @@ import {
   buildTypeOptions
 } from './topMenuOptionBuilders';
 import { useTopMenuContext } from './context/useTopMenuContext';
+import { useTopMenuAiAccount } from './useTopMenuAiAccount';
 
 export function TopMenuAiSettingsSection() {
   const {
@@ -23,6 +24,11 @@ export function TopMenuAiSettingsSection() {
   } = useTopMenuContext();
 
   const providerModels = aiSettings.availableModels[aiSettings.aiProvider];
+  const account = useTopMenuAiAccount({
+    provider: aiSettings.aiProvider,
+    labels,
+    onSwitchProvider: actions.onChangeAiProvider
+  });
 
   return (
     <details className="controlSection" open>
@@ -32,9 +38,93 @@ export function TopMenuAiSettingsSection() {
           id="aiProviderSelect"
           label={labels.aiProvider}
           value={aiSettings.aiProvider}
-          onChange={actions.onChangeAiProvider}
+          onChange={account.switchProviderWithSavedKey}
           options={buildAiProviderOptions(labels)}
         />
+
+        <Box sx={{ width: '100%', border: '1px solid var(--ctl-border)', borderRadius: 2, p: 1 }}>
+          <Typography variant="caption" sx={{ display: 'block', mb: 1 }}>
+            {labels.authAccountTitle}
+          </Typography>
+
+          {account.user ? (
+            <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1, flexWrap: 'wrap' }}>
+              <Typography variant="caption">{labels.authSignedInAs}: {account.user.username}</Typography>
+              <Button size="small" variant="outlined" onClick={account.signOut} disabled={account.busy}>
+                {labels.authSignOut}
+              </Button>
+            </Stack>
+          ) : (
+            <Stack spacing={1} sx={{ mb: 1 }}>
+              <Stack direction="row" spacing={1}>
+                <TextField
+                  size="small"
+                  fullWidth
+                  label={labels.authUsername}
+                  value={account.username}
+                  onChange={e => account.setUsername(e.target.value)}
+                />
+                <TextField
+                  size="small"
+                  fullWidth
+                  type="password"
+                  label={labels.authPassword}
+                  value={account.password}
+                  onChange={e => account.setPassword(e.target.value)}
+                />
+              </Stack>
+              <Stack direction="row" spacing={1}>
+                <Button size="small" variant="contained" onClick={account.signIn} disabled={account.busy}>
+                  {labels.authSignIn}
+                </Button>
+                <Button size="small" variant="outlined" onClick={account.register} disabled={account.busy}>
+                  {labels.authRegister}
+                </Button>
+              </Stack>
+            </Stack>
+          )}
+
+          <Stack direction="row" spacing={1} sx={{ mb: 1 }}>
+            <TextField
+              size="small"
+              fullWidth
+              type="password"
+              label={labels.authApiKey}
+              placeholder={labels.authApiKeyPlaceholder}
+              value={account.apiKey}
+              onChange={e => account.setApiKey(e.target.value)}
+              disabled={!account.user || account.busy}
+            />
+            <Button
+              size="small"
+              variant="contained"
+              onClick={account.saveCurrentProviderKey}
+              disabled={!account.user || account.busy || !String(account.apiKey || '').trim()}
+            >
+              {labels.authSaveKey}
+            </Button>
+          </Stack>
+
+          <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1, flexWrap: 'wrap' }}>
+            <Typography variant="caption">
+              {account.hasSavedKey ? labels.authKeyStoredYes : labels.authKeyStoredNo}
+            </Typography>
+            <Button
+              size="small"
+              variant="outlined"
+              onClick={() => account.switchProviderWithSavedKey(aiSettings.aiProvider)}
+              disabled={!account.user || !account.hasSavedKey || account.busy}
+            >
+              {labels.authApplyProvider}
+            </Button>
+          </Stack>
+
+          {account.message ? (
+            <Alert severity={account.message.kind} sx={{ py: 0 }}>
+              {account.message.text}
+            </Alert>
+          ) : null}
+        </Box>
 
         <TopMenuSelectField
           id="summaryLang"

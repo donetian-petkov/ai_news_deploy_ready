@@ -6,7 +6,8 @@ import { setAiSettings, enqueueToast } from '../../../store/slices/uiSlice';
 import { setFeedBudgetSetting } from '../../../store/slices/feedsSlice';
 import type { AppDispatch, RootState } from '../../../store/store';
 import { sendWsMessage } from '../../../store/wsClient';
-import { getProviderKeyLabel, type TopMenuAiProvider } from '../topMenu.services';
+import { getStoredAuthToken } from '../topMenuAuth.services';
+import type { TopMenuAiProvider } from '../topMenu.services';
 
 type Args = {
   dispatch: AppDispatch;
@@ -27,21 +28,16 @@ export function useTopMenuAiActions({ dispatch, t, labels, feeds }: Args) {
   }, [dispatch, feeds]);
 
   const changeAiProvider = useCallback((provider: TopMenuAiProvider) => {
-    const keyLabel = getProviderKeyLabel(provider);
-    const promptText = t('topMenu.switchProviderPrompt', { keyLabel });
-    const apiKey = window.prompt(promptText, '');
-    if (apiKey === null) return;
-
-    if (!apiKey.trim()) {
-      dispatch(enqueueToast({ kind: 'error', message: labels.providerSwitchCancelled }));
+    const authToken = getStoredAuthToken();
+    if (!authToken) {
+      dispatch(enqueueToast({ kind: 'error', message: labels.authSignInRequired }));
       return;
     }
-
-    const ok = sendWsMessage({ type: 'set_ai_provider', provider, apiKey: apiKey.trim() });
+    const ok = sendWsMessage({ type: 'set_ai_provider', provider, authToken });
     if (!ok) {
       dispatch(enqueueToast({ kind: 'error', message: labels.noServerConnection }));
     }
-  }, [dispatch, labels.noServerConnection, labels.providerSwitchCancelled, t]);
+  }, [dispatch, labels.authSignInRequired, labels.noServerConnection, t]);
 
   const requestNotificationPermission = useCallback(async (enabled: boolean) => {
     if (!enabled || typeof Notification === 'undefined') return;

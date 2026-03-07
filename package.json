@@ -14,6 +14,8 @@
     "test": "npm run test -w @ai-news/web && npm run test -w @ai-news/shared",
     "test:all": "npm run test",
     "start": "npm run start -w @ai-news/api & npm run start -w @ai-news/web",
+    "install:server": "bash ./scripts/install.sh",
+    "start:server": "bash ./scripts/start.sh",
     "prisma:generate": "npm run prisma:generate -w @ai-news/api",
     "prisma:migrate": "npm run prisma:migrate -w @ai-news/api"
   }

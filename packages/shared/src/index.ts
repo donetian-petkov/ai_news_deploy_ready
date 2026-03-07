@@ -16,7 +16,12 @@ export const columnFiltersSchema = z.object({
 
 export const clientMsgSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('toggle_ai'), enabled: z.boolean() }),
-  z.object({ type: z.literal('set_ai_provider'), provider: aiProviderSchema, apiKey: z.string().optional() }),
+  z.object({
+    type: z.literal('set_ai_provider'),
+    provider: aiProviderSchema,
+    apiKey: z.string().optional(),
+    authToken: z.string().optional()
+  }),
   z.object({
     type: z.literal('set_ai_models'),
     summaryModel: aiModelIdSchema.optional(),

@@ -33,7 +33,8 @@ A real-time, multi-column news intelligence dashboard with AI summaries, AI rese
   - reset back to 10 (column and global)
 
 ### AI Behaviors
-- AI provider switching from UI (`OpenAI`, `Claude`, `OpenRouter`) with runtime key prompt.
+- Account-based AI provider key storage (encrypted at rest in SQLite).
+- AI provider switching from UI (`OpenAI`, `Claude`, `OpenRouter`) using the signed-in account's saved key.
 - Summary and Research language controls.
 - Per-column AI budget (`low`, `standard`, `high`) + global apply-all budget.
 - Ask Agent per news item with remaining-question limits and contextual replies.
@@ -156,17 +157,17 @@ cp .env.example .env
 Minimum required values:
 
 ```env
-OPENAI_API_KEY=...
 NEXT_PUBLIC_WS_URL=ws://localhost:4000
+NEXT_PUBLIC_API_URL=http://localhost:4000
 DATABASE_URL="file:./dev.db"
+AUTH_TOKEN_SECRET=change-me-super-secret
+KEY_ENCRYPTION_SECRET=change-me-encryption-secret
 ```
 
 ### 3) Install + initialize
 
 ```bash
-npm install
-npm run prisma:generate
-npm run prisma:migrate
+npm run install:server
 ```
 
 ### 4) Run locally
@@ -174,6 +175,12 @@ npm run prisma:migrate
 ```bash
 npm run dev
 ```
+
+### 5) Create account + save provider key
+- Open the app and expand `AI Settings`.
+- In `Account & Provider Keys`, register/sign in.
+- Paste API key for selected provider and click `Save Key`.
+- Change provider from the provider dropdown (or `Apply Provider`).
 
 Endpoints:
 - Web: `http://localhost:3000`
@@ -451,6 +458,8 @@ npm run dev:api
 # Build + start
 npm run build
 npm run start
+npm run install:server
+npm run start:server
 
 # Tests
 npm run test
@@ -476,6 +485,8 @@ npm run prisma:migrate
 - `ANTHROPIC_API_KEY` (or `CLAUDE_API_KEY`)
 - `OPENROUTER_API_KEY`
 - `OPENROUTER_BASE_URL` (optional override)
+- `AUTH_TOKEN_SECRET` (required for account login token signing)
+- `KEY_ENCRYPTION_SECRET` (required for provider API key encryption at rest)
 
 ### AI Behavior
 - `AI_ENABLED` (`true`/`false`)
