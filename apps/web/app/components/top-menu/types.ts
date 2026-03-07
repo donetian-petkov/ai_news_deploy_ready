@@ -63,6 +63,7 @@ export type TopMenuControlsModel = {
     aiAvailable: TopMenuUiState['aiAvailable'];
     performanceMode: TopMenuUiState['performanceMode'];
     aiProvider: TopMenuUiState['aiProvider'];
+    keywords: TopMenuUiState['keywords'];
     summaryLang: TopMenuUiState['summaryLang'];
     researchLang: TopMenuUiState['researchLang'];
     summaryModel: TopMenuUiState['summaryModel'];
@@ -117,6 +118,7 @@ export type TopMenuControlsActions = {
   onNotifyEnabledChange: (enabled: boolean) => void;
   onNotifyModeChange: (mode: TopMenuUiState['notifyMode']) => void;
   onChangeAiProvider: (provider: TopMenuUiState['aiProvider']) => void;
+  onSetKeywords: (keywords: string[]) => void;
   onSummaryLangChange: (lang: TopMenuUiState['summaryLang']) => void;
   onResearchLangChange: (lang: TopMenuUiState['researchLang']) => void;
   onSummaryModelChange: (model: string) => void;
