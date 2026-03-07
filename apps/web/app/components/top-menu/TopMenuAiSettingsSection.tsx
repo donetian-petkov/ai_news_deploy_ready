@@ -48,7 +48,7 @@ export function TopMenuAiSettingsSection() {
           </Typography>
 
           {account.user ? (
-            <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1, flexWrap: 'wrap' }}>
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems={{ xs: 'stretch', sm: 'center' }} sx={{ mb: 1 }}>
               <Typography variant="caption">{labels.authSignedInAs}: {account.user.username}</Typography>
               <Button size="small" variant="outlined" onClick={account.signOut} disabled={account.busy}>
                 {labels.authSignOut}
@@ -56,7 +56,7 @@ export function TopMenuAiSettingsSection() {
             </Stack>
           ) : (
             <Stack spacing={1} sx={{ mb: 1 }}>
-              <Stack direction="row" spacing={1}>
+              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
                 <TextField
                   size="small"
                   fullWidth
@@ -73,7 +73,7 @@ export function TopMenuAiSettingsSection() {
                   onChange={e => account.setPassword(e.target.value)}
                 />
               </Stack>
-              <Stack direction="row" spacing={1}>
+              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
                 <Button size="small" variant="contained" onClick={account.signIn} disabled={account.busy}>
                   {labels.authSignIn}
                 </Button>
@@ -84,7 +84,7 @@ export function TopMenuAiSettingsSection() {
             </Stack>
           )}
 
-          <Stack direction="row" spacing={1} sx={{ mb: 1 }}>
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ mb: 1 }}>
             <TextField
               size="small"
               fullWidth
@@ -105,7 +105,7 @@ export function TopMenuAiSettingsSection() {
             </Button>
           </Stack>
 
-          <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1, flexWrap: 'wrap' }}>
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems={{ xs: 'stretch', sm: 'center' }} sx={{ mb: 1 }}>
             <Typography variant="caption">
               {account.hasSavedKey ? labels.authKeyStoredYes : labels.authKeyStoredNo}
             </Typography>
