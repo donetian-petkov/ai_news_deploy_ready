@@ -9,6 +9,14 @@ if [[ ! -f ".env" ]]; then
   echo "Created .env from .env.example"
 fi
 
+missing_secrets=()
+for key in AUTH_TOKEN_SECRET KEY_ENCRYPTION_SECRET; do
+  value="$(grep -E "^${key}=" .env 2>/dev/null | tail -n1 | cut -d= -f2- | tr -d '\"' | tr -d "'" || true)"
+  if [[ -z "${value}" || "${value}" == change-me* ]]; then
+    missing_secrets+=("${key}")
+  fi
+done
+
 echo "Installing dependencies..."
 npm install
 
@@ -21,14 +29,25 @@ npm run prisma:migrate
 echo "Building apps..."
 npm run build
 
+echo
+echo "Install complete."
+echo
+echo "Next steps:"
+echo "1) This script assumes README Step 2 (.env configuration) is already done."
+if [[ ${#missing_secrets[@]} -gt 0 ]]; then
+  echo "   Missing/placeholder secrets detected:"
+  for key in "${missing_secrets[@]}"; do
+    echo "   - ${key}"
+  done
+  echo "   Set these in .env before starting services."
+fi
 cat <<'EOF'
-Install complete.
-
-Next steps:
-1) Edit .env and set:
-   - AUTH_TOKEN_SECRET
-   - KEY_ENCRYPTION_SECRET
-   - provider API keys (optional fallback)
 2) Start services:
-   npm run start
+   npm run start:server
+EOF
+cat <<'EOF'
+
+Optional fallback:
+- You can set provider API keys in .env (OPENAI/ANTHROPIC/OPENROUTER),
+- or sign in from the UI and save provider keys per account.
 EOF
