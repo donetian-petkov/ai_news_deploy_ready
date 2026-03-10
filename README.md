@@ -34,6 +34,7 @@ A real-time, multi-column news intelligence dashboard with AI summaries, AI rese
 
 ### AI Behaviors
 - Account-based AI provider key storage (encrypted at rest in SQLite).
+- Account-based preferences profile (auto-saves summary/research/title language, vibe, color mode, and other UI settings).
 - AI provider switching from UI (`OpenAI`, `Claude`, `OpenRouter`) using the signed-in account's saved key.
 - Summary and Research language controls.
 - Per-column AI budget (`low`, `standard`, `high`) + global apply-all budget.
@@ -177,10 +178,11 @@ npm run dev
 ```
 
 ### 5) Create account + save provider key
-- Open the app and expand `AI Settings`.
-- In `Account & Provider Keys`, register/sign in.
+- Open the app and expand Top Controls.
+- In `Account`, register/sign in.
 - Paste API key for selected provider and click `Save Key`.
 - Change provider from the provider dropdown (or `Apply Provider`).
+- Major preferences are auto-saved per account (including summary/research/title language, vibe, and color mode).
 
 Endpoints:
 - Web: `http://localhost:3000`

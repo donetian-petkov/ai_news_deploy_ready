@@ -3,7 +3,7 @@
 import { createContext } from 'react';
 import type { FeedInfo } from '../../../store/types';
 import type { TopMenuVibe } from '../topMenu.services';
-import type { TopMenuAddStreamModel, TopMenuControlsActions, TopMenuControlsModel, TopMenuSearchModel } from '../types';
+import type { TopMenuAccountModel, TopMenuAddStreamModel, TopMenuControlsActions, TopMenuControlsModel, TopMenuSearchModel } from '../types';
 
 type TopMenuToast = {
   id: string;
@@ -34,6 +34,7 @@ export type TopMenuContextValue = {
   orderedFeeds: FeedInfo[];
   searchVisible: boolean;
   addStreamVisible: boolean;
+  account: TopMenuAccountModel;
   search: TopMenuSearchModel;
   addStream: TopMenuAddStreamModel;
   controls: {

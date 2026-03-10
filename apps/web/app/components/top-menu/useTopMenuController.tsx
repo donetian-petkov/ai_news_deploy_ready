@@ -24,6 +24,8 @@ import { useTopMenuToastLifecycle } from './useTopMenuToastLifecycle';
 import { useTopMenuUiPersistence } from './useTopMenuUiPersistence';
 import { useTopMenuViewModel } from './useTopMenuViewModel';
 import { useTopMenuControlPanelHandlers } from './useTopMenuControlPanelHandlers';
+import { useTopMenuAccount } from './useTopMenuAccount';
+import { useTopMenuAccountSettingsSync } from './useTopMenuAccountSettingsSync';
 import type { AddStatus, FeedType, TopMenuAddStreamModel, TopMenuControlsActions, TopMenuControlsModel, TopMenuSearchModel } from './types';
 
 export function useTopMenuController() {
@@ -166,6 +168,17 @@ export function useTopMenuController() {
     onDeleteAgeAllChange: setDeleteAgeAll,
     ...controlPanelHandlers
   }), [controlPanelHandlers]);
+  const account = useTopMenuAccount({
+    provider: ui.aiProvider,
+    labels,
+    onSwitchProvider: changeAiProvider
+  });
+
+  useTopMenuAccountSettingsSync({
+    dispatch,
+    ui,
+    account
+  });
 
   const onScrollToColumns = () => {
     document.querySelector('.container')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -257,6 +270,7 @@ export function useTopMenuController() {
     hideAllSummaries: ui.hideAllSummaries,
     searchVisible: ui.searchVisible,
     addStreamVisible: ui.addStreamVisible,
+    account,
     controlsCollapsed: ui.controlsCollapsed,
     menuCollapsed: ui.menuCollapsed,
     allColumnControlsHidden: ui.allColumnControlsHidden,

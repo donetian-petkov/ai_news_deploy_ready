@@ -7,6 +7,8 @@ export type AuthUser = {
   username: string;
 };
 
+export type AccountSettingsPayload = Record<string, unknown>;
+
 type AuthSuccess = {
   token: string;
   user: AuthUser;
@@ -100,4 +102,18 @@ export async function saveProviderKey(token: string, provider: TopMenuAiProvider
 export async function fetchProviderKeyStatus(token: string, provider: TopMenuAiProvider): Promise<boolean> {
   const result = await requestJson<{ hasKey: boolean }>(`/api/auth/provider-key/${provider}`, { method: 'GET' }, token);
   return !!result.hasKey;
+}
+
+export async function fetchAccountSettings(token: string): Promise<AccountSettingsPayload> {
+  const result = await requestJson<{ settings?: unknown }>('/api/account/settings', { method: 'GET' }, token);
+  return result && result.settings && typeof result.settings === 'object'
+    ? result.settings as AccountSettingsPayload
+    : {};
+}
+
+export async function saveAccountSettings(token: string, settings: AccountSettingsPayload): Promise<void> {
+  await requestJson<{ saved: true }>('/api/account/settings', {
+    method: 'PUT',
+    body: JSON.stringify({ settings })
+  }, token);
 }

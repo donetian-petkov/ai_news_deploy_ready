@@ -5,7 +5,7 @@ import { FILTERED_FEED_URL } from '../../store/constants';
 import type { FeedInfo } from '../../store/types';
 import type { TopMenuContextValue } from './context/TopMenuContext';
 import type { TopMenuVibe } from './topMenu.services';
-import type { TopMenuAddStreamModel, TopMenuControlsActions, TopMenuControlsModel, TopMenuSearchModel } from './types';
+import type { TopMenuAccountModel, TopMenuAddStreamModel, TopMenuControlsActions, TopMenuControlsModel, TopMenuSearchModel } from './types';
 
 type Args = {
   labels: Record<string, string>;
@@ -24,6 +24,7 @@ type Args = {
   hideAllSummaries: boolean;
   searchVisible: boolean;
   addStreamVisible: boolean;
+  account: TopMenuAccountModel;
   controlsCollapsed: boolean;
   menuCollapsed: boolean;
   allColumnControlsHidden: boolean;
@@ -72,6 +73,7 @@ export function useTopMenuViewModel({
   hideAllSummaries,
   searchVisible,
   addStreamVisible,
+  account,
   controlsCollapsed,
   menuCollapsed,
   allColumnControlsHidden,
@@ -145,6 +147,7 @@ export function useTopMenuViewModel({
     orderedFeeds,
     searchVisible,
     addStreamVisible,
+    account,
     search,
     addStream,
     controls: {
@@ -177,7 +180,7 @@ export function useTopMenuViewModel({
     onChangeVibe,
     onPlayToggleSound,
     onReorderFeeds
-  }), [addStream, addStreamLabel, addStreamVisible, allColumnLabel, connected, controlsActions, controlsLabel, controlsModel, dateFormat, helpCloseLabel, helpOpen, helpTitle, hideAllResearch, hideAllSummaries, isMobile, labels, language, menuItemsAsIcons, menuLabel, mobileDrawerOpen, onChangeVibe, onCloseHelp, onCloseMobileDrawer, onDismissToast, onOpenHelp, onPlayToggleSound, onReorderFeeds, onScrollToColumns, onToggleAddStream, onToggleAllColumnControls, onToggleControls, onToggleHideAllResearch, onToggleHideAllSummaries, onToggleMenu, onToggleSearch, orderedFeeds, search, searchLabel, searchVisible, showDesktopBody, status, timezone, toasts, topHintAsButtons, totalTokens, vibe]);
+  }), [account, addStream, addStreamLabel, addStreamVisible, allColumnLabel, connected, controlsActions, controlsLabel, controlsModel, dateFormat, helpCloseLabel, helpOpen, helpTitle, hideAllResearch, hideAllSummaries, isMobile, labels, language, menuItemsAsIcons, menuLabel, mobileDrawerOpen, onChangeVibe, onCloseHelp, onCloseMobileDrawer, onDismissToast, onOpenHelp, onPlayToggleSound, onReorderFeeds, onScrollToColumns, onToggleAddStream, onToggleAllColumnControls, onToggleControls, onToggleHideAllResearch, onToggleHideAllSummaries, onToggleMenu, onToggleSearch, orderedFeeds, search, searchLabel, searchVisible, showDesktopBody, status, timezone, toasts, topHintAsButtons, totalTokens, vibe]);
 
   return {
     contextValue

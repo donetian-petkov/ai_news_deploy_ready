@@ -1,6 +1,7 @@
 'use client';
 
 import { TopMenuControlsQuickRow } from './TopMenuControlsQuickRow';
+import { TopMenuAccountSection } from './TopMenuAccountSection';
 import { TopMenuNotificationsSection } from './TopMenuNotificationsSection';
 import { TopMenuAiSettingsSection } from './TopMenuAiSettingsSection';
 import { TopMenuAppearanceSection } from './TopMenuAppearanceSection';
@@ -22,7 +23,10 @@ export function TopMenuControlsPanel() {
 
       <div className="controlsGrid">
         <div className="controlsCell controlsCellNotifications">
-          <TopMenuNotificationsSection />
+          <div className="controlsCellStack">
+            <TopMenuAccountSection />
+            <TopMenuNotificationsSection />
+          </div>
         </div>
         <div className="controlsCell controlsCellAi">
           <TopMenuAiSettingsSection />

@@ -25,7 +25,7 @@ type Args = {
   onSwitchProvider: (provider: TopMenuAiProvider) => void;
 };
 
-export function useTopMenuAiAccount({ provider, labels, onSwitchProvider }: Args) {
+export function useTopMenuAccount({ provider, labels, onSwitchProvider }: Args) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');

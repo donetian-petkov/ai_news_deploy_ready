@@ -137,6 +137,12 @@
   min-width: 0;
 }
 
+.controlsCellStack {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
 @media (min-width: 1100px) {
   .controlsGrid {
     grid-template-columns: minmax(250px, 0.78fr) minmax(520px, 1.45fr) minmax(420px, 1.1fr);
@@ -196,7 +202,8 @@
 }
 
 .controlSectionAi .controlGroupAi,
-.controlSectionAppearance .controlGroupAppearance {
+.controlSectionAppearance .controlGroupAppearance,
+.controlSectionAccount .controlGroupAccount {
   align-items: stretch;
 }
 

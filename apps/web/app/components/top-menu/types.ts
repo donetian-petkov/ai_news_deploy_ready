@@ -9,6 +9,25 @@ export type FeedType = 'rss' | 'reddit' | 'youtube';
 export type TopMenuUiState = RootState['ui'];
 export type TopMenuFocusTarget = 'search' | 'addStream';
 
+export type TopMenuAccountModel = {
+  user: { id: number; username: string } | null;
+  username: string;
+  setUsername: (value: string) => void;
+  password: string;
+  setPassword: (value: string) => void;
+  apiKey: string;
+  setApiKey: (value: string) => void;
+  hasSavedKey: boolean;
+  busy: boolean;
+  token: string;
+  message: { kind: 'success' | 'error' | 'info'; text: string } | null;
+  signIn: () => void;
+  register: () => void;
+  signOut: () => void;
+  saveCurrentProviderKey: () => void;
+  switchProviderWithSavedKey: (provider: 'openai' | 'claude' | 'openrouter') => void;
+};
+
 export type TopMenuActionsResult = {
   addStream: () => void;
   toggleSearch: () => void;
