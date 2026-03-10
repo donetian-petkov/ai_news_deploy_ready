@@ -91,6 +91,8 @@ export function useTopMenuActions({
     deleteAgeAll
   });
 
+  const setProviderApiKey = () => {};
+
   return {
     addStream,
     toggleSearch,
@@ -102,6 +104,7 @@ export function useTopMenuActions({
     cycleVibe,
     applyAllBudget,
     changeAiProvider,
+    setProviderApiKey,
     requestNotificationPermission,
     resetAllNewest,
     deleteOldAllColumns

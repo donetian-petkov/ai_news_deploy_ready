@@ -20,6 +20,7 @@ export type TopMenuActionsResult = {
   cycleVibe: () => void;
   applyAllBudget: (budget: 'low' | 'standard' | 'high') => void;
   changeAiProvider: (provider: 'openai' | 'claude' | 'openrouter') => void;
+  setProviderApiKey: (provider: 'openai' | 'claude' | 'openrouter', apiKey: string) => void;
   requestNotificationPermission: (enabled: boolean) => Promise<void>;
   resetAllNewest: () => void;
   deleteOldAllColumns: () => void;
@@ -66,6 +67,7 @@ export type TopMenuControlsModel = {
     keywords: TopMenuUiState['keywords'];
     summaryLang: TopMenuUiState['summaryLang'];
     researchLang: TopMenuUiState['researchLang'];
+    titleDisplayLanguage: TopMenuUiState['titleDisplayLanguage'];
     summaryModel: TopMenuUiState['summaryModel'];
     researchModel: TopMenuUiState['researchModel'];
     askModel: TopMenuUiState['askModel'];
@@ -118,9 +120,11 @@ export type TopMenuControlsActions = {
   onNotifyEnabledChange: (enabled: boolean) => void;
   onNotifyModeChange: (mode: TopMenuUiState['notifyMode']) => void;
   onChangeAiProvider: (provider: TopMenuUiState['aiProvider']) => void;
+  onSetProviderApiKey: (provider: TopMenuUiState['aiProvider'], apiKey: string) => void;
   onSetKeywords: (keywords: string[]) => void;
   onSummaryLangChange: (lang: TopMenuUiState['summaryLang']) => void;
   onResearchLangChange: (lang: TopMenuUiState['researchLang']) => void;
+  onTitleDisplayLanguageChange: (lang: TopMenuUiState['titleDisplayLanguage']) => void;
   onSummaryModelChange: (model: string) => void;
   onResearchModelChange: (model: string) => void;
   onAskModelChange: (model: string) => void;

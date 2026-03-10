@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react';
 import { sendWsMessage } from '../../store/wsClient';
-import { setAiSettings, setAppearanceSettings, setKeywords, setLanguage, setMoodFilter, setNotifySettings, setTypeFilter, triggerResetNewsShownAll, triggerShowMoreNewsAll } from '../../store/slices/uiSlice';
+import { setAiSettings, setAppearanceSettings, setKeywords, setLanguage, setMoodFilter, setNotifySettings, setTitleDisplayLanguage, setTypeFilter, triggerResetNewsShownAll, triggerShowMoreNewsAll } from '../../store/slices/uiSlice';
 import type { AppDispatch, RootState } from '../../store/store';
 
 type Args = {
@@ -11,6 +11,7 @@ type Args = {
   triggerSoundCue: (kind: 'toggle' | 'success' | 'error') => void;
   requestNotificationPermission: (enabled: boolean) => Promise<void>;
   changeAiProvider: (provider: 'openai' | 'claude' | 'openrouter') => void;
+  setProviderApiKey: (provider: 'openai' | 'claude' | 'openrouter', apiKey: string) => void;
   applyAllBudget: (budget: 'low' | 'standard' | 'high') => void;
   cycleTheme: () => void;
   resetAllNewest: () => void;
@@ -24,6 +25,7 @@ export function useTopMenuControlPanelHandlers({
   triggerSoundCue,
   requestNotificationPermission,
   changeAiProvider,
+  setProviderApiKey,
   applyAllBudget,
   cycleTheme,
   resetAllNewest,
@@ -46,6 +48,7 @@ export function useTopMenuControlPanelHandlers({
     },
     onNotifyModeChange: (notifyMode: RootState['ui']['notifyMode']) => dispatch(setNotifySettings({ notifyMode })),
     onChangeAiProvider: changeAiProvider,
+    onSetProviderApiKey: setProviderApiKey,
     onSetKeywords: (keywords: string[]) => {
       const cleaned = Array.isArray(keywords)
         ? keywords
@@ -62,6 +65,9 @@ export function useTopMenuControlPanelHandlers({
     onResearchLangChange: (lang: RootState['ui']['researchLang']) => {
       const ok = sendWsMessage({ type: 'set_research_lang', lang });
       if (ok) dispatch(setAiSettings({ researchLang: lang }));
+    },
+    onTitleDisplayLanguageChange: (lang: RootState['ui']['titleDisplayLanguage']) => {
+      dispatch(setTitleDisplayLanguage(lang));
     },
     onSummaryModelChange: (model: string) => {
       const next = String(model || '').trim();
@@ -93,5 +99,5 @@ export function useTopMenuControlPanelHandlers({
       dispatch(setAppearanceSettings({ soundEnabled: next }));
       if (next) triggerSoundCue('success');
     }
-  }), [applyAllBudget, changeAiProvider, cycleTheme, deleteOldAllColumns, dispatch, onOpenHelp, requestNotificationPermission, resetAllNewest, triggerSoundCue, ui.performanceMode, ui.soundEnabled]);
+  }), [applyAllBudget, changeAiProvider, cycleTheme, deleteOldAllColumns, dispatch, onOpenHelp, requestNotificationPermission, resetAllNewest, setProviderApiKey, triggerSoundCue, ui.performanceMode, ui.soundEnabled]);
 }
