@@ -3,15 +3,6 @@ import Parser from 'rss-parser';
 import { WebSocketServer, WebSocket } from 'ws';
 import path from 'path';
 import fs from 'fs';
-import {
-  createCipheriv,
-  createDecipheriv,
-  createHash,
-  createHmac,
-  randomBytes,
-  scryptSync,
-  timingSafeEqual
-} from 'crypto';
 import dotenv from 'dotenv';
 import OpenAI from 'openai';
 import { PrismaClient } from '@prisma/client';
@@ -54,20 +45,6 @@ bootstrapEnv();
 
 const app = express();
 const PORT = Number(process.env.PORT || 4000);
-
-app.use(express.json({ limit: '64kb' }));
-app.use((req, res, next) => {
-  const origin = String(process.env.CORS_ORIGIN || '*').trim() || '*';
-  res.setHeader('Access-Control-Allow-Origin', origin);
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
-  if (req.method === 'OPTIONS') {
-    res.status(204).end();
-    return;
-  }
-  next();
-});
-
 const prisma = new PrismaClient({
   datasources: {
     db: {
@@ -233,267 +210,6 @@ type AskAgentReply = {
 };
 
 const parser: Parser = new Parser({ timeout: 10_000 });
-
-type AuthTokenPayload = {
-  uid: number;
-  username: string;
-  exp: number;
-};
-
-type AuthenticatedUser = {
-  id: number;
-  username: string;
-};
-
-const AUTH_TOKEN_TTL_MS = Math.max(60_000, Number.parseInt(process.env.AUTH_TOKEN_TTL_MS || '', 10) || (1000 * 60 * 60 * 24 * 7));
-const authTokenSecret = String(process.env.AUTH_TOKEN_SECRET || 'change-me-auth-token-secret').trim();
-const keyEncryptionSecret = String(process.env.KEY_ENCRYPTION_SECRET || authTokenSecret).trim();
-const authSigningKey = createHash('sha256').update(authTokenSecret).digest();
-const keyEncryptionKey = createHash('sha256').update(keyEncryptionSecret).digest();
-
-function toBase64Url(input: Buffer | string): string {
-  const raw = Buffer.isBuffer(input) ? input : Buffer.from(input);
-  return raw.toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
-}
-
-function fromBase64Url(value: string): Buffer {
-  const normalized = String(value || '').replace(/-/g, '+').replace(/_/g, '/');
-  const padded = normalized + '==='.slice((normalized.length + 3) % 4);
-  return Buffer.from(padded, 'base64');
-}
-
-function signAuthToken(user: { id: number; username: string }): string {
-  const payload: AuthTokenPayload = {
-    uid: user.id,
-    username: user.username,
-    exp: Date.now() + AUTH_TOKEN_TTL_MS
-  };
-  const payloadEncoded = toBase64Url(JSON.stringify(payload));
-  const signature = toBase64Url(createHmac('sha256', authSigningKey).update(payloadEncoded).digest());
-  return `${payloadEncoded}.${signature}`;
-}
-
-function verifyAuthToken(token: string): AuthenticatedUser | null {
-  const raw = String(token || '').trim();
-  if (!raw || !raw.includes('.')) return null;
-  const [payloadEncoded, signature] = raw.split('.', 2);
-  if (!payloadEncoded || !signature) return null;
-  try {
-    const expected = createHmac('sha256', authSigningKey).update(payloadEncoded).digest();
-    const actual = fromBase64Url(signature);
-    if (actual.length !== expected.length || !timingSafeEqual(actual, expected)) return null;
-
-    const payload = JSON.parse(fromBase64Url(payloadEncoded).toString('utf8')) as Partial<AuthTokenPayload>;
-    const uid = Number(payload.uid);
-    const username = String(payload.username || '').trim();
-    const exp = Number(payload.exp);
-    if (!Number.isFinite(uid) || uid <= 0 || !username || !Number.isFinite(exp) || exp <= Date.now()) return null;
-    return { id: Math.floor(uid), username };
-  } catch {
-    return null;
-  }
-}
-
-function extractBearerToken(authHeader: unknown): string {
-  const raw = String(authHeader || '').trim();
-  if (!raw.toLowerCase().startsWith('bearer ')) return '';
-  return raw.slice(7).trim();
-}
-
-function hashPassword(password: string): string {
-  const salt = randomBytes(16).toString('hex');
-  const derived = scryptSync(password, salt, 64).toString('hex');
-  return `${salt}:${derived}`;
-}
-
-function verifyPassword(password: string, hashed: string): boolean {
-  const [salt, storedHex] = String(hashed || '').split(':', 2);
-  if (!salt || !storedHex) return false;
-  try {
-    const actual = Buffer.from(storedHex, 'hex');
-    const expected = Buffer.from(scryptSync(password, salt, 64));
-    if (actual.length !== expected.length) return false;
-    return timingSafeEqual(actual, expected);
-  } catch {
-    return false;
-  }
-}
-
-function encryptSecret(secret: string): string {
-  const iv = randomBytes(12);
-  const cipher = createCipheriv('aes-256-gcm', keyEncryptionKey, iv);
-  const ciphertext = Buffer.concat([cipher.update(String(secret || ''), 'utf8'), cipher.final()]);
-  const tag = cipher.getAuthTag();
-  return `v1:${toBase64Url(iv)}:${toBase64Url(tag)}:${toBase64Url(ciphertext)}`;
-}
-
-function decryptSecret(payload: string): string {
-  const [version, ivEncoded, tagEncoded, dataEncoded] = String(payload || '').split(':', 4);
-  if (version !== 'v1' || !ivEncoded || !tagEncoded || !dataEncoded) return '';
-  const iv = fromBase64Url(ivEncoded);
-  const tag = fromBase64Url(tagEncoded);
-  const encrypted = fromBase64Url(dataEncoded);
-  const decipher = createDecipheriv('aes-256-gcm', keyEncryptionKey, iv);
-  decipher.setAuthTag(tag);
-  const plain = Buffer.concat([decipher.update(encrypted), decipher.final()]);
-  return plain.toString('utf8');
-}
-
-function sanitizeUsername(value: unknown): string {
-  return String(value || '').trim().toLowerCase().replace(/[^a-z0-9._-]+/g, '').slice(0, 48);
-}
-
-function validatePassword(value: unknown): string {
-  return String(value || '').trim();
-}
-
-async function loadStoredProviderKey(userId: number, provider: AIProvider): Promise<string> {
-  const row = await prisma.userProviderKey.findUnique({
-    where: {
-      userId_provider: {
-        userId,
-        provider
-      }
-    }
-  });
-  if (!row || !row.encryptedKey) return '';
-  try {
-    return String(decryptSecret(row.encryptedKey) || '').trim();
-  } catch {
-    return '';
-  }
-}
-
-async function saveStoredProviderKey(userId: number, provider: AIProvider, apiKey: string): Promise<void> {
-  const encryptedKey = encryptSecret(apiKey);
-  await prisma.userProviderKey.upsert({
-    where: {
-      userId_provider: {
-        userId,
-        provider
-      }
-    },
-    create: {
-      userId,
-      provider,
-      encryptedKey
-    },
-    update: {
-      encryptedKey
-    }
-  });
-}
-
-async function requireAuthenticatedUser(req: express.Request, res: express.Response): Promise<AuthenticatedUser | null> {
-  const token = extractBearerToken(req.headers.authorization);
-  const parsed = verifyAuthToken(token);
-  if (!parsed) {
-    res.status(401).json({ error: 'Unauthorized' });
-    return null;
-  }
-  const user = await prisma.user.findUnique({
-    where: { id: parsed.id },
-    select: { id: true, username: true }
-  });
-  if (!user) {
-    res.status(401).json({ error: 'Unauthorized' });
-    return null;
-  }
-  return { id: user.id, username: user.username };
-}
-
-app.post('/api/auth/register', async (req, res) => {
-  const username = sanitizeUsername(req.body?.username);
-  const password = validatePassword(req.body?.password);
-
-  if (username.length < 3) {
-    res.status(400).json({ error: 'Username must be at least 3 characters.' });
-    return;
-  }
-  if (password.length < 8) {
-    res.status(400).json({ error: 'Password must be at least 8 characters.' });
-    return;
-  }
-
-  const existing = await prisma.user.findUnique({ where: { username } });
-  if (existing) {
-    res.status(409).json({ error: 'Username already exists.' });
-    return;
-  }
-
-  const created = await prisma.user.create({
-    data: {
-      username,
-      passwordHash: hashPassword(password)
-    },
-    select: {
-      id: true,
-      username: true
-    }
-  });
-  const token = signAuthToken(created);
-  res.json({ token, user: created });
-});
-
-app.post('/api/auth/login', async (req, res) => {
-  const username = sanitizeUsername(req.body?.username);
-  const password = validatePassword(req.body?.password);
-
-  if (!username || !password) {
-    res.status(400).json({ error: 'Username and password are required.' });
-    return;
-  }
-
-  const user = await prisma.user.findUnique({ where: { username } });
-  if (!user || !verifyPassword(password, user.passwordHash)) {
-    res.status(401).json({ error: 'Invalid credentials.' });
-    return;
-  }
-
-  const token = signAuthToken({ id: user.id, username: user.username });
-  res.json({
-    token,
-    user: {
-      id: user.id,
-      username: user.username
-    }
-  });
-});
-
-app.get('/api/auth/me', async (req, res) => {
-  const user = await requireAuthenticatedUser(req, res);
-  if (!user) return;
-  res.json({ user });
-});
-
-app.get('/api/auth/provider-key/:provider', async (req, res) => {
-  const user = await requireAuthenticatedUser(req, res);
-  if (!user) return;
-  const parsed = aiProviderSchema.safeParse(String(req.params.provider || '').trim());
-  if (!parsed.success) {
-    res.status(400).json({ error: 'Unsupported AI provider.' });
-    return;
-  }
-  const key = await loadStoredProviderKey(user.id, parsed.data);
-  res.json({ provider: parsed.data, hasKey: !!key });
-});
-
-app.post('/api/auth/provider-key', async (req, res) => {
-  const user = await requireAuthenticatedUser(req, res);
-  if (!user) return;
-  const providerParsed = aiProviderSchema.safeParse(String(req.body?.provider || '').trim());
-  if (!providerParsed.success) {
-    res.status(400).json({ error: 'Unsupported AI provider.' });
-    return;
-  }
-  const apiKey = String(req.body?.apiKey || '').trim();
-  if (!apiKey) {
-    res.status(400).json({ error: 'API key is required.' });
-    return;
-  }
-  await saveStoredProviderKey(user.id, providerParsed.data, apiKey);
-  res.json({ provider: providerParsed.data, saved: true });
-});
 
 app.get('/health', (_req, res) => {
   res.json({ ok: true, service: 'ai-news-api' });
@@ -1333,11 +1049,55 @@ function titleTranslateInstruction(): string {
   ].join(' ');
 }
 
+function titleTranslateSingleInstruction(lang: 'bg' | 'en'): string {
+  if (lang === 'bg') {
+    return [
+      'Translate this headline to Bulgarian.',
+      'Return plain text only.',
+      'No quotes, no markdown, no extra commentary.'
+    ].join(' ');
+  }
+  return [
+    'Translate this headline to English.',
+    'Return plain text only.',
+    'No quotes, no markdown, no extra commentary.'
+  ].join(' ');
+}
+
 function normalizeTitleValue(raw: unknown): string {
   return String(raw || '')
     .replace(/\s+/g, ' ')
     .trim()
     .slice(0, 320);
+}
+
+function normalizedTitleKey(raw: string): string {
+  return String(raw || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function letterScriptRatios(raw: string): { cyr: number; lat: number } {
+  const text = String(raw || '');
+  const cyr = (text.match(/[А-Яа-яЁёЍѝ]/g) || []).length;
+  const lat = (text.match(/[A-Za-z]/g) || []).length;
+  const total = cyr + lat;
+  if (!total) return { cyr: 0, lat: 0 };
+  return { cyr: cyr / total, lat: lat / total };
+}
+
+function looksBulgarianTitle(raw: string): boolean {
+  const { cyr } = letterScriptRatios(raw);
+  return cyr >= 0.45;
+}
+
+function looksEnglishTitle(raw: string): boolean {
+  const { lat } = letterScriptRatios(raw);
+  return lat >= 0.55;
 }
 
 function parseTitleTranslation(raw: string): { bg: string; en: string } | undefined {
@@ -1645,15 +1405,61 @@ async function translateTitleBilingual(
   source: string,
   budget: BudgetMode
 ): Promise<{ bg: string; en: string } | undefined> {
+  const maxTokens = Math.max(90, Math.min(220, budgetToTokensSummary(budget) + 70));
   const input =
     `${titleTranslateInstruction()}\n` +
     `Source: ${source}\n` +
     `Headline: ${title}\n`;
 
-  const maxTokens = Math.max(90, Math.min(220, budgetToTokensSummary(budget) + 70));
   const text = await generateAiText('summary', input, maxTokens, 0);
-  if (!text) return undefined;
-  return parseTitleTranslation(text);
+  const parsed = text ? parseTitleTranslation(text) : undefined;
+
+  let bg = normalizeTitleValue(parsed?.bg || '');
+  let en = normalizeTitleValue(parsed?.en || '');
+  const srcKey = normalizedTitleKey(title);
+  const bgNeedsRetry = !bg || !looksBulgarianTitle(bg);
+  const enNeedsRetry = !en || !looksEnglishTitle(en);
+
+  if (bgNeedsRetry) {
+    const retryBgText = await generateAiText(
+      'summary',
+      `${titleTranslateSingleInstruction('bg')}\nSource: ${source}\nHeadline: ${title}\n`,
+      maxTokens,
+      0
+    );
+    const retryBg = normalizeTitleValue(retryBgText || '');
+    if (retryBg && looksBulgarianTitle(retryBg)) bg = retryBg;
+  }
+
+  if (enNeedsRetry) {
+    const retryEnText = await generateAiText(
+      'summary',
+      `${titleTranslateSingleInstruction('en')}\nSource: ${source}\nHeadline: ${title}\n`,
+      maxTokens,
+      0
+    );
+    const retryEn = normalizeTitleValue(retryEnText || '');
+    if (retryEn && looksEnglishTitle(retryEn)) en = retryEn;
+  }
+
+  if (!bg || !en) return undefined;
+
+  const bgKey = normalizedTitleKey(bg);
+  const enKey = normalizedTitleKey(en);
+
+  if (bgKey && enKey && bgKey === enKey) {
+    if (looksBulgarianTitle(title)) {
+      // Source is likely BG; keep BG and keep EN only if it differs.
+      if (enKey === srcKey) return undefined;
+    } else if (looksEnglishTitle(title)) {
+      // Source is likely EN; keep EN and keep BG only if it differs.
+      if (bgKey === srcKey) return undefined;
+    } else {
+      return undefined;
+    }
+  }
+
+  return { bg, en };
 }
 
 async function oneItemResearch(
@@ -1914,6 +1720,12 @@ function hasSummaryJobQueuedOrRunning(id: string, feedUrl: string): boolean {
   return aiQueue.some(job => job.kind === 'summary' && job.id === id && job.feedUrl === feedUrl);
 }
 
+function hasTitleTranslateJobQueuedOrRunning(id: string, feedUrl: string): boolean {
+  const k = `title_translate:${feedUrl || ''}::${id}`;
+  if (aiInFlight.has(k)) return true;
+  return aiQueue.some(job => job.kind === 'title_translate' && job.id === id && job.feedUrl === feedUrl);
+}
+
 function isJobExpired(job: AiJob, nowMs = Date.now()): boolean {
   return nowMs - job.enqueuedAtMs > AI_JOB_TTL_MS;
 }
@@ -2028,6 +1840,37 @@ function enqueueJob(job: AiJobInput) {
   aiQueue.push(nextJob);
 }
 
+function enqueueTitleTranslateBackfill(options?: {
+  feedUrl?: string;
+  max?: number;
+  manual?: boolean;
+}): number {
+  if (!aiEnabled || !aiAvailable) return 0;
+  if (activeModel('summary') === 'none') return 0;
+
+  const targetFeedUrl = String(options?.feedUrl || '').trim();
+  const max = Math.max(1, Math.min(2_000, Math.floor(options?.max ?? 320)));
+  const manual = !!options?.manual;
+  const list = recent.slice().sort((a, b) => b.publishedMs - a.publishedMs);
+  let done = 0;
+
+  for (const it of list) {
+    if (done >= max) break;
+    if (targetFeedUrl && !eligibleForFeed(it, targetFeedUrl)) continue;
+    if (hiddenIds.has(it.id)) continue;
+    if (it.titleBg && it.titleBg.trim() && it.titleEn && it.titleEn.trim()) continue;
+
+    const itemBudget = feedSettings.get(it.feedUrl)?.budget || 'standard';
+    if (!manual && itemBudget !== 'high') continue;
+    if (hasTitleTranslateJobQueuedOrRunning(it.id, it.feedUrl)) continue;
+
+    enqueueJob({ kind: 'title_translate', id: it.id, feedUrl: it.feedUrl, manual });
+    done++;
+  }
+
+  return done;
+}
+
 async function runOneJob(job: AiJob) {
   const k = jobKey(job);
   aiInFlight.add(k);
@@ -2066,7 +1909,7 @@ async function runOneJob(job: AiJob) {
     }
 
     if (job.kind === 'title_translate') {
-      if (budget !== 'high') return;
+      if (!job.manual && budget !== 'high') return;
       if (activeModel('summary') === 'none') return;
       if (it.titleBg && it.titleBg.trim() && it.titleEn && it.titleEn.trim()) return;
 
@@ -2623,6 +2466,19 @@ wss.on('connection', (ws: WebSocket) => {
       return;
     }
 
+    if (raw && typeof raw === 'object' && (raw as { type?: unknown }).type === 'run_title_translate_item') {
+      const id = String((raw as { id?: unknown }).id || '').trim();
+      const feedUrl = String((raw as { feedUrl?: unknown }).feedUrl || '').trim();
+      if (!id || !feedUrl) return;
+      if (!aiEnabled || !aiAvailable || activeModel('summary') === 'none') return;
+
+      const it = recent.find(x => x.id === id && x.feedUrl === feedUrl) || recent.find(x => x.id === id);
+      if (!it) return;
+      enqueueJob({ kind: 'title_translate', id: it.id, feedUrl: it.feedUrl, manual: true });
+      ws.send(JSON.stringify({ type: 'ok', message: 'Title translation requested.' }));
+      return;
+    }
+
     const parsed = clientMsgSchema.safeParse(raw);
     if (!parsed.success) return;
     const msg: ClientMsg = parsed.data;
@@ -2640,6 +2496,9 @@ wss.on('connection', (ws: WebSocket) => {
       aiInFlight.clear();
 
       await initKeywordEmbeddings();
+      if (aiEnabled && aiAvailable) {
+        enqueueTitleTranslateBackfill({ max: 360 });
+      }
       broadcastConfig();
       markDirty();
       return;
@@ -2648,39 +2507,14 @@ wss.on('connection', (ws: WebSocket) => {
     if (msg.type === 'set_ai_provider') {
       const provider = msg.provider;
       const nextKey = typeof msg.apiKey === 'string' ? msg.apiKey.trim() : '';
-      const authToken = typeof msg.authToken === 'string' ? msg.authToken.trim() : '';
-      const parsedUser = verifyAuthToken(authToken);
-      const authedUser = parsedUser
-        ? await prisma.user.findUnique({ where: { id: parsedUser.id }, select: { id: true, username: true } })
-        : null;
-
-      if (nextKey && !authedUser) {
-        ws.send(JSON.stringify({ type: 'error', message: 'Sign in is required to save provider API keys.' }));
+      if (typeof msg.apiKey === 'string' && !nextKey) {
+        ws.send(JSON.stringify({ type: 'error', message: 'API key is required for provider switch.' }));
         return;
-      }
-
-      if (!authedUser && !nextKey) {
-        ws.send(JSON.stringify({ type: 'error', message: 'Sign in and save a provider API key first.' }));
-        return;
-      }
-
-      let keyToUse = nextKey;
-      if (authedUser && !keyToUse) {
-        keyToUse = await loadStoredProviderKey(authedUser.id, provider);
-      }
-
-      if (!keyToUse) {
-        ws.send(JSON.stringify({ type: 'error', message: `No saved API key for ${provider}.` }));
-        return;
-      }
-
-      if (authedUser && nextKey) {
-        await saveStoredProviderKey(authedUser.id, provider, nextKey);
       }
 
       aiProvider = provider;
-      if (keyToUse) {
-        setAiProviderKey(provider, keyToUse);
+      if (nextKey) {
+        setAiProviderKey(provider, nextKey);
       } else {
         refreshAiClients();
       }
@@ -2694,6 +2528,9 @@ wss.on('connection', (ws: WebSocket) => {
       aiInFlight.clear();
 
       await initKeywordEmbeddings();
+      if (aiEnabled && aiAvailable) {
+        enqueueTitleTranslateBackfill({ max: 360 });
+      }
       broadcastConfig();
       ws.send(JSON.stringify({
         type: 'ok',
@@ -3283,6 +3120,9 @@ wss.on('connection', (ws: WebSocket) => {
 
   // load embeddings once
   if (aiEnabled) await initKeywordEmbeddings();
+  if (aiEnabled && aiAvailable) {
+    enqueueTitleTranslateBackfill({ max: 420 });
+  }
 
   // start scheduler
   startScheduler();
