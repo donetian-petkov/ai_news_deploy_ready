@@ -56,27 +56,135 @@ export function TopMenuAiSettingsSection() {
   };
 
   return (
-    <details className="controlSection" open>
+    <details className="controlSection controlSectionAi" open>
       <summary id="aiSettingsSummary">{labels.aiSettingsSummary}</summary>
-      <div className="controlGroup">
-        <TopMenuSelectField
-          id="aiProviderSelect"
-          label={labels.aiProvider}
-          value={aiSettings.aiProvider}
-          onChange={account.switchProviderWithSavedKey}
-          options={buildAiProviderOptions(labels)}
-        />
+      <div className="controlGroup controlGroupAi">
+        <div className="topMenuFieldGrid">
+          <TopMenuSelectField
+            id="aiProviderSelect"
+            label={labels.aiProvider}
+            value={aiSettings.aiProvider}
+            onChange={account.switchProviderWithSavedKey}
+            options={buildAiProviderOptions(labels)}
+            layout="stacked"
+            wrapperClassName="topMenuField"
+          />
 
-        <Box sx={{ width: '100%', border: '1px solid var(--ctl-border)', borderRadius: 2, p: 1 }}>
+          <TopMenuSelectField
+            id="summaryLang"
+            label={labels.summaryPrefix}
+            value={aiSettings.summaryLang}
+            disabled={!aiSettings.aiAvailable}
+            onChange={actions.onSummaryLangChange}
+            options={buildSummaryLangOptions()}
+            layout="stacked"
+            wrapperClassName="topMenuField"
+          />
+
+          <TopMenuSelectField
+            id="researchLang"
+            label={labels.researchPrefix}
+            value={aiSettings.researchLang}
+            disabled={!aiSettings.aiAvailable}
+            onChange={actions.onResearchLangChange}
+            options={buildResearchLangOptions()}
+            layout="stacked"
+            wrapperClassName="topMenuField"
+          />
+
+          <TopMenuSelectField
+            id="summaryModel"
+            label={labels.summaryModelPrefix}
+            value={aiSettings.summaryModel}
+            disabled={!aiSettings.aiAvailable}
+            onChange={actions.onSummaryModelChange}
+            options={buildAiModelOptions(providerModels.summary, aiSettings.summaryModel)}
+            layout="stacked"
+            wrapperClassName="topMenuField"
+          />
+
+          <TopMenuSelectField
+            id="researchModel"
+            label={labels.researchModelPrefix}
+            value={aiSettings.researchModel}
+            disabled={!aiSettings.aiAvailable}
+            onChange={actions.onResearchModelChange}
+            options={buildAiModelOptions(providerModels.research, aiSettings.researchModel)}
+            layout="stacked"
+            wrapperClassName="topMenuField"
+          />
+
+          <TopMenuSelectField
+            id="askModel"
+            label={labels.askModelPrefix}
+            value={aiSettings.askModel}
+            disabled={!aiSettings.aiAvailable}
+            onChange={actions.onAskModelChange}
+            options={buildAiModelOptions(providerModels.ask, aiSettings.askModel)}
+            layout="stacked"
+            wrapperClassName="topMenuField"
+          />
+
+          {!aiSettings.performanceMode ? (
+            <>
+              <TopMenuSelectField
+                id="moodFilter"
+                label={labels.moodFilter}
+                value={aiSettings.moodFilter}
+                disabled={!aiSettings.aiAvailable}
+                onChange={actions.onMoodFilterChange}
+                options={buildMoodOptions(labels)}
+                layout="stacked"
+                wrapperClassName="topMenuField"
+              />
+              <TopMenuSelectField
+                id="typeFilter"
+                label={labels.typeFilter}
+                value={aiSettings.typeFilter}
+                disabled={!aiSettings.aiAvailable}
+                onChange={actions.onTypeFilterChange}
+                options={buildTypeOptions(labels)}
+                layout="stacked"
+                wrapperClassName="topMenuField"
+              />
+            </>
+          ) : (
+            <Alert severity="info" sx={{ py: 0 }} className="topMenuFieldGridFull">
+              {labels.perfAIFiltersHidden}
+            </Alert>
+          )}
+
+          <TopMenuSelectField
+            id="allBudgetSelect"
+            title="Apply one budget to all columns"
+            label={labels.allBudgetPrefix}
+            value={aiSettings.allBudget}
+            disabled={!aiSettings.aiAvailable}
+            onChange={budget => {
+              if (budget !== 'mixed') actions.onApplyAllBudget(budget);
+            }}
+            options={buildBudgetOptions(labels)}
+            layout="stacked"
+            wrapperClassName="topMenuField"
+          />
+
+          {!aiSettings.aiAvailable ? (
+            <Alert severity="info" sx={{ py: 0 }} className="topMenuFieldGridFull">
+              {labels.aiUnavailable}
+            </Alert>
+          ) : null}
+        </div>
+
+        <Box className="topMenuCardBlock" sx={{ width: '100%', border: '1px solid var(--panel-border)', borderRadius: 2, p: 1 }}>
           <Typography variant="caption" sx={{ display: 'block', mb: 1 }}>
-            {labels.authAccountTitle}
+            {labels.authAccountTitle || 'AI account'}
           </Typography>
 
           {account.user ? (
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems={{ xs: 'stretch', sm: 'center' }} sx={{ mb: 1 }}>
-              <Typography variant="caption">{labels.authSignedInAs}: {account.user.username}</Typography>
+              <Typography variant="caption">{labels.authSignedInAs || 'Signed in as'}: {account.user.username}</Typography>
               <Button size="small" variant="outlined" onClick={account.signOut} disabled={account.busy}>
-                {labels.authSignOut}
+                {labels.authSignOut || 'Sign out'}
               </Button>
             </Stack>
           ) : (
@@ -85,7 +193,7 @@ export function TopMenuAiSettingsSection() {
                 <TextField
                   size="small"
                   fullWidth
-                  label={labels.authUsername}
+                  label={labels.authUsername || 'Username'}
                   value={account.username}
                   onChange={e => account.setUsername(e.target.value)}
                 />
@@ -93,17 +201,17 @@ export function TopMenuAiSettingsSection() {
                   size="small"
                   fullWidth
                   type="password"
-                  label={labels.authPassword}
+                  label={labels.authPassword || 'Password'}
                   value={account.password}
                   onChange={e => account.setPassword(e.target.value)}
                 />
               </Stack>
               <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
                 <Button size="small" variant="contained" onClick={account.signIn} disabled={account.busy}>
-                  {labels.authSignIn}
+                  {labels.authSignIn || 'Sign in'}
                 </Button>
                 <Button size="small" variant="outlined" onClick={account.register} disabled={account.busy}>
-                  {labels.authRegister}
+                  {labels.authRegister || 'Register'}
                 </Button>
               </Stack>
             </Stack>
@@ -114,8 +222,8 @@ export function TopMenuAiSettingsSection() {
               size="small"
               fullWidth
               type="password"
-              label={labels.authApiKey}
-              placeholder={labels.authApiKeyPlaceholder}
+              label={labels.authApiKey || 'Provider API key'}
+              placeholder={labels.authApiKeyPlaceholder || 'Paste API key for selected provider'}
               value={account.apiKey}
               onChange={e => account.setApiKey(e.target.value)}
               disabled={!account.user || account.busy}
@@ -126,13 +234,15 @@ export function TopMenuAiSettingsSection() {
               onClick={account.saveCurrentProviderKey}
               disabled={!account.user || account.busy || !String(account.apiKey || '').trim()}
             >
-              {labels.authSaveKey}
+              {labels.authSaveKey || 'Save key'}
             </Button>
           </Stack>
 
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems={{ xs: 'stretch', sm: 'center' }} sx={{ mb: 1 }}>
             <Typography variant="caption">
-              {account.hasSavedKey ? labels.authKeyStoredYes : labels.authKeyStoredNo}
+              {account.hasSavedKey
+                ? (labels.authKeyStoredYes || 'Saved key exists for selected provider.')
+                : (labels.authKeyStoredNo || 'No saved key for selected provider.')}
             </Typography>
             <Button
               size="small"
@@ -140,7 +250,7 @@ export function TopMenuAiSettingsSection() {
               onClick={() => account.switchProviderWithSavedKey(aiSettings.aiProvider)}
               disabled={!account.user || !account.hasSavedKey || account.busy}
             >
-              {labels.authApplyProvider}
+              {labels.authApplyProvider || 'Apply provider'}
             </Button>
           </Stack>
 
@@ -151,7 +261,7 @@ export function TopMenuAiSettingsSection() {
           ) : null}
         </Box>
 
-        <Box sx={{ width: '100%', border: '1px solid var(--ctl-border)', borderRadius: 2, p: 1 }}>
+        <Box className="topMenuCardBlock" sx={{ width: '100%', border: '1px solid var(--panel-border)', borderRadius: 2, p: 1 }}>
           <Typography variant="caption" sx={{ display: 'block', mb: 0.8 }}>
             {labels.matchKeywordsLabel || 'Filtered match keywords'}
           </Typography>
@@ -186,94 +296,6 @@ export function TopMenuAiSettingsSection() {
             </Stack>
           ) : null}
         </Box>
-
-        <TopMenuSelectField
-          id="summaryLang"
-          label={labels.summaryPrefix}
-          value={aiSettings.summaryLang}
-          disabled={!aiSettings.aiAvailable}
-          onChange={actions.onSummaryLangChange}
-          options={buildSummaryLangOptions()}
-        />
-
-        <TopMenuSelectField
-          id="researchLang"
-          label={labels.researchPrefix}
-          value={aiSettings.researchLang}
-          disabled={!aiSettings.aiAvailable}
-          onChange={actions.onResearchLangChange}
-          options={buildResearchLangOptions()}
-        />
-
-        <TopMenuSelectField
-          id="summaryModel"
-          label={labels.summaryModelPrefix}
-          value={aiSettings.summaryModel}
-          disabled={!aiSettings.aiAvailable}
-          onChange={actions.onSummaryModelChange}
-          options={buildAiModelOptions(providerModels.summary, aiSettings.summaryModel)}
-        />
-
-        <TopMenuSelectField
-          id="researchModel"
-          label={labels.researchModelPrefix}
-          value={aiSettings.researchModel}
-          disabled={!aiSettings.aiAvailable}
-          onChange={actions.onResearchModelChange}
-          options={buildAiModelOptions(providerModels.research, aiSettings.researchModel)}
-        />
-
-        <TopMenuSelectField
-          id="askModel"
-          label={labels.askModelPrefix}
-          value={aiSettings.askModel}
-          disabled={!aiSettings.aiAvailable}
-          onChange={actions.onAskModelChange}
-          options={buildAiModelOptions(providerModels.ask, aiSettings.askModel)}
-        />
-
-        {!aiSettings.performanceMode ? (
-          <>
-            <TopMenuSelectField
-              id="moodFilter"
-              label={labels.moodFilter}
-              value={aiSettings.moodFilter}
-              disabled={!aiSettings.aiAvailable}
-              onChange={actions.onMoodFilterChange}
-              options={buildMoodOptions(labels)}
-            />
-            <TopMenuSelectField
-              id="typeFilter"
-              label={labels.typeFilter}
-              value={aiSettings.typeFilter}
-              disabled={!aiSettings.aiAvailable}
-              onChange={actions.onTypeFilterChange}
-              options={buildTypeOptions(labels)}
-            />
-          </>
-        ) : (
-          <Alert severity="info" sx={{ py: 0 }}>
-            {labels.perfAIFiltersHidden}
-          </Alert>
-        )}
-
-        <TopMenuSelectField
-          id="allBudgetSelect"
-          title="Apply one budget to all columns"
-          label={labels.allBudgetPrefix}
-          value={aiSettings.allBudget}
-          disabled={!aiSettings.aiAvailable}
-          onChange={budget => {
-            if (budget !== 'mixed') actions.onApplyAllBudget(budget);
-          }}
-          options={buildBudgetOptions(labels)}
-        />
-
-        {!aiSettings.aiAvailable ? (
-          <Alert severity="info" sx={{ py: 0 }}>
-            {labels.aiUnavailable}
-          </Alert>
-        ) : null}
       </div>
     </details>
   );
