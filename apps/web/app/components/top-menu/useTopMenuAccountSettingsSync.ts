@@ -36,6 +36,7 @@ function isRecord(raw: unknown): raw is Record<string, unknown> {
 export function useTopMenuAccountSettingsSync({ dispatch, ui, account }: Args) {
   const isApplyingRef = useRef(false);
   const hydratedUserIdRef = useRef<number | null>(null);
+  const loadedUserIdRef = useRef<number | null>(null);
   const lastSavedJsonRef = useRef('');
   const saveTimerRef = useRef<number | null>(null);
 
@@ -80,18 +81,19 @@ export function useTopMenuAccountSettingsSync({ dispatch, ui, account }: Args) {
     const token = String(account.token || '').trim();
     if (!userId || !token) {
       hydratedUserIdRef.current = null;
+      loadedUserIdRef.current = null;
       lastSavedJsonRef.current = '';
       return;
     }
     if (hydratedUserIdRef.current === userId) return;
 
     hydratedUserIdRef.current = userId;
+    loadedUserIdRef.current = null;
+    isApplyingRef.current = true;
     void (async () => {
       try {
         const remote = await fetchAccountSettings(token);
         if (!isRecord(remote)) return;
-
-        isApplyingRef.current = true;
         const uiPatch: PersistedUiPrefs = {};
 
         const maybeString = (k: string) => (typeof remote[k] === 'string' ? String(remote[k]) : undefined);
@@ -191,6 +193,7 @@ export function useTopMenuAccountSettingsSync({ dispatch, ui, account }: Args) {
         // Keep UI usable even when account settings storage is not initialized yet.
       } finally {
         isApplyingRef.current = false;
+        loadedUserIdRef.current = userId;
       }
     })();
   }, [account.token, account.user?.id, dispatch]);
@@ -199,6 +202,7 @@ export function useTopMenuAccountSettingsSync({ dispatch, ui, account }: Args) {
     const userId = account.user?.id ?? null;
     const token = String(account.token || '').trim();
     if (!userId || !token) return;
+    if (loadedUserIdRef.current !== userId) return;
     if (isApplyingRef.current) return;
 
     const payloadJson = JSON.stringify(settingsPayload);
