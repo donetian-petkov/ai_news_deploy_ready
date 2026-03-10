@@ -237,7 +237,7 @@ type AuthTokenPayload = {
 };
 
 const authCredentialsSchema = z.object({
-  username: z.string().trim().min(3).max(64).regex(/^[a-zA-Z0-9._-]+$/),
+  username: z.string().trim().min(3).max(64).regex(/^[a-zA-Z0-9._@+-]+$/),
   password: z.string().min(6).max(256)
 });
 
