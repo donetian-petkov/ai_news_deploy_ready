@@ -394,6 +394,14 @@ function normalizeAccountSettings(raw: unknown): Record<string, unknown> {
   return parsed.data as Record<string, unknown>;
 }
 
+function isMissingUserSettingsTableError(error: unknown): boolean {
+  const code = String((error as { code?: unknown } | null)?.code || '').trim();
+  const message = String((error as { message?: unknown } | null)?.message || '');
+  if (code === 'P2021') return true;
+  if (/UserSettings/i.test(message) && /does not exist|no such table/i.test(message)) return true;
+  return false;
+}
+
 app.post('/api/auth/register', async (req, res) => {
   const parsed = authCredentialsSchema.safeParse(req.body || {});
   if (!parsed.success) {
@@ -543,6 +551,10 @@ app.get('/api/account/settings', async (req, res) => {
     }
     res.json({ settings: normalizeAccountSettings(parsed) });
   } catch (error) {
+    if (isMissingUserSettingsTableError(error)) {
+      res.json({ settings: {}, fallback: 'settings_table_missing' });
+      return;
+    }
     res.status(500).json({ error: (error as Error).message || 'Failed to load account settings.' });
   }
 });
@@ -564,6 +576,10 @@ app.put('/api/account/settings', async (req, res) => {
     });
     res.json({ saved: true, settings: normalized });
   } catch (error) {
+    if (isMissingUserSettingsTableError(error)) {
+      res.json({ saved: false, settings: {}, fallback: 'settings_table_missing' });
+      return;
+    }
     res.status(500).json({ error: (error as Error).message || 'Failed to save account settings.' });
   }
 });

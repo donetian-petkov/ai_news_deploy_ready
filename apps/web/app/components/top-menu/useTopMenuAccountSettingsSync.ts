@@ -187,6 +187,8 @@ export function useTopMenuAccountSettingsSync({ dispatch, ui, account }: Args) {
             dispatch(setKeywords(keywords));
           }
         }
+      } catch {
+        // Keep UI usable even when account settings storage is not initialized yet.
       } finally {
         isApplyingRef.current = false;
       }
