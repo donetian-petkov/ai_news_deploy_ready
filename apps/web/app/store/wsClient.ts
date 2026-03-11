@@ -260,6 +260,11 @@ function resolveWsUrl(explicitUrl: string): string {
   return 'ws://localhost:4000';
 }
 
+function hasSignedInAccountSession(): boolean {
+  if (typeof window === 'undefined') return false;
+  return !!String(window.localStorage.getItem('ai_news_auth_token') || '').trim();
+}
+
 function flushPendingNews(dispatch: AppDispatch) {
   if (!pendingNews.length) return;
   const batch = pendingNews;
@@ -363,23 +368,24 @@ function openWsConnection(dispatch: AppDispatch, nextUrl: string, isReconnect: b
       const parsedFeeds = parseFeedInfos(msg.feeds, msg.feedSettings);
       const parsedModels = parseAvailableModels(msg.availableModels);
       const parsedKeywords = parseKeywordList(msg.keywords);
+      const signedIn = hasSignedInAccountSession();
       dispatch(setFeeds(parsedFeeds));
       dispatch(setKeywords(parsedKeywords));
       dispatch(setAiSettings({
         aiAvailable: !!msg.aiAvailable,
         aiEnabled: !!msg.aiEnabled,
-        aiProvider: isAiProvider(msg.aiProvider)
-          ? msg.aiProvider
-          : AiProviderValue.OpenAI,
-        summaryLang: isSummaryLang(msg.summaryLang)
-          ? msg.summaryLang
-          : SummaryLangValue.Bilingual,
-        researchLang: isResearchLang(msg.researchLang)
-          ? msg.researchLang
-          : ResearchLangValue.Bg,
-        summaryModel: isString(msg.summaryModel) ? msg.summaryModel : undefined,
-        researchModel: isString(msg.researchModel) ? msg.researchModel : undefined,
-        askModel: isString(msg.askModel) ? msg.askModel : undefined,
+        aiProvider: signedIn
+          ? undefined
+          : (isAiProvider(msg.aiProvider) ? msg.aiProvider : AiProviderValue.OpenAI),
+        summaryLang: signedIn
+          ? undefined
+          : (isSummaryLang(msg.summaryLang) ? msg.summaryLang : SummaryLangValue.Bilingual),
+        researchLang: signedIn
+          ? undefined
+          : (isResearchLang(msg.researchLang) ? msg.researchLang : ResearchLangValue.Bg),
+        summaryModel: signedIn ? undefined : (isString(msg.summaryModel) ? msg.summaryModel : undefined),
+        researchModel: signedIn ? undefined : (isString(msg.researchModel) ? msg.researchModel : undefined),
+        askModel: signedIn ? undefined : (isString(msg.askModel) ? msg.askModel : undefined),
         availableModels: parsedModels,
         allBudget: deriveAllBudget(parsedFeeds)
       }));

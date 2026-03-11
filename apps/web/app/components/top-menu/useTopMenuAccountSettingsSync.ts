@@ -22,6 +22,7 @@ type Args = {
 type AccountSettingsPayload = PersistedUiPrefs & {
   summaryLang: RootState['ui']['summaryLang'];
   researchLang: RootState['ui']['researchLang'];
+  allBudget: RootState['ui']['allBudget'];
   aiProvider: RootState['ui']['aiProvider'];
   summaryModel: string;
   researchModel: string;
@@ -69,12 +70,13 @@ export function useTopMenuAccountSettingsSync({ dispatch, ui, account }: Args) {
     vibe: ui.vibe,
     summaryLang: ui.summaryLang,
     researchLang: ui.researchLang,
+    allBudget: ui.allBudget,
     aiProvider: ui.aiProvider,
     summaryModel: ui.summaryModel,
     researchModel: ui.researchModel,
     askModel: ui.askModel,
     keywords: Array.isArray(ui.keywords) ? ui.keywords : []
-  }), [ui.addStreamVisible, ui.aiProvider, ui.allColumnControlsHidden, ui.askModel, ui.buttonMode, ui.colorMode, ui.controlsCollapsed, ui.dateFormat, ui.effectIntensity, ui.font, ui.fontSize, ui.hideAllResearch, ui.hideAllSummaries, ui.keywords, ui.language, ui.menuCollapsed, ui.menuHintMode, ui.moodFilter, ui.notifyEnabled, ui.notifyMode, ui.performanceMode, ui.researchLang, ui.researchModel, ui.scheme, ui.searchVisible, ui.soundEnabled, ui.soundTheme, ui.summaryLang, ui.summaryModel, ui.timezone, ui.titleDisplayLanguage, ui.typeFilter, ui.vibe]);
+  }), [ui.addStreamVisible, ui.aiProvider, ui.allBudget, ui.allColumnControlsHidden, ui.askModel, ui.buttonMode, ui.colorMode, ui.controlsCollapsed, ui.dateFormat, ui.effectIntensity, ui.font, ui.fontSize, ui.hideAllResearch, ui.hideAllSummaries, ui.keywords, ui.language, ui.menuCollapsed, ui.menuHintMode, ui.moodFilter, ui.notifyEnabled, ui.notifyMode, ui.performanceMode, ui.researchLang, ui.researchModel, ui.scheme, ui.searchVisible, ui.soundEnabled, ui.soundTheme, ui.summaryLang, ui.summaryModel, ui.timezone, ui.titleDisplayLanguage, ui.typeFilter, ui.vibe]);
 
   useEffect(() => {
     const userId = account.user?.id ?? null;
@@ -148,6 +150,14 @@ export function useTopMenuAccountSettingsSync({ dispatch, ui, account }: Args) {
           dispatch(setAiSettings({ researchLang }));
         }
 
+        const allBudget = maybeString('allBudget');
+        if (allBudget === 'low' || allBudget === 'standard' || allBudget === 'high' || allBudget === 'mixed') {
+          dispatch(setAiSettings({ allBudget }));
+          if (allBudget === 'low' || allBudget === 'standard' || allBudget === 'high') {
+            sendWsMessage({ type: 'set_all_budget', budget: allBudget });
+          }
+        }
+
         const titleDisplayLanguage = maybeString('titleDisplayLanguage');
         if (titleDisplayLanguage === 'original' || titleDisplayLanguage === 'bg' || titleDisplayLanguage === 'en') {
           dispatch(setTitleDisplayLanguage(titleDisplayLanguage));
@@ -184,10 +194,8 @@ export function useTopMenuAccountSettingsSync({ dispatch, ui, account }: Args) {
             .map(v => String(v || '').trim())
             .filter(Boolean)
             .slice(0, 120);
-          if (keywords.length) {
-            sendWsMessage({ type: 'set_keywords', keywords });
-            dispatch(setKeywords(keywords));
-          }
+          sendWsMessage({ type: 'set_keywords', keywords });
+          dispatch(setKeywords(keywords));
         }
       } catch {
         // Keep UI usable even when account settings storage is not initialized yet.
