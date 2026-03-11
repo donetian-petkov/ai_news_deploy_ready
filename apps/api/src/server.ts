@@ -2159,6 +2159,9 @@ const AI_QUEUE_MAX = Math.max(200, parseInt(process.env.AI_QUEUE_MAX || '600', 1
 const AI_JOB_TTL_MS = Math.max(15_000, Number.parseInt(process.env.AI_JOB_TTL_MS ?? '180_000', 10) || 180_000);
 const AI_DEAD_LETTER_MAX = Math.max(50, Number.parseInt(process.env.AI_DEAD_LETTER_MAX ?? '400', 10) || 400);
 const AI_SUMMARY_TIMEOUT_MS = Math.max(4_000, Number.parseInt(process.env.AI_SUMMARY_TIMEOUT_MS ?? '22_000', 10) || 22_000);
+const AI_SUMMARY_RETRY_COOLDOWN_MS = Math.max(5_000, Number.parseInt(process.env.AI_SUMMARY_RETRY_COOLDOWN_MS ?? '20_000', 10) || 20_000);
+const AI_SUMMARY_RECOVERY_INTERVAL_MS = Math.max(2_000, Number.parseInt(process.env.AI_SUMMARY_RECOVERY_INTERVAL_MS ?? '8_000', 10) || 8_000);
+const AI_SUMMARY_RECOVERY_BATCH = Math.max(1, Math.min(100, Number.parseInt(process.env.AI_SUMMARY_RECOVERY_BATCH ?? '24', 10) || 24));
 const AI_TITLE_TRANSLATE_TIMEOUT_MS = Math.max(6_000, Number.parseInt(process.env.AI_TITLE_TRANSLATE_TIMEOUT_MS ?? '24_000', 10) || 24_000);
 const AI_RESEARCH_TIMEOUT_MS = Math.max(8_000, Number.parseInt(process.env.AI_RESEARCH_TIMEOUT_MS ?? '45_000', 10) || 45_000);
 const AI_RESEARCH_TIMEOUT_MANUAL_MS = Math.max(
@@ -2167,6 +2170,8 @@ const AI_RESEARCH_TIMEOUT_MANUAL_MS = Math.max(
 );
 const AI_CLASSIFY_TIMEOUT_MS = Math.max(6_000, Number.parseInt(process.env.AI_CLASSIFY_TIMEOUT_MS ?? '22_000', 10) || 22_000);
 const AI_ERROR_TOAST_COOLDOWN_MS = Math.max(5_000, Number.parseInt(process.env.AI_ERROR_TOAST_COOLDOWN_MS ?? '20_000', 10) || 20_000);
+let lastSummaryRecoveryAtMs = 0;
+const summaryRetryCooldownUntilMs = new Map<string, number>();
 
 function jobKey(j: AiJob) {
   return `${j.kind}:${j.feedUrl || ''}::${j.id}`;
@@ -2182,6 +2187,10 @@ function hasTitleTranslateJobQueuedOrRunning(id: string, feedUrl: string): boole
   const k = `title_translate:${feedUrl || ''}::${id}`;
   if (aiInFlight.has(k)) return true;
   return aiQueue.some(job => job.kind === 'title_translate' && job.id === id && job.feedUrl === feedUrl);
+}
+
+function summaryItemKey(id: string, feedUrl: string): string {
+  return `${feedUrl || ''}::${id}`;
 }
 
 function isJobExpired(job: AiJob, nowMs = Date.now()): boolean {
@@ -2329,10 +2338,52 @@ function enqueueTitleTranslateBackfill(options?: {
   return done;
 }
 
+function enqueueSummaryRecoveryPass(nowMs = Date.now()): number {
+  if (!aiEnabled || !aiAvailable) return 0;
+  if (activeModel('summary') === 'none') return 0;
+  if (nowMs - lastSummaryRecoveryAtMs < AI_SUMMARY_RECOVERY_INTERVAL_MS) return 0;
+  lastSummaryRecoveryAtMs = nowMs;
+
+  // Keep map bounded over long runtimes.
+  if (summaryRetryCooldownUntilMs.size > 10_000) {
+    const keys = Array.from(summaryRetryCooldownUntilMs.keys());
+    for (const key of keys) {
+      const until = summaryRetryCooldownUntilMs.get(key) || 0;
+      if (until <= nowMs) summaryRetryCooldownUntilMs.delete(key);
+    }
+  }
+
+  let queued = 0;
+  const list = recent.slice().sort((a, b) => b.publishedMs - a.publishedMs);
+  for (const it of list) {
+    if (queued >= AI_SUMMARY_RECOVERY_BATCH) break;
+    if (!it?.id || !it.feedUrl) continue;
+    if (hiddenIds.has(it.id)) continue;
+    if (!shouldHaveSummary(it)) continue;
+    if (it.summary && it.summary.trim()) {
+      summaryRetryCooldownUntilMs.delete(summaryItemKey(it.id, it.feedUrl));
+      continue;
+    }
+
+    const key = summaryItemKey(it.id, it.feedUrl);
+    const cooldownUntil = summaryRetryCooldownUntilMs.get(key) || 0;
+    if (cooldownUntil > nowMs) continue;
+    if (hasSummaryJobQueuedOrRunning(it.id, it.feedUrl)) continue;
+
+    enqueueJob({ kind: 'summary', id: it.id, feedUrl: it.feedUrl });
+    if (hasSummaryJobQueuedOrRunning(it.id, it.feedUrl)) {
+      queued += 1;
+      broadcastNewsUpdate(it);
+    }
+  }
+  return queued;
+}
+
 async function runOneJob(job: AiJob) {
   const k = jobKey(job);
   aiInFlight.add(k);
   let itemForError: NewsInternal | undefined;
+  let didBroadcastUpdate = false;
 
   try {
     if (isJobExpired(job)) {
@@ -2361,6 +2412,8 @@ async function runOneJob(job: AiJob) {
       if (text) {
         it.summary = text;
         broadcastNewsUpdate(it);
+        didBroadcastUpdate = true;
+        summaryRetryCooldownUntilMs.delete(summaryItemKey(it.id, it.feedUrl));
         markDirty();
       }
       return;
@@ -2380,6 +2433,7 @@ async function runOneJob(job: AiJob) {
         it.titleBg = translated.bg;
         it.titleEn = translated.en;
         broadcastNewsUpdate(it);
+        didBroadcastUpdate = true;
         markDirty();
       }
       return;
@@ -2403,6 +2457,7 @@ async function runOneJob(job: AiJob) {
       if (mood) {
         it.mood = mood;
         broadcastNewsUpdate(it);
+        didBroadcastUpdate = true;
         markDirty();
       }
       return;
@@ -2426,6 +2481,7 @@ async function runOneJob(job: AiJob) {
       if (newsType) {
         it.newsType = newsType;
         broadcastNewsUpdate(it);
+        didBroadcastUpdate = true;
         markDirty();
       }
       return;
@@ -2470,6 +2526,7 @@ async function runOneJob(job: AiJob) {
       if (text) {
         it.research = text;
         broadcastNewsUpdate(it);
+        didBroadcastUpdate = true;
         markDirty();
       }
       return;
@@ -2481,6 +2538,10 @@ async function runOneJob(job: AiJob) {
       return;
     }
 
+    if (job.kind === 'summary') {
+      summaryRetryCooldownUntilMs.set(summaryItemKey(job.id, job.feedUrl), Date.now() + AI_SUMMARY_RETRY_COOLDOWN_MS);
+    }
+
     if (classifyJob) {
       console.warn(`AI classify job skipped (${job.kind}:${job.id})`, message);
       return;
@@ -2490,6 +2551,12 @@ async function runOneJob(job: AiJob) {
     broadcastAiJobError(job, itemForError, err);
   } finally {
     aiInFlight.delete(k);
+    if (!didBroadcastUpdate && itemForError && !hiddenIds.has(itemForError.id)) {
+      // Push final pending=false state when jobs finish without producing output.
+      if (job.kind === 'summary' || job.kind === 'research' || job.kind === 'title_translate') {
+        broadcastNewsUpdate(itemForError);
+      }
+    }
   }
 }
 
@@ -2747,6 +2814,7 @@ let schedulerTimer: NodeJS.Timeout | null = null;
 async function schedulerTick() {
   // run AI queue
   try { await tickAiQueue(); } catch {}
+  try { enqueueSummaryRecoveryPass(); } catch {}
 
   const now = Date.now();
   for (const fi of feedsList) {
