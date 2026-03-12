@@ -7,6 +7,7 @@ export function ToastStack() {
   const { toast } = useTopMenuContext();
   const { toasts, onDismiss } = toast;
   if (!toasts.length) return null;
+  const orderedToasts = [...toasts].reverse();
 
   return (
     <Box
@@ -18,10 +19,13 @@ export function ToastStack() {
         display: 'flex',
         flexDirection: 'column',
         gap: 1,
-        width: { xs: 'calc(100vw - 28px)', sm: 420 }
+        width: { xs: 'calc(100vw - 28px)', sm: 420 },
+        maxHeight: { xs: 'calc(100dvh - 28px)', sm: 'min(70vh, 560px)' },
+        overflowY: 'auto',
+        pr: 0.25
       }}
     >
-      {toasts.map(t => (
+      {orderedToasts.map(t => (
         <Alert
           key={t.id}
           severity={t.kind}

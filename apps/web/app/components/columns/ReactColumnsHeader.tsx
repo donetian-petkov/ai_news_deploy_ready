@@ -57,11 +57,31 @@ export function ReactColumnsHeader() {
   ].filter(group => group.count > 0 && group.label);
 
   return (
-    <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.25 }}>
-      <Typography variant="overline" sx={{ color: 'var(--text-muted)', letterSpacing: '0.14em', fontWeight: 800 }}>
+    <Stack
+      direction={{ xs: 'column', sm: 'row' }}
+      justifyContent="space-between"
+      alignItems={{ xs: 'stretch', sm: 'center' }}
+      sx={{ mb: 1.25, gap: { xs: 0.65, sm: 0 } }}
+    >
+      <Typography
+        variant="overline"
+        sx={{
+          color: 'var(--text-muted)',
+          letterSpacing: '0.14em',
+          fontWeight: 800,
+          lineHeight: 1.2,
+          whiteSpace: { xs: 'normal', sm: 'nowrap' }
+        }}
+      >
         {title}
       </Typography>
-      <Stack direction="row" spacing={0.8} alignItems="center" flexWrap="wrap" justifyContent="flex-end">
+      <Stack
+        direction={{ xs: 'column', sm: 'row' }}
+        spacing={0.7}
+        alignItems={{ xs: 'stretch', sm: 'center' }}
+        flexWrap="wrap"
+        justifyContent={{ xs: 'flex-start', sm: 'flex-end' }}
+      >
         {loadingGroups.map(group => (
           <Chip
             key={group.key}
@@ -72,6 +92,19 @@ export function ReactColumnsHeader() {
             onClick={e => setDetailsTarget({ anchor: e.currentTarget, label: group.label, items: group.items })}
             clickable
             title={`Click to view ${group.label.toLowerCase()} queue details`}
+            sx={{
+              maxWidth: { xs: '100%', sm: 'none' },
+              justifyContent: { xs: 'space-between', sm: 'center' },
+              height: { xs: 30, sm: 32 },
+              '& .MuiChip-label': {
+                px: { xs: 1.1, sm: 1.35 },
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                fontSize: { xs: '0.92rem', sm: '0.96rem' },
+                fontWeight: 760
+              }
+            }}
           />
         ))}
         <Popover
@@ -106,6 +139,15 @@ export function ReactColumnsHeader() {
           label={connected ? liveLabel : `${disconnectedLabel} (${status})`}
           color={connected ? 'success' : 'default'}
           variant={connected ? 'filled' : 'outlined'}
+          sx={{
+            maxWidth: { xs: '100%', sm: 'none' },
+            alignSelf: { xs: 'flex-start', sm: 'auto' },
+            '& .MuiChip-label': {
+              px: { xs: 1.1, sm: 1.35 },
+              fontSize: { xs: '0.9rem', sm: '0.96rem' },
+              fontWeight: 760
+            }
+          }}
         />
       </Stack>
     </Stack>

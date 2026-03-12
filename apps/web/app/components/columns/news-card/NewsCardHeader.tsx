@@ -102,6 +102,7 @@ export function NewsCardHeader() {
   const displayTranslated = titleOverride === 'translated'
     || (titleOverride === 'auto' && view.titleDisplayLanguage !== 'original' && hasAnyTranslation);
   const displayedTitle = displayTranslated && translatedCandidate ? translatedCandidate : item.title;
+  const duplicateMatchLabel = 'DUPE';
 
   useEffect(() => {
     setTitleOverride('auto');
@@ -112,26 +113,26 @@ export function NewsCardHeader() {
       <Stack
         direction="row"
         justifyContent="space-between"
-        alignItems="flex-start"
+        alignItems="center"
         sx={{
           mb: 0.9,
           pt: 0.35,
           px: 0.8,
           flexWrap: 'nowrap',
-          rowGap: 0.6,
-          columnGap: 1.35,
-          '@media (max-width: 860px)': {
-            flexWrap: 'wrap'
-          }
+          rowGap: 0,
+          columnGap: 0.8
         }}
       >
-        <Stack direction="row" spacing={0.8} alignItems="center" sx={{ minWidth: 0, flex: '1 1 auto', flexWrap: 'nowrap', rowGap: 0.45, pr: { xs: 0.9, sm: 1.8 } }}>
+        <Stack direction="row" spacing={0.8} alignItems="center" sx={{ minWidth: 0, flex: '1 1 0', flexWrap: 'nowrap', rowGap: 0, pr: 0.55 }}>
           <Typography
             variant="caption"
             sx={{
               color: NEWS_CARD_COLOR_TOKENS.headerMuted,
               whiteSpace: 'nowrap',
-              flexShrink: 0
+              flexShrink: 1,
+              minWidth: 0,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis'
             }}
           >
             {formatTime(item.publishedMs)}
@@ -142,25 +143,20 @@ export function NewsCardHeader() {
           spacing={0.6}
           alignItems="center"
           sx={{
-            pr: 0.2,
+            pr: 0.1,
             ml: 'auto',
-            pl: { xs: 0, sm: 0.85 },
-            flex: '0 1 auto',
+            pl: { xs: 0, sm: 0.55 },
+            flex: '0 0 auto',
+            maxWidth: 'none',
             flexWrap: 'nowrap',
             justifyContent: 'flex-end',
-            rowGap: 0.45,
-            '@media (max-width: 860px)': {
-              width: '100%',
-              flexWrap: 'wrap',
-              justifyContent: 'flex-start',
-              ml: 0
-            }
+            rowGap: 0
           }}
         >
-          {item.isMatch ? (
+          {item.isMatch && item.feedUrl !== FILTERED_FEED_URL ? (
             <Chip
               size="small"
-              label={isDuplicateMatch ? labels.duplicatedMatch : labels.match}
+              label={isDuplicateMatch ? duplicateMatchLabel : labels.match}
               variant="outlined"
               sx={{
                 color: matchAccent,
@@ -168,16 +164,18 @@ export function NewsCardHeader() {
                 fontWeight: 800,
                 flexShrink: 0,
                 ml: { xs: 0, sm: 0.7 },
-                whiteSpace: isDuplicateMatch ? 'pre-line' : 'nowrap',
-                height: isDuplicateMatch ? 'auto' : undefined,
-                '& .MuiChip-label': isDuplicateMatch
-                  ? {
-                    px: 1.1,
-                    py: 0.2,
-                    lineHeight: 1.05,
-                    textAlign: 'center'
-                  }
-                  : undefined
+                whiteSpace: 'nowrap',
+                height: 28,
+                minWidth: 72,
+                justifyContent: 'center',
+                '& .MuiChip-label': {
+                  px: 1,
+                  py: 0,
+                  lineHeight: 1,
+                  textAlign: 'center',
+                  fontSize: '0.94rem',
+                  fontWeight: 800
+                }
               }}
             />
           ) : null}

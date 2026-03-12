@@ -220,15 +220,24 @@ export function NewsAccessGate() {
         sx={{
           width: 'min(760px, 100%)',
           borderColor: 'rgba(88, 149, 255, 0.45)',
-          background: 'linear-gradient(180deg, rgba(8, 16, 33, 0.96), rgba(6, 12, 24, 0.98))'
+          background: 'linear-gradient(180deg, rgba(8, 16, 33, 0.96), rgba(6, 12, 24, 0.98))',
+          color: '#dcebff',
+          boxShadow: '0 16px 38px rgba(0, 0, 0, 0.45)',
+          '& .MuiTypography-root': {
+            color: 'inherit'
+          },
+          '& .MuiChip-root': {
+            color: '#dcebff',
+            borderColor: 'rgba(120, 180, 255, 0.42)'
+          }
         }}
       >
         <CardContent>
           <Stack spacing={1.2}>
-            <Typography variant="h5" sx={{ fontWeight: 800 }}>
+            <Typography variant="h5" sx={{ fontWeight: 800, color: '#eaf3ff' }}>
               {labels.accessGateTitle || 'Sign in to unlock live news'}
             </Typography>
-            <Typography variant="body2" sx={{ color: 'var(--text-muted)' }}>
+            <Typography variant="body2" sx={{ color: 'rgba(219, 233, 255, 0.82)' }}>
               {labels.accessGateSubtitle || 'News fetching starts only after account login and provider API key setup.'}
             </Typography>
             <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
@@ -296,7 +305,7 @@ export function NewsAccessGate() {
             )}
 
             {checking ? (
-              <Typography variant="caption" sx={{ color: 'var(--text-muted)' }}>
+              <Typography variant="caption" sx={{ color: 'rgba(219, 233, 255, 0.75)' }}>
                 {labels.accessGateChecking || 'Checking account access...'}
               </Typography>
             ) : null}
