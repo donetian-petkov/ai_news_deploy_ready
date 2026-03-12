@@ -1438,9 +1438,20 @@ function pickRssContextCombined(item: any, limitChars: number): string {
 }
 
 function summaryInstruction(lang: SummaryLang): string {
-  if (lang === 'bg') return 'Write ONE short sentence in Bulgarian (max 18 words).';
-  if (lang === 'en') return 'Write ONE short sentence in English (max 18 words).';
+  if (lang === 'bg') return 'Write ONE short sentence in Bulgarian (max 18 words). Do NOT include English text. Do NOT use "/" separators.';
+  if (lang === 'en') return 'Write ONE short sentence in English (max 18 words). Do NOT include Bulgarian text. Do NOT use "/" separators.';
   return 'Write TWO short sentences: first Bulgarian (max 14 words), then English (max 14 words). Separate with " / ".';
+}
+
+function enforceSummaryLanguage(summaryRaw: string, lang: SummaryLang): string {
+  const summary = String(summaryRaw || '').trim();
+  if (!summary) return '';
+  const parts = summary.split(/\s\/\s/).map(v => v.trim()).filter(Boolean);
+  if (parts.length <= 1) return summary;
+  if (lang === 'bg') return parts[0] || summary;
+  if (lang === 'en') return parts[parts.length - 1] || summary;
+  if (parts.length >= 2) return `${parts[0]} / ${parts[parts.length - 1]}`;
+  return summary;
 }
 
 // ---------------- Better Research Prompt ----------------
@@ -1854,7 +1865,9 @@ async function oneLineSummary(
     `Headline: ${title}\n` +
     (context ? `Context: ${context}\n` : '');
 
-  return generateAiText('summary', input, budgetToTokensSummary(budget), 0.2);
+  const generated = await generateAiText('summary', input, budgetToTokensSummary(budget), 0.2);
+  if (!generated) return generated;
+  return enforceSummaryLanguage(generated, summaryLang);
 }
 
 async function translateTitleBilingual(
@@ -3176,6 +3189,15 @@ wss.on('connection', (ws: WebSocket) => {
       if (lang === 'bg' || lang === 'en' || lang === 'bilingual') {
         const prev = summaryLang;
         summaryLang = lang;
+        let normalizedNow = 0;
+        for (const it of recent) {
+          if (!it.summary || !it.summary.trim()) continue;
+          const nextSummary = enforceSummaryLanguage(it.summary, lang);
+          if (nextSummary === it.summary) continue;
+          it.summary = nextSummary;
+          broadcastNewsUpdate(it);
+          normalizedNow++;
+        }
         broadcastConfig();
 
         // Re-render existing summaries in the newly selected global language.
@@ -3198,6 +3220,11 @@ wss.on('connection', (ws: WebSocket) => {
             ws.send(JSON.stringify({
               type: 'ok',
               message: `Refreshing ${done} summaries for ${lang.toUpperCase()}`
+            }));
+          } else if (normalizedNow > 0) {
+            ws.send(JSON.stringify({
+              type: 'ok',
+              message: `Adjusted ${normalizedNow} summaries to ${lang.toUpperCase()}`
             }));
           }
         }
