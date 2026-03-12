@@ -69,7 +69,7 @@ export function useTopMenuControlPanelHandlers({
     onTitleDisplayLanguageChange: (lang: RootState['ui']['titleDisplayLanguage']) => {
       dispatch(setTitleDisplayLanguage(lang));
       if (lang !== 'original') {
-        sendWsMessage({ type: 'run_title_translate_backfill', max: 700 });
+        sendWsMessage({ type: 'run_title_translate_backfill', max: 220 });
       }
     },
     onSummaryModelChange: (model: string) => {

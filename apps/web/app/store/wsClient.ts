@@ -244,6 +244,8 @@ function parseNews(v: unknown): NewsItem | null {
     summary: isString(m.summary) ? m.summary : '',
     summaryPending: isBoolean(m.summaryPending) ? m.summaryPending : undefined,
     research: isString(m.research) ? m.research : '',
+    researchPending: isBoolean(m.researchPending) ? m.researchPending : undefined,
+    titleTranslatePending: isBoolean(m.titleTranslatePending) ? m.titleTranslatePending : undefined,
     mood,
     newsType,
     filteredOk: isBoolean(m.filteredOk) ? m.filteredOk : true

@@ -15,57 +15,92 @@ export function ReactColumnsHeader() {
     summariesLoadingCount,
     summariesStalledCount,
     summariesLoadingLabel,
-    summariesLoadingItems
+    summariesLoadingItems,
+    researchesLoadingCount,
+    researchesStalledCount,
+    researchesLoadingLabel,
+    researchesLoadingItems,
+    titlesLoadingCount,
+    titlesStalledCount,
+    titlesLoadingLabel,
+    titlesLoadingItems
   } = header;
-  const [detailsAnchor, setDetailsAnchor] = useState<HTMLElement | null>(null);
+  const [detailsTarget, setDetailsTarget] = useState<{
+    anchor: HTMLElement;
+    label: string;
+    items: string[];
+  } | null>(null);
+  const detailsAnchor = detailsTarget?.anchor || null;
   const detailsOpen = Boolean(detailsAnchor);
+  const loadingGroups = [
+    {
+      key: 'summaries',
+      label: summariesLoadingLabel,
+      count: summariesLoadingCount,
+      stalledCount: summariesStalledCount,
+      items: summariesLoadingItems
+    },
+    {
+      key: 'titles',
+      label: titlesLoadingLabel,
+      count: titlesLoadingCount,
+      stalledCount: titlesStalledCount,
+      items: titlesLoadingItems
+    },
+    {
+      key: 'researches',
+      label: researchesLoadingLabel,
+      count: researchesLoadingCount,
+      stalledCount: researchesStalledCount,
+      items: researchesLoadingItems
+    }
+  ].filter(group => group.count > 0 && group.label);
 
   return (
     <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.25 }}>
       <Typography variant="overline" sx={{ color: 'var(--text-muted)', letterSpacing: '0.14em', fontWeight: 800 }}>
         {title}
       </Typography>
-      <Stack direction="row" spacing={0.8} alignItems="center">
-        {summariesLoadingCount > 0 && summariesLoadingLabel ? (
-          <>
-            <Chip
-              size="small"
-              label={`${summariesLoadingLabel}: ${summariesLoadingCount}${summariesStalledCount > 0 ? ` • stuck: ${summariesStalledCount}` : ''}`}
-              color={summariesStalledCount > 0 ? 'warning' : 'info'}
-              variant="outlined"
-              onClick={e => setDetailsAnchor(e.currentTarget)}
-              clickable
-              title="Click to view summary queue details"
-            />
-            <Popover
-              open={detailsOpen}
-              anchorEl={detailsAnchor}
-              onClose={() => setDetailsAnchor(null)}
-              anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
-              transformOrigin={{ vertical: 'top', horizontal: 'left' }}
-            >
-              <Box sx={{ p: 1.2, maxWidth: 560, maxHeight: 360, overflow: 'auto' }}>
-                <Typography variant="subtitle2" sx={{ mb: 0.6 }}>
-                  Summaries in progress ({summariesLoadingItems.length})
+      <Stack direction="row" spacing={0.8} alignItems="center" flexWrap="wrap" justifyContent="flex-end">
+        {loadingGroups.map(group => (
+          <Chip
+            key={group.key}
+            size="small"
+            label={`${group.label}: ${group.count}${group.stalledCount > 0 ? ` • stuck: ${group.stalledCount}` : ''}`}
+            color={group.stalledCount > 0 ? 'warning' : 'info'}
+            variant="outlined"
+            onClick={e => setDetailsTarget({ anchor: e.currentTarget, label: group.label, items: group.items })}
+            clickable
+            title={`Click to view ${group.label.toLowerCase()} queue details`}
+          />
+        ))}
+        <Popover
+          open={detailsOpen}
+          anchorEl={detailsAnchor}
+          onClose={() => setDetailsTarget(null)}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+          transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+        >
+          <Box sx={{ p: 1.2, maxWidth: 560, maxHeight: 360, overflow: 'auto' }}>
+            <Typography variant="subtitle2" sx={{ mb: 0.6 }}>
+              {detailsTarget?.label || 'Queue'} ({detailsTarget?.items.length || 0})
+            </Typography>
+            <Stack spacing={0.45}>
+              {(detailsTarget?.items.length || 0) ? detailsTarget!.items.slice(0, 40).map((line, idx) => (
+                <Typography key={`${idx}-${line}`} variant="body2">
+                  {idx + 1}. {line}
                 </Typography>
-                <Stack spacing={0.45}>
-                  {summariesLoadingItems.length ? summariesLoadingItems.slice(0, 40).map((line, idx) => (
-                    <Typography key={`${idx}-${line}`} variant="body2">
-                      {idx + 1}. {line}
-                    </Typography>
-                  )) : (
-                    <Typography variant="body2">No pending summary items.</Typography>
-                  )}
-                  {summariesLoadingItems.length > 40 ? (
-                    <Typography variant="caption" color="text.secondary">
-                      ...and {summariesLoadingItems.length - 40} more
-                    </Typography>
-                  ) : null}
-                </Stack>
-              </Box>
-            </Popover>
-          </>
-        ) : null}
+              )) : (
+                <Typography variant="body2">No pending items.</Typography>
+              )}
+              {(detailsTarget?.items.length || 0) > 40 ? (
+                <Typography variant="caption" color="text.secondary">
+                  ...and {(detailsTarget?.items.length || 0) - 40} more
+                </Typography>
+              ) : null}
+            </Stack>
+          </Box>
+        </Popover>
         <Chip
           size="small"
           label={connected ? liveLabel : `${disconnectedLabel} (${status})`}

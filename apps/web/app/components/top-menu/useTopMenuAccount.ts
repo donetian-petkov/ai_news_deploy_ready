@@ -59,6 +59,16 @@ export function useTopMenuAccount({ provider, labels, onSwitchProvider }: Args) 
     void refreshUserAndKeyStatus();
   }, [refreshUserAndKeyStatus]);
 
+  useEffect(() => {
+    const onAuthChanged = () => { void refreshUserAndKeyStatus(); };
+    window.addEventListener('ai-news-auth-changed', onAuthChanged);
+    window.addEventListener('storage', onAuthChanged);
+    return () => {
+      window.removeEventListener('ai-news-auth-changed', onAuthChanged);
+      window.removeEventListener('storage', onAuthChanged);
+    };
+  }, [refreshUserAndKeyStatus]);
+
   const submitAuth = useCallback(async (mode: 'login' | 'register') => {
     const u = String(username || '').trim().toLowerCase();
     const p = String(password || '').trim();
@@ -73,6 +83,7 @@ export function useTopMenuAccount({ provider, labels, onSwitchProvider }: Args) 
         ? await registerUser(u, p)
         : await loginUser(u, p);
       setStoredAuthToken(result.token);
+      window.dispatchEvent(new Event('ai-news-auth-changed'));
       setUser(result.user);
       setPassword('');
       const hasKey = await fetchProviderKeyStatus(result.token, provider);
@@ -92,6 +103,7 @@ export function useTopMenuAccount({ provider, labels, onSwitchProvider }: Args) 
 
   const signOut = useCallback(() => {
     clearStoredAuthToken();
+    window.dispatchEvent(new Event('ai-news-auth-changed'));
     setUser(null);
     setUsername('');
     setPassword('');

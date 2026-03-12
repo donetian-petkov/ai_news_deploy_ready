@@ -11,6 +11,10 @@ export function TopMenuAccountSection() {
     },
     account
   } = useTopMenuContext();
+  const compactAuthButtonSx = {
+    whiteSpace: 'nowrap',
+    minWidth: { xs: 112, sm: 108 }
+  } as const;
 
   return (
     <details className="controlSection controlSectionAccount" open>
@@ -48,10 +52,10 @@ export function TopMenuAccountSection() {
                 />
               </Stack>
               <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
-                <Button size="small" variant="contained" onClick={account.signIn} disabled={account.busy}>
+                <Button size="small" variant="contained" onClick={account.signIn} disabled={account.busy} sx={compactAuthButtonSx}>
                   {labels.authSignIn || 'Sign in'}
                 </Button>
-                <Button size="small" variant="outlined" onClick={account.register} disabled={account.busy}>
+                <Button size="small" variant="outlined" onClick={account.register} disabled={account.busy} sx={compactAuthButtonSx}>
                   {labels.authRegister || 'Register'}
                 </Button>
               </Stack>

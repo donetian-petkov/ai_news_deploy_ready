@@ -23,6 +23,7 @@ type NewsState = {
   hiddenIds: string[];
   summaryPendingById: Record<string, true>;
   researchPendingById: Record<string, true>;
+  titleTranslatePendingById: Record<string, true>;
   askByItem: Record<string, AskItemState>;
   pinnedNewsById: Record<string, true>;
 };
@@ -32,6 +33,7 @@ const initialState: NewsState = {
   hiddenIds: [],
   summaryPendingById: {},
   researchPendingById: {},
+  titleTranslatePendingById: {},
   askByItem: {},
   pinnedNewsById: {}
 };
@@ -47,6 +49,9 @@ function clearPendingKeysForNewsId(state: NewsState, id: string) {
   });
   Object.keys(state.researchPendingById).forEach(key => {
     if (key === id || key.endsWith(suffix)) delete state.researchPendingById[key];
+  });
+  Object.keys(state.titleTranslatePendingById).forEach(key => {
+    if (key === id || key.endsWith(suffix)) delete state.titleTranslatePendingById[key];
   });
 }
 
@@ -84,6 +89,21 @@ function applyNewsBatch(state: NewsState, items: NewsItem[]) {
     if (item.research && item.research.trim()) {
       delete state.researchPendingById[key];
       delete state.researchPendingById[item.id];
+    } else if (item.researchPending === true) {
+      state.researchPendingById[key] = true;
+    } else if (item.researchPending === false) {
+      delete state.researchPendingById[key];
+      delete state.researchPendingById[item.id];
+    }
+
+    if (item.titleBg || item.titleEn) {
+      delete state.titleTranslatePendingById[key];
+      delete state.titleTranslatePendingById[item.id];
+    } else if (item.titleTranslatePending === true) {
+      state.titleTranslatePendingById[key] = true;
+    } else if (item.titleTranslatePending === false) {
+      delete state.titleTranslatePendingById[key];
+      delete state.titleTranslatePendingById[item.id];
     }
   });
 

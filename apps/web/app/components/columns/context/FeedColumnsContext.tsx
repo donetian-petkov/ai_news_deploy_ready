@@ -21,6 +21,14 @@ export type FeedColumnsContextValue = {
     summariesStalledCount: number;
     summariesLoadingLabel: string;
     summariesLoadingItems: string[];
+    researchesLoadingCount: number;
+    researchesStalledCount: number;
+    researchesLoadingLabel: string;
+    researchesLoadingItems: string[];
+    titlesLoadingCount: number;
+    titlesStalledCount: number;
+    titlesLoadingLabel: string;
+    titlesLoadingItems: string[];
   };
   clipboard: {
     open: boolean;

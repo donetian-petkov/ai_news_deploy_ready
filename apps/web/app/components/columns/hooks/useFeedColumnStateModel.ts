@@ -18,6 +18,7 @@ export function useFeedColumnStateModel(args: Args) {
     deleteAgeByUrl: args.deleteAgeByUrl,
     summaryPendingById: args.summaryPendingById,
     researchPendingById: args.researchPendingById,
+    titleTranslatePendingById: args.titleTranslatePendingById,
     pinnedNewsById: args.pinnedNewsById,
     askByItem: args.askByItem,
     bodyModes: args.bodyModes
@@ -35,6 +36,7 @@ export function useFeedColumnStateModel(args: Args) {
     args.pinnedNewsById,
     args.researchPendingById,
     args.summaryPendingById,
+    args.titleTranslatePendingById,
     args.visibleByFeed
   ]);
 }

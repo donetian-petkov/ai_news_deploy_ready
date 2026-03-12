@@ -98,6 +98,8 @@ export type NewsItem = {
   summary?: string;
   summaryPending?: boolean;
   research?: string;
+  researchPending?: boolean;
+  titleTranslatePending?: boolean;
   mood?: NewsMood;
   newsType?: NewsType;
   filteredOk?: boolean;

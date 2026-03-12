@@ -124,6 +124,7 @@ export type FeedColumnStateModel = {
   deleteAgeByUrl: Record<string, 'yesterday' | 'week' | 'month' | 'year'>;
   summaryPendingById: Record<string, true>;
   researchPendingById: Record<string, true>;
+  titleTranslatePendingById: Record<string, true>;
   pinnedNewsById: Record<string, true>;
   askByItem: Record<string, FeedAskState>;
   bodyModes: Record<string, BodyMode>;

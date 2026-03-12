@@ -156,6 +156,8 @@ type News = {
   summary?: string;
   summaryPending?: boolean;
   research?: string;
+  researchPending?: boolean;
+  titleTranslatePending?: boolean;
   mood?: Mood;
   newsType?: NewsType;
 };
@@ -173,6 +175,7 @@ type ModelOptionsByProvider = Record<AIProvider, ProviderModelOptions>;
 type Config = {
   type: 'config';
   keywords: string[];
+  newsAccessLocked: boolean;
 
   aiProvider: AIProvider;
   aiAvailable: boolean;
@@ -228,6 +231,8 @@ app.use((req, res, next) => {
 const AUTH_TOKEN_SECRET = String(process.env.AUTH_TOKEN_SECRET || '').trim();
 const KEY_ENCRYPTION_SECRET = String(process.env.KEY_ENCRYPTION_SECRET || '').trim();
 const AUTH_TOKEN_TTL_MS = 1000 * 60 * 60 * 24 * 30; // 30 days
+const REQUIRE_LOGIN_AND_KEY_FOR_NEWS = String(process.env.REQUIRE_LOGIN_AND_KEY_FOR_NEWS || 'true').trim() !== 'false';
+let newsAccessUnlocked = !REQUIRE_LOGIN_AND_KEY_FOR_NEWS;
 
 type AuthTokenPayload = {
   uid: number;
@@ -399,6 +404,10 @@ function normalizeAccountSettings(raw: unknown): Record<string, unknown> {
   const parsed = accountSettingsSchema.safeParse(raw);
   if (!parsed.success) return {};
   return parsed.data as Record<string, unknown>;
+}
+
+function isNewsAccessLocked(): boolean {
+  return REQUIRE_LOGIN_AND_KEY_FOR_NEWS && !newsAccessUnlocked;
 }
 
 function isMissingUserSettingsTableError(error: unknown): boolean {
@@ -615,6 +624,67 @@ app.get('/health', (_req, res) => {
   res.json({ ok: true, service: 'ai-news-api' });
 });
 
+app.get('/api/ops/ai-jobs', (req, res) => {
+  const kindRaw = String(req.query.kind || '').trim();
+  const stageRaw = String(req.query.stage || '').trim();
+  const limitRaw = Number(req.query.limit);
+  const deadLimitRaw = Number(req.query.deadLimit);
+  const limit = Number.isFinite(limitRaw) ? Math.max(1, Math.min(1000, Math.floor(limitRaw))) : 120;
+  const deadLimit = Number.isFinite(deadLimitRaw) ? Math.max(1, Math.min(400, Math.floor(deadLimitRaw))) : 40;
+
+  const kinds: AiJobKind[] = ['summary', 'title_translate', 'research', 'mood', 'news_type'];
+  const stages: AiJobLogStage[] = ['enqueue', 'start', 'success', 'skip', 'drop', 'error'];
+  const kindFilter = kinds.includes(kindRaw as AiJobKind) ? (kindRaw as AiJobKind) : '';
+  const stageFilter = stages.includes(stageRaw as AiJobLogStage) ? (stageRaw as AiJobLogStage) : '';
+
+  const events = aiJobLogEvents
+    .filter(e => (!kindFilter || e.kind === kindFilter) && (!stageFilter || e.stage === stageFilter))
+    .slice(-limit)
+    .reverse();
+
+  const deadLetters = aiDeadLetters
+    .slice(-deadLimit)
+    .reverse();
+
+  const queuePreview = aiQueue
+    .slice(-Math.min(limit, 200))
+    .map(job => ({
+      kind: job.kind,
+      id: job.id,
+      feedUrl: job.feedUrl,
+      manual: !!job.manual,
+      enqueuedAtMs: job.enqueuedAtMs,
+      ageMs: Math.max(0, Date.now() - job.enqueuedAtMs)
+    }))
+    .reverse();
+
+  const inFlightKeys = Array.from(aiInFlight).slice(-Math.min(limit, 200));
+
+  res.json({
+    ok: true,
+    now: new Date().toISOString(),
+    newsAccessLocked: isNewsAccessLocked(),
+    storage: {
+      persistEnabled: AI_JOB_LOG_PERSIST,
+      logDir: AI_JOB_LOG_DIR,
+      logFile: AI_JOB_LOG_FILE_PATH,
+      bufferedEvents: aiJobLogFileBuffer.length,
+      rotateBytes: AI_JOB_LOG_ROTATE_BYTES,
+      rotateFiles: AI_JOB_LOG_ROTATE_FILES
+    },
+    queue: {
+      size: aiQueue.length,
+      countsByKind: aiQueueCounts(),
+      inFlight: aiInFlight.size,
+      deadLetters: aiDeadLetters.length,
+      queuedJobs: queuePreview,
+      inFlightKeys
+    },
+    events,
+    deadLetters
+  });
+});
+
 const server = app.listen(PORT, () =>
   console.log(`Live RSS running at http://localhost:${PORT}`)
 );
@@ -630,6 +700,10 @@ const RUNTIME_MS =
 
 function shutdown(reason: string) {
   console.log(`Shutting down: ${reason}`);
+  try {
+    stopAiJobLogFlushTimer();
+    flushAiJobLogBufferNow();
+  } catch {}
   try {
     wss.clients.forEach((c: WebSocket) => {
       try { c.close(); } catch {}
@@ -1109,10 +1183,18 @@ function saveStateNow() {
 setInterval(saveStateNow, 2500);
 process.on('exit', () => {
   try { saveStateNow(); } catch {}
+  try {
+    stopAiJobLogFlushTimer();
+    flushAiJobLogBufferNow();
+  } catch {}
 });
 process.on('uncaughtException', (err) => {
   console.error('uncaughtException:', err);
   try { saveStateNow(); } catch {}
+  try {
+    stopAiJobLogFlushTimer();
+    flushAiJobLogBufferNow();
+  } catch {}
   process.exit(1);
 });
 // ----------------------------------------------------
@@ -1204,6 +1286,7 @@ const recent: NewsInternal[] = [];
 
 // ---- embeddings caches ----
 let keywordVecs: { keyword: string; vec: number[] }[] = [];
+let keywordEmbeddingsInitRunId = 0;
 const titleVecCache = new Map<string, number[]>();
 const TITLE_VEC_CACHE_MAX = 3000;
 
@@ -1277,16 +1360,29 @@ async function embed(text: string): Promise<number[] | null> {
 }
 
 async function initKeywordEmbeddings() {
-  keywordVecs = [];
-  if (!openaiEmbeddingClient || !aiEnabled || keywords.length === 0) return;
+  const runId = ++keywordEmbeddingsInitRunId;
+  const keywordSnapshot = Array.isArray(keywords) ? [...keywords] : [];
 
-  for (const kw of keywords) {
-    const v = await embed(kw);
-    if (v) keywordVecs.push({ keyword: kw, vec: v });
+  if (!openaiEmbeddingClient || !aiEnabled || keywordSnapshot.length === 0) {
+    if (runId === keywordEmbeddingsInitRunId) {
+      keywordVecs = [];
+      console.log(`AI enabled: ${aiEnabled}. Keyword embeddings loaded: 0/${keywordSnapshot.length}`);
+    }
+    return;
   }
 
+  const nextKeywordVecs: { keyword: string; vec: number[] }[] = [];
+  for (const kw of keywordSnapshot) {
+    const v = await embed(kw);
+    if (v) nextKeywordVecs.push({ keyword: kw, vec: v });
+  }
+
+  // Drop stale runs if a newer init started while this one was in-flight.
+  if (runId !== keywordEmbeddingsInitRunId) return;
+
+  keywordVecs = nextKeywordVecs;
   console.log(
-    `AI enabled: ${aiEnabled}. Keyword embeddings loaded: ${keywordVecs.length}/${keywords.length}`
+    `AI enabled: ${aiEnabled}. Keyword embeddings loaded: ${keywordVecs.length}/${keywordSnapshot.length}`
   );
 }
 
@@ -2079,6 +2175,7 @@ function broadcastConfig() {
   const cfg: Config = {
     type: 'config',
     keywords,
+    newsAccessLocked: isNewsAccessLocked(),
 
     aiProvider,
     aiAvailable,
@@ -2131,12 +2228,44 @@ function broadcastNewsUpdate(it: NewsInternal) {
     summary: it.summary,
     summaryPending: hasSummaryJobQueuedOrRunning(it.id, it.feedUrl),
     research: it.research,
+    researchPending: hasResearchJobQueuedOrRunning(it.id, it.feedUrl),
+    titleTranslatePending: hasTitleTranslateJobQueuedOrRunning(it.id, it.feedUrl),
     mood: it.mood,
     newsType: it.newsType
   } satisfies News);
 
   wss.clients.forEach((c: WebSocket) => {
     if (c.readyState === WebSocket.OPEN) c.send(payload);
+  });
+}
+
+function sendSnapshotToSocket(ws: WebSocket) {
+  const snapshot = recent.slice().sort((a, b) => b.publishedMs - a.publishedMs);
+  snapshot.forEach(item => {
+    if (hiddenIds.has(item.id)) return;
+    if (ws.readyState !== WebSocket.OPEN) return;
+    ws.send(JSON.stringify({
+      type: 'news',
+      id: item.id,
+      title: item.title,
+      titleBg: item.titleBg,
+      titleEn: item.titleEn,
+      link: item.link,
+      source: item.source,
+      published: item.published,
+      publishedMs: item.publishedMs,
+      feedUrl: item.feedUrl,
+      isMatch: item.isMatch,
+      matchScore: item.matchScore,
+      filteredOk: item.filteredOk,
+      summary: item.summary,
+      summaryPending: hasSummaryJobQueuedOrRunning(item.id, item.feedUrl),
+      research: item.research,
+      researchPending: hasResearchJobQueuedOrRunning(item.id, item.feedUrl),
+      titleTranslatePending: hasTitleTranslateJobQueuedOrRunning(item.id, item.feedUrl),
+      mood: item.mood,
+      newsType: item.newsType
+    } satisfies News));
   });
 }
 
@@ -2175,6 +2304,15 @@ function shouldHaveSummary(it: NewsInternal): boolean {
   return ownFeedSummary || filteredSummary;
 }
 
+function shouldHaveResearch(it: NewsInternal): boolean {
+  const ownFeedResearch = !!feedSettings.get(it.feedUrl)?.researchEnabled;
+  const filteredResearch =
+    !!feedSettings.get(FILTERED_FEED_URL)?.researchEnabled &&
+    !!it.isMatch &&
+    it.filteredOk !== false;
+  return ownFeedResearch || filteredResearch;
+}
+
 // ---------------- AI JOB QUEUE (non-blocking) ----------------
 type AiJobKind = 'summary' | 'title_translate' | 'research' | 'mood' | 'news_type';
 type AiJobInput = { kind: AiJobKind; id: string; feedUrl: string; manual?: boolean };
@@ -2189,19 +2327,68 @@ type DeadLetterAiJob = {
   reason: string;
 };
 
+type AiJobLogStage = 'enqueue' | 'start' | 'success' | 'skip' | 'drop' | 'error';
+type AiJobLogEvent = {
+  atMs: number;
+  isoTime: string;
+  stage: AiJobLogStage;
+  kind: AiJobKind;
+  id: string;
+  feedUrl: string;
+  manual: boolean;
+  reason?: string;
+  durationMs?: number;
+  queueLength: number;
+  inFlight: number;
+};
+
 const aiQueue: AiJob[] = [];
 const aiInFlight = new Set<string>();
 const aiDeadLetters: DeadLetterAiJob[] = [];
+const aiJobLogEvents: AiJobLogEvent[] = [];
 const lastAiJobErrorAtMs = new Map<string, number>();
 
 const AI_MAX_CONCURRENCY = Math.max(1, parseInt(process.env.AI_MAX_CONCURRENCY || '1', 10));
 const AI_QUEUE_MAX = Math.max(200, parseInt(process.env.AI_QUEUE_MAX || '600', 10));
 const AI_JOB_TTL_MS = Math.max(15_000, Number.parseInt(process.env.AI_JOB_TTL_MS ?? '180_000', 10) || 180_000);
 const AI_DEAD_LETTER_MAX = Math.max(50, Number.parseInt(process.env.AI_DEAD_LETTER_MAX ?? '400', 10) || 400);
+const AI_JOB_LOG_MAX = Math.max(100, Number.parseInt(process.env.AI_JOB_LOG_MAX ?? '1200', 10) || 1200);
+const AI_JOB_LOG_VERBOSE = String(process.env.AI_JOB_LOG_VERBOSE || '').trim().toLowerCase() === 'true';
+const AI_JOB_LOG_PERSIST = String(process.env.AI_JOB_LOG_PERSIST || 'true').trim().toLowerCase() !== 'false';
+const API_ROOT_DIR = (() => {
+  const candidate = path.resolve(__dirname, '..');
+  if (fs.existsSync(path.join(candidate, 'package.json'))) return candidate;
+  return process.cwd();
+})();
+const AI_JOB_LOG_DIR = (() => {
+  const fromEnv = String(process.env.AI_JOB_LOG_DIR || '').trim();
+  if (fromEnv) return path.resolve(fromEnv);
+  return path.join(API_ROOT_DIR, '.data', 'logs');
+})();
+const AI_JOB_LOG_FILE_PATH = path.join(AI_JOB_LOG_DIR, 'ai-jobs.jsonl');
+const AI_JOB_LOG_ROTATE_BYTES = Math.max(
+  128 * 1024,
+  Number.parseInt(process.env.AI_JOB_LOG_ROTATE_BYTES ?? '5242880', 10) || 5 * 1024 * 1024
+);
+const AI_JOB_LOG_ROTATE_FILES = Math.max(
+  1,
+  Number.parseInt(process.env.AI_JOB_LOG_ROTATE_FILES ?? '10', 10) || 10
+);
+const AI_JOB_LOG_FLUSH_INTERVAL_MS = Math.max(
+  250,
+  Number.parseInt(process.env.AI_JOB_LOG_FLUSH_INTERVAL_MS ?? '1500', 10) || 1500
+);
+const aiJobLogFileBuffer: string[] = [];
+let aiJobLogFlushTimer: NodeJS.Timeout | null = null;
+let aiJobLogFlushInProgress = false;
 const AI_SUMMARY_TIMEOUT_MS = Math.max(4_000, Number.parseInt(process.env.AI_SUMMARY_TIMEOUT_MS ?? '22_000', 10) || 22_000);
 const AI_SUMMARY_RETRY_COOLDOWN_MS = Math.max(5_000, Number.parseInt(process.env.AI_SUMMARY_RETRY_COOLDOWN_MS ?? '20_000', 10) || 20_000);
 const AI_SUMMARY_RECOVERY_INTERVAL_MS = Math.max(2_000, Number.parseInt(process.env.AI_SUMMARY_RECOVERY_INTERVAL_MS ?? '8_000', 10) || 8_000);
 const AI_SUMMARY_RECOVERY_BATCH = Math.max(1, Math.min(100, Number.parseInt(process.env.AI_SUMMARY_RECOVERY_BATCH ?? '24', 10) || 24));
+const AI_TITLE_RECOVERY_INTERVAL_MS = Math.max(3_000, Number.parseInt(process.env.AI_TITLE_RECOVERY_INTERVAL_MS ?? '9_000', 10) || 9_000);
+const AI_TITLE_RECOVERY_BATCH = Math.max(1, Math.min(120, Number.parseInt(process.env.AI_TITLE_RECOVERY_BATCH ?? '32', 10) || 32));
+const AI_RESEARCH_RECOVERY_INTERVAL_MS = Math.max(4_000, Number.parseInt(process.env.AI_RESEARCH_RECOVERY_INTERVAL_MS ?? '12_000', 10) || 12_000);
+const AI_RESEARCH_RECOVERY_BATCH = Math.max(1, Math.min(80, Number.parseInt(process.env.AI_RESEARCH_RECOVERY_BATCH ?? '18', 10) || 18));
 const AI_TITLE_TRANSLATE_TIMEOUT_MS = Math.max(6_000, Number.parseInt(process.env.AI_TITLE_TRANSLATE_TIMEOUT_MS ?? '24_000', 10) || 24_000);
 const AI_RESEARCH_TIMEOUT_MS = Math.max(8_000, Number.parseInt(process.env.AI_RESEARCH_TIMEOUT_MS ?? '45_000', 10) || 45_000);
 const AI_RESEARCH_TIMEOUT_MANUAL_MS = Math.max(
@@ -2211,7 +2398,102 @@ const AI_RESEARCH_TIMEOUT_MANUAL_MS = Math.max(
 const AI_CLASSIFY_TIMEOUT_MS = Math.max(6_000, Number.parseInt(process.env.AI_CLASSIFY_TIMEOUT_MS ?? '22_000', 10) || 22_000);
 const AI_ERROR_TOAST_COOLDOWN_MS = Math.max(5_000, Number.parseInt(process.env.AI_ERROR_TOAST_COOLDOWN_MS ?? '20_000', 10) || 20_000);
 let lastSummaryRecoveryAtMs = 0;
+let lastTitleRecoveryAtMs = 0;
+let lastResearchRecoveryAtMs = 0;
 const summaryRetryCooldownUntilMs = new Map<string, number>();
+
+function ensureAiJobLogDir() {
+  if (!AI_JOB_LOG_PERSIST) return;
+  try {
+    fs.mkdirSync(AI_JOB_LOG_DIR, { recursive: true });
+  } catch {}
+}
+
+function rotateSuffix() {
+  return new Date()
+    .toISOString()
+    .replace(/[-:]/g, '')
+    .replace(/\..+$/, '')
+    .replace('T', '_');
+}
+
+function rotateAiJobLogFileIfNeeded(nextBytes: number) {
+  if (!AI_JOB_LOG_PERSIST) return;
+  try {
+    if (!fs.existsSync(AI_JOB_LOG_FILE_PATH)) return;
+    const stat = fs.statSync(AI_JOB_LOG_FILE_PATH);
+    if ((stat.size + nextBytes) < AI_JOB_LOG_ROTATE_BYTES) return;
+    const rotatedPath = path.join(AI_JOB_LOG_DIR, `ai-jobs-${rotateSuffix()}.jsonl`);
+    fs.renameSync(AI_JOB_LOG_FILE_PATH, rotatedPath);
+  } catch (error) {
+    console.error('AI job log rotate failed:', (error as Error).message);
+  }
+}
+
+function pruneAiJobLogFiles() {
+  if (!AI_JOB_LOG_PERSIST) return;
+  try {
+    const entries = fs.readdirSync(AI_JOB_LOG_DIR, { withFileTypes: true });
+    const rotated = entries
+      .filter(entry => entry.isFile() && /^ai-jobs-\d{8}_\d{6}\.jsonl$/i.test(entry.name))
+      .map(entry => {
+        const fullPath = path.join(AI_JOB_LOG_DIR, entry.name);
+        const stat = fs.statSync(fullPath);
+        return { fullPath, mtimeMs: stat.mtimeMs };
+      })
+      .sort((a, b) => b.mtimeMs - a.mtimeMs);
+
+    const toDelete = rotated.slice(AI_JOB_LOG_ROTATE_FILES);
+    toDelete.forEach(file => {
+      try {
+        fs.unlinkSync(file.fullPath);
+      } catch {}
+    });
+  } catch {}
+}
+
+function flushAiJobLogBufferNow() {
+  if (!AI_JOB_LOG_PERSIST) return;
+  if (aiJobLogFlushInProgress) return;
+  if (!aiJobLogFileBuffer.length) return;
+  aiJobLogFlushInProgress = true;
+  try {
+    ensureAiJobLogDir();
+    const lines = aiJobLogFileBuffer.splice(0, aiJobLogFileBuffer.length);
+    const payload = `${lines.join('\n')}\n`;
+    rotateAiJobLogFileIfNeeded(Buffer.byteLength(payload, 'utf8'));
+    fs.appendFileSync(AI_JOB_LOG_FILE_PATH, payload, 'utf8');
+    pruneAiJobLogFiles();
+  } catch (error) {
+    console.error('AI job log flush failed:', (error as Error).message);
+  } finally {
+    aiJobLogFlushInProgress = false;
+  }
+}
+
+function ensureAiJobLogFlushTimer() {
+  if (!AI_JOB_LOG_PERSIST) return;
+  if (aiJobLogFlushTimer) return;
+  aiJobLogFlushTimer = setInterval(() => {
+    flushAiJobLogBufferNow();
+  }, AI_JOB_LOG_FLUSH_INTERVAL_MS);
+  aiJobLogFlushTimer.unref?.();
+}
+
+function stopAiJobLogFlushTimer() {
+  if (!aiJobLogFlushTimer) return;
+  clearInterval(aiJobLogFlushTimer);
+  aiJobLogFlushTimer = null;
+}
+
+function persistAiJobEvent(event: AiJobLogEvent) {
+  if (!AI_JOB_LOG_PERSIST) return;
+  ensureAiJobLogFlushTimer();
+  aiJobLogFileBuffer.push(JSON.stringify(event));
+  if (aiJobLogFileBuffer.length >= 100) {
+    flushAiJobLogBufferNow();
+  }
+}
 
 function jobKey(j: AiJob) {
   return `${j.kind}:${j.feedUrl || ''}::${j.id}`;
@@ -2221,6 +2503,12 @@ function hasSummaryJobQueuedOrRunning(id: string, feedUrl: string): boolean {
   const k = `summary:${feedUrl || ''}::${id}`;
   if (aiInFlight.has(k)) return true;
   return aiQueue.some(job => job.kind === 'summary' && job.id === id && job.feedUrl === feedUrl);
+}
+
+function hasResearchJobQueuedOrRunning(id: string, feedUrl: string): boolean {
+  const k = `research:${feedUrl || ''}::${id}`;
+  if (aiInFlight.has(k)) return true;
+  return aiQueue.some(job => job.kind === 'research' && job.id === id && job.feedUrl === feedUrl);
 }
 
 function hasTitleTranslateJobQueuedOrRunning(id: string, feedUrl: string): boolean {
@@ -2252,6 +2540,47 @@ function pushDeadLetter(job: AiJob, reason: string) {
   }
 }
 
+function aiQueueCounts() {
+  const counts: Record<AiJobKind, number> = {
+    summary: 0,
+    title_translate: 0,
+    research: 0,
+    mood: 0,
+    news_type: 0
+  };
+  aiQueue.forEach(job => {
+    counts[job.kind] += 1;
+  });
+  return counts;
+}
+
+function recordAiJobEvent(job: Pick<AiJob, 'kind' | 'id' | 'feedUrl' | 'manual'>, stage: AiJobLogStage, opts?: {
+  reason?: string;
+  durationMs?: number;
+}) {
+  const event: AiJobLogEvent = {
+    atMs: Date.now(),
+    isoTime: new Date().toISOString(),
+    stage,
+    kind: job.kind,
+    id: job.id,
+    feedUrl: job.feedUrl,
+    manual: !!job.manual,
+    reason: opts?.reason,
+    durationMs: opts?.durationMs,
+    queueLength: aiQueue.length,
+    inFlight: aiInFlight.size
+  };
+  aiJobLogEvents.push(event);
+  if (aiJobLogEvents.length > AI_JOB_LOG_MAX) {
+    aiJobLogEvents.splice(0, aiJobLogEvents.length - AI_JOB_LOG_MAX);
+  }
+  persistAiJobEvent(event);
+  if (AI_JOB_LOG_VERBOSE) {
+    console.log('[ai-job]', JSON.stringify(event));
+  }
+}
+
 function resolveJobItem(job: AiJob): NewsInternal | undefined {
   return recent.find(x => x.id === job.id && x.feedUrl === job.feedUrl)
     || recent.find(x => x.id === job.id);
@@ -2259,6 +2588,7 @@ function resolveJobItem(job: AiJob): NewsInternal | undefined {
 
 function dropJob(job: AiJob, reason: string) {
   pushDeadLetter(job, reason);
+  recordAiJobEvent(job, 'drop', { reason });
   const it = resolveJobItem(job);
   if (it) {
     broadcastNewsUpdate(it);
@@ -2277,11 +2607,18 @@ function purgeExpiredQueuedJobs() {
 }
 
 function jobPriority(j: AiJob): number {
-  if (j.kind === 'summary') return j.manual ? 0 : 1;
-  if (j.kind === 'research') return j.manual ? 2 : 4;
+  if (j.manual) {
+    if (j.kind === 'summary') return 0;
+    if (j.kind === 'title_translate') return 1;
+    if (j.kind === 'research') return 2;
+    if (j.kind === 'mood') return 6;
+    return 7; // news_type
+  }
   if (j.kind === 'title_translate') return 3;
-  if (j.kind === 'mood') return 5;
-  return 6; // news_type
+  if (j.kind === 'summary') return 4;
+  if (j.kind === 'research') return 5;
+  if (j.kind === 'mood') return 6;
+  return 7; // news_type
 }
 
 function dequeueNextJob(): AiJob | undefined {
@@ -2334,17 +2671,49 @@ function enqueueJob(job: AiJobInput) {
   if (!aiEnabled || !aiAvailable) return;
   const nextJob: AiJob = { ...job, enqueuedAtMs: Date.now() };
   const k = jobKey(nextJob);
-  if (aiInFlight.has(k)) return;
-  if (aiQueue.some(x => jobKey(x) === k)) return;
+  if (aiInFlight.has(k)) {
+    recordAiJobEvent(nextJob, 'skip', { reason: 'duplicate_inflight' });
+    return;
+  }
+  if (aiQueue.some(x => jobKey(x) === k)) {
+    recordAiJobEvent(nextJob, 'skip', { reason: 'duplicate_queue' });
+    return;
+  }
 
   if (aiQueue.length >= AI_QUEUE_MAX) {
-    // drop oldest non-manual first
-    const idx = aiQueue.findIndex(x => !x.manual);
+    // Protect higher-priority work by dropping lowest-priority queued work first.
+    const pickDropIndex = (manualFlag: boolean): number => {
+      let dropIdx = -1;
+      for (let i = 0; i < aiQueue.length; i += 1) {
+        const candidate = aiQueue[i];
+        if (!!candidate.manual !== manualFlag) continue;
+        if (dropIdx < 0) {
+          dropIdx = i;
+          continue;
+        }
+        const current = aiQueue[dropIdx];
+        const candidatePriority = jobPriority(candidate);
+        const currentPriority = jobPriority(current);
+        if (candidatePriority > currentPriority) {
+          dropIdx = i;
+          continue;
+        }
+        if (candidatePriority === currentPriority && candidate.enqueuedAtMs < current.enqueuedAtMs) {
+          dropIdx = i;
+        }
+      }
+      return dropIdx;
+    };
+
+    const nonManualIdx = pickDropIndex(false);
+    const manualIdx = pickDropIndex(true);
+    const idx = nonManualIdx >= 0 ? nonManualIdx : manualIdx;
     const dropped = idx >= 0 ? aiQueue.splice(idx, 1)[0] : aiQueue.shift();
     if (dropped) dropJob(dropped, 'queue_overflow');
   }
 
   aiQueue.push(nextJob);
+  recordAiJobEvent(nextJob, 'enqueue');
 }
 
 function enqueueTitleTranslateBackfill(options?: {
@@ -2419,29 +2788,107 @@ function enqueueSummaryRecoveryPass(nowMs = Date.now()): number {
   return queued;
 }
 
+function enqueueTitleTranslateRecoveryPass(nowMs = Date.now()): number {
+  if (!aiEnabled || !aiAvailable) return 0;
+  if (activeModel('summary') === 'none') return 0;
+  if (nowMs - lastTitleRecoveryAtMs < AI_TITLE_RECOVERY_INTERVAL_MS) return 0;
+  lastTitleRecoveryAtMs = nowMs;
+
+  let queued = 0;
+  const list = recent.slice().sort((a, b) => b.publishedMs - a.publishedMs);
+  for (const it of list) {
+    if (queued >= AI_TITLE_RECOVERY_BATCH) break;
+    if (!it?.id || !it.feedUrl) continue;
+    if (hiddenIds.has(it.id)) continue;
+    if (!needsTitleTranslation(it.title, it.titleBg, it.titleEn)) continue;
+    const budget = feedSettings.get(it.feedUrl)?.budget || 'standard';
+    if (budget !== 'high') continue;
+    if (hasTitleTranslateJobQueuedOrRunning(it.id, it.feedUrl)) continue;
+
+    enqueueJob({ kind: 'title_translate', id: it.id, feedUrl: it.feedUrl });
+    if (hasTitleTranslateJobQueuedOrRunning(it.id, it.feedUrl)) {
+      queued += 1;
+      broadcastNewsUpdate(it);
+    }
+  }
+  return queued;
+}
+
+function enqueueResearchRecoveryPass(nowMs = Date.now()): number {
+  if (!aiEnabled || !aiAvailable) return 0;
+  if (activeModel('research') === 'none') return 0;
+  if (nowMs - lastResearchRecoveryAtMs < AI_RESEARCH_RECOVERY_INTERVAL_MS) return 0;
+  lastResearchRecoveryAtMs = nowMs;
+
+  let queued = 0;
+  const list = recent.slice().sort((a, b) => b.publishedMs - a.publishedMs);
+  for (const it of list) {
+    if (queued >= AI_RESEARCH_RECOVERY_BATCH) break;
+    if (!it?.id || !it.feedUrl) continue;
+    if (hiddenIds.has(it.id)) continue;
+    if (!shouldHaveResearch(it)) continue;
+    if (it.research && it.research.trim()) continue;
+    const budget = feedSettings.get(it.feedUrl)?.budget || 'standard';
+    if (!budgetAllowsAutoResearch(budget)) continue;
+    if (hasResearchJobQueuedOrRunning(it.id, it.feedUrl)) continue;
+
+    enqueueJob({ kind: 'research', id: it.id, feedUrl: it.feedUrl });
+    if (hasResearchJobQueuedOrRunning(it.id, it.feedUrl)) {
+      queued += 1;
+      broadcastNewsUpdate(it);
+    }
+  }
+  return queued;
+}
+
 async function runOneJob(job: AiJob) {
+  const startedAtMs = Date.now();
+  const duration = () => Math.max(0, Date.now() - startedAtMs);
   const k = jobKey(job);
   aiInFlight.add(k);
+  recordAiJobEvent(job, 'start');
   let itemForError: NewsInternal | undefined;
   let didBroadcastUpdate = false;
+  let outcomeRecorded = false;
+  const markSkip = (reason: string) => {
+    outcomeRecorded = true;
+    recordAiJobEvent(job, 'skip', { reason, durationMs: duration() });
+  };
+  const markSuccess = (reason: string) => {
+    outcomeRecorded = true;
+    recordAiJobEvent(job, 'success', { reason, durationMs: duration() });
+  };
 
   try {
     if (isJobExpired(job)) {
       dropJob(job, 'ttl_expired_before_run');
+      outcomeRecorded = true;
       return;
     }
 
     const it = resolveJobItem(job);
-    if (!it) return;
+    if (!it) {
+      markSkip('item_not_found');
+      return;
+    }
     itemForError = it;
-    if (hiddenIds.has(it.id)) return;
+    if (hiddenIds.has(it.id)) {
+      markSkip('hidden_item');
+      return;
+    }
 
     const s = feedSettings.get(it.feedUrl) || defaultSettingsForFeed({ url: it.feedUrl, label: it.source, kind: 'rss', intervalSec: 120 });
     const budget = s.budget || 'standard';
 
     if (job.kind === 'summary') {
-      if (it.summary && it.summary.trim()) return;
-      if (activeModel('summary') === 'none') return;
+      if (it.summary && it.summary.trim()) {
+        markSkip('summary_exists');
+        return;
+      }
+      if (activeModel('summary') === 'none') {
+        markSkip('summary_model_disabled');
+        return;
+      }
 
       const ctx = it.__ctx || '';
       const text = await withTimeout(
@@ -2455,14 +2902,26 @@ async function runOneJob(job: AiJob) {
         didBroadcastUpdate = true;
         summaryRetryCooldownUntilMs.delete(summaryItemKey(it.id, it.feedUrl));
         markDirty();
+        markSuccess('summary_generated');
+      } else {
+        markSkip('summary_empty');
       }
       return;
     }
 
     if (job.kind === 'title_translate') {
-      if (!job.manual && budget !== 'high') return;
-      if (activeModel('summary') === 'none') return;
-      if (!needsTitleTranslation(it.title, it.titleBg, it.titleEn)) return;
+      if (!job.manual && budget !== 'high') {
+        markSkip('budget_not_high');
+        return;
+      }
+      if (activeModel('summary') === 'none') {
+        markSkip('summary_model_disabled');
+        return;
+      }
+      if (!needsTitleTranslation(it.title, it.titleBg, it.titleEn)) {
+        markSkip('already_translated_or_not_needed');
+        return;
+      }
 
       const translated = await withTimeout(
         translateTitleBilingual(it.title, it.source, budget),
@@ -2475,13 +2934,22 @@ async function runOneJob(job: AiJob) {
         broadcastNewsUpdate(it);
         didBroadcastUpdate = true;
         markDirty();
+        markSuccess('title_translated');
+      } else {
+        markSkip('title_translate_empty_or_invalid');
       }
       return;
     }
 
     if (job.kind === 'mood') {
-      if (it.mood) return;
-      if (activeModel('research') === 'none') return;
+      if (it.mood) {
+        markSkip('mood_exists');
+        return;
+      }
+      if (activeModel('research') === 'none') {
+        markSkip('research_model_disabled');
+        return;
+      }
       const mood = await withTimeout(
         classifyMoodForItem(
           it.title,
@@ -2499,13 +2967,22 @@ async function runOneJob(job: AiJob) {
         broadcastNewsUpdate(it);
         didBroadcastUpdate = true;
         markDirty();
+        markSuccess('mood_classified');
+      } else {
+        markSkip('mood_empty');
       }
       return;
     }
 
     if (job.kind === 'news_type') {
-      if (it.newsType) return;
-      if (activeModel('research') === 'none') return;
+      if (it.newsType) {
+        markSkip('news_type_exists');
+        return;
+      }
+      if (activeModel('research') === 'none') {
+        markSkip('research_model_disabled');
+        return;
+      }
       const newsType = await withTimeout(
         classifyNewsTypeForItem(
           it.title,
@@ -2523,16 +3000,28 @@ async function runOneJob(job: AiJob) {
         broadcastNewsUpdate(it);
         didBroadcastUpdate = true;
         markDirty();
+        markSuccess('news_type_classified');
+      } else {
+        markSkip('news_type_empty');
       }
       return;
     }
 
     if (job.kind === 'research') {
-      if (it.research && it.research.trim() && !job.manual) return;
-      if (activeModel('research') === 'none') return;
+      if (it.research && it.research.trim() && !job.manual) {
+        markSkip('research_exists');
+        return;
+      }
+      if (activeModel('research') === 'none') {
+        markSkip('research_model_disabled');
+        return;
+      }
 
       // If budget is low and not manual -> skip auto research
-      if (!job.manual && !budgetAllowsAutoResearch(budget)) return;
+      if (!job.manual && !budgetAllowsAutoResearch(budget)) {
+        markSkip('budget_low_auto_research_blocked');
+        return;
+      }
 
       const ctx = it.__ctx || '';
 
@@ -2568,6 +3057,9 @@ async function runOneJob(job: AiJob) {
         broadcastNewsUpdate(it);
         didBroadcastUpdate = true;
         markDirty();
+        markSuccess('research_generated');
+      } else {
+        markSkip('research_empty');
       }
       return;
     }
@@ -2575,6 +3067,10 @@ async function runOneJob(job: AiJob) {
     const message = (err as Error)?.message || String(err);
     const classifyJob = job.kind === 'mood' || job.kind === 'news_type';
     if (classifyJob && isTimeoutError(err)) {
+      if (!outcomeRecorded) {
+        recordAiJobEvent(job, 'skip', { reason: 'classify_timeout', durationMs: duration() });
+        outcomeRecorded = true;
+      }
       return;
     }
 
@@ -2584,10 +3080,18 @@ async function runOneJob(job: AiJob) {
 
     if (classifyJob) {
       console.warn(`AI classify job skipped (${job.kind}:${job.id})`, message);
+      if (!outcomeRecorded) {
+        recordAiJobEvent(job, 'skip', { reason: `classify_error:${message}`, durationMs: duration() });
+        outcomeRecorded = true;
+      }
       return;
     }
 
     console.error(`AI job failed (${job.kind}:${job.id})`, message);
+    if (!outcomeRecorded) {
+      recordAiJobEvent(job, 'error', { reason: message, durationMs: duration() });
+      outcomeRecorded = true;
+    }
     broadcastAiJobError(job, itemForError, err);
   } finally {
     aiInFlight.delete(k);
@@ -2852,9 +3356,13 @@ async function processFeed(fi: FeedInfo) {
 let schedulerTimer: NodeJS.Timeout | null = null;
 
 async function schedulerTick() {
+  if (isNewsAccessLocked()) return;
+
   // run AI queue
   try { await tickAiQueue(); } catch {}
   try { enqueueSummaryRecoveryPass(); } catch {}
+  try { enqueueTitleTranslateRecoveryPass(); } catch {}
+  try { enqueueResearchRecoveryPass(); } catch {}
 
   const now = Date.now();
   for (const fi of feedsList) {
@@ -2973,6 +3481,7 @@ wss.on('connection', (ws: WebSocket) => {
   ws.send(JSON.stringify({
     type: 'config',
     keywords,
+    newsAccessLocked: isNewsAccessLocked(),
 
     aiProvider,
     aiAvailable,
@@ -3000,10 +3509,9 @@ wss.on('connection', (ws: WebSocket) => {
   } satisfies Config));
 
   // Send snapshot (newest first)
-  const snapshot = recent.slice().sort((a, b) => b.publishedMs - a.publishedMs);
-  snapshot.forEach(item => {
-    if (!hiddenIds.has(item.id)) ws.send(JSON.stringify(item));
-  });
+  if (!isNewsAccessLocked()) {
+    sendSnapshotToSocket(ws);
+  }
 
   ws.on('message', async data => {
     let raw: unknown;
@@ -3036,17 +3544,28 @@ wss.on('connection', (ws: WebSocket) => {
       const id = String((raw as { id?: unknown }).id || '').trim();
       const feedUrl = String((raw as { feedUrl?: unknown }).feedUrl || '').trim();
       if (!id || !feedUrl) return;
-      if (!aiEnabled || !aiAvailable || activeModel('summary') === 'none') return;
+      if (!aiEnabled || !aiAvailable || activeModel('summary') === 'none') {
+        ws.send(JSON.stringify({ type: 'error', message: 'Title translation is unavailable (AI disabled, key missing, or no summary model).' }));
+        return;
+      }
 
       const it = recent.find(x => x.id === id && x.feedUrl === feedUrl) || recent.find(x => x.id === id);
       if (!it) return;
+      if (!needsTitleTranslation(it.title, it.titleBg, it.titleEn)) {
+        ws.send(JSON.stringify({ type: 'ok', message: 'Title translation already exists for this item.' }));
+        return;
+      }
       enqueueJob({ kind: 'title_translate', id: it.id, feedUrl: it.feedUrl, manual: true });
-      ws.send(JSON.stringify({ type: 'ok', message: 'Title translation requested.' }));
+      const queued = hasTitleTranslateJobQueuedOrRunning(it.id, it.feedUrl);
+      ws.send(JSON.stringify({ type: 'ok', message: queued ? 'Title translation queued.' : 'Title translation requested.' }));
       return;
     }
 
     if (raw && typeof raw === 'object' && (raw as { type?: unknown }).type === 'run_title_translate_backfill') {
-      if (!aiEnabled || !aiAvailable || activeModel('summary') === 'none') return;
+      if (!aiEnabled || !aiAvailable || activeModel('summary') === 'none') {
+        ws.send(JSON.stringify({ type: 'error', message: 'Title translation backfill is unavailable (AI disabled, key missing, or no summary model).' }));
+        return;
+      }
       const feedUrl = String((raw as { feedUrl?: unknown }).feedUrl || '').trim();
       const maxRaw = Number((raw as { max?: unknown }).max);
       const max = Number.isFinite(maxRaw) ? Math.max(1, Math.min(2_000, Math.floor(maxRaw))) : 500;
@@ -3085,6 +3604,7 @@ wss.on('connection', (ws: WebSocket) => {
     }
 
     if (msg.type === 'set_ai_provider') {
+      const wasLocked = isNewsAccessLocked();
       const provider = msg.provider;
       const nextKey = typeof msg.apiKey === 'string' ? msg.apiKey.trim() : '';
       if (typeof msg.apiKey === 'string' && !nextKey) {
@@ -3092,16 +3612,26 @@ wss.on('connection', (ws: WebSocket) => {
         return;
       }
       const authToken = typeof msg.authToken === 'string' ? msg.authToken.trim() : '';
+      const authPayload = verifyAuthToken(authToken);
+      if (REQUIRE_LOGIN_AND_KEY_FOR_NEWS && !authPayload) {
+        ws.send(JSON.stringify({ type: 'error', message: 'Sign in is required before starting news fetching.' }));
+        return;
+      }
 
       let resolvedKey = nextKey;
       if (!resolvedKey && authToken) {
         resolvedKey = await resolveSavedProviderKey(authToken, provider) || '';
       }
-      if (!resolvedKey) {
+      if (!resolvedKey && !REQUIRE_LOGIN_AND_KEY_FOR_NEWS) {
         resolvedKey = String(providerApiKeys[provider] || '').trim();
       }
       if (!resolvedKey) {
-        ws.send(JSON.stringify({ type: 'error', message: 'No key available for provider switch. Sign in and save a provider key.' }));
+        ws.send(JSON.stringify({
+          type: 'error',
+          message: REQUIRE_LOGIN_AND_KEY_FOR_NEWS
+            ? 'Provider key is required. Save a key in your account first.'
+            : 'No key available for provider switch. Sign in and save a provider key.'
+        }));
         return;
       }
 
@@ -3120,7 +3650,13 @@ wss.on('connection', (ws: WebSocket) => {
       if (aiEnabled && aiAvailable) {
         enqueueTitleTranslateBackfill({ max: 360 });
       }
+      if (REQUIRE_LOGIN_AND_KEY_FOR_NEWS && !newsAccessUnlocked) {
+        newsAccessUnlocked = true;
+      }
       broadcastConfig();
+      if (wasLocked && !isNewsAccessLocked()) {
+        sendSnapshotToSocket(ws);
+      }
       ws.send(JSON.stringify({
         type: 'ok',
         message: `AI provider switched to ${provider}`

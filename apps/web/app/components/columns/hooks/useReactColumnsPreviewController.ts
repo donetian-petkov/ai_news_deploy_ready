@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { useAppDispatch } from '../../../store/hooks';
 import { FILTERED_FEED_URL } from '../../../store/constants';
 import type { NewsItem } from '../../../store/types';
-import { startWsConnection, stopWsConnection } from '../../../store/wsClient';
+import { sendWsMessage, startWsConnection, stopWsConnection } from '../../../store/wsClient';
 import {
   type SchemeValue,
   type VibeValue
@@ -172,12 +172,22 @@ export function useReactColumnsPreviewController({ wsUrl }: Args) {
   const { connection, ui, feeds: feedsState, news: newsState } = useReactColumnsState();
   const { connected, status } = connection;
   const { feeds, pinnedByUrl, controlsOpenByUrl, deleteAgeByUrl, orderByUrl } = feedsState;
-  const { itemsByFeed, summaryPendingById, researchPendingById, pinnedNewsById, askByItem } = newsState;
+  const {
+    itemsByFeed,
+    summaryPendingById,
+    researchPendingById,
+    titleTranslatePendingById,
+    pinnedNewsById,
+    askByItem
+  } = newsState;
 
   const hydratedFeedUiRef = useRef(false);
   const summaryActiveSinceRef = useRef<Record<string, number>>({});
+  const researchActiveSinceRef = useRef<Record<string, number>>({});
+  const titleTranslateActiveSinceRef = useRef<Record<string, number>>({});
   const [advancedControlsByUrl, setAdvancedControlsByUrl] = useState<Record<string, boolean>>({});
   const [summaryStatusTick, setSummaryStatusTick] = useState(0);
+  const lastTitleBackfillRequestAtRef = useRef(0);
   const labels = useMemo(
     () => t('columns', { returnObjects: true }) as Record<string, string>,
     [t]
@@ -199,6 +209,18 @@ export function useReactColumnsPreviewController({ wsUrl }: Args) {
     }, SUMMARY_STATUS_REFRESH_MS);
     return () => window.clearInterval(timer);
   }, []);
+
+  useEffect(() => {
+    if (!connected) return;
+    if (!ui.aiEnabled || !ui.aiAvailable) return;
+    if (ui.titleDisplayLanguage === 'original') return;
+    const now = Date.now();
+    if (now - lastTitleBackfillRequestAtRef.current < 20_000) return;
+    const ok = sendWsMessage({ type: 'run_title_translate_backfill', max: 220 });
+    if (ok) {
+      lastTitleBackfillRequestAtRef.current = now;
+    }
+  }, [connected, ui.aiAvailable, ui.aiEnabled, ui.titleDisplayLanguage]);
 
   useFeedUiPersistence({
     dispatch,
@@ -252,7 +274,7 @@ export function useReactColumnsPreviewController({ wsUrl }: Args) {
     }));
   }, [feeds, itemsByFeed, orderByUrl]);
 
-  const summariesLoadCandidates = useMemo(() => {
+  const buildPendingLoadCandidates = (pendingById: Record<string, true>) => {
     if (!ui.aiEnabled || !ui.aiAvailable) {
       return {
         pendingKeys: [] as string[],
@@ -263,7 +285,7 @@ export function useReactColumnsPreviewController({ wsUrl }: Args) {
 
     const feedLabelByUrl = new Map(renderedFeeds.map(feed => [feed.url, feed.label]));
     const itemMetaByKey = new Map<string, { title: string; feedUrl: string }>();
-    const pendingSet = new Set(Object.keys(summaryPendingById));
+    const pendingSet = new Set(Object.keys(pendingById));
 
     Object.entries(itemsByFeed).forEach(([feedUrl, feedItems]) => {
       if (!Array.isArray(feedItems)) return;
@@ -283,7 +305,20 @@ export function useReactColumnsPreviewController({ wsUrl }: Args) {
       itemMetaByKey,
       feedLabelByUrl
     };
-  }, [itemsByFeed, renderedFeeds, summaryPendingById, ui.aiAvailable, ui.aiEnabled]);
+  };
+
+  const summariesLoadCandidates = useMemo(
+    () => buildPendingLoadCandidates(summaryPendingById),
+    [itemsByFeed, renderedFeeds, summaryPendingById, ui.aiAvailable, ui.aiEnabled]
+  );
+  const researchesLoadCandidates = useMemo(
+    () => buildPendingLoadCandidates(researchPendingById),
+    [itemsByFeed, renderedFeeds, researchPendingById, ui.aiAvailable, ui.aiEnabled]
+  );
+  const titlesLoadCandidates = useMemo(
+    () => buildPendingLoadCandidates(titleTranslatePendingById),
+    [itemsByFeed, renderedFeeds, titleTranslatePendingById, ui.aiAvailable, ui.aiEnabled]
+  );
 
   useEffect(() => {
     const now = Date.now();
@@ -295,7 +330,34 @@ export function useReactColumnsPreviewController({ wsUrl }: Args) {
     summaryActiveSinceRef.current = next;
   }, [summariesLoadCandidates.pendingKeys]);
 
-  const summariesLoading = useMemo(() => {
+  useEffect(() => {
+    const now = Date.now();
+    const prev = researchActiveSinceRef.current;
+    const next: Record<string, number> = {};
+    researchesLoadCandidates.pendingKeys.forEach(key => {
+      next[key] = prev[key] || now;
+    });
+    researchActiveSinceRef.current = next;
+  }, [researchesLoadCandidates.pendingKeys]);
+
+  useEffect(() => {
+    const now = Date.now();
+    const prev = titleTranslateActiveSinceRef.current;
+    const next: Record<string, number> = {};
+    titlesLoadCandidates.pendingKeys.forEach(key => {
+      next[key] = prev[key] || now;
+    });
+    titleTranslateActiveSinceRef.current = next;
+  }, [titlesLoadCandidates.pendingKeys]);
+
+  const computePendingLoadState = (
+    candidates: {
+      pendingKeys: string[];
+      itemMetaByKey: Map<string, { title: string; feedUrl: string }>;
+      feedLabelByUrl: Map<string, string>;
+    },
+    activeSince: Record<string, number>
+  ) => {
     if (!ui.aiEnabled || !ui.aiAvailable) {
       return { count: 0, stalledCount: 0, items: [] as string[] };
     }
@@ -303,16 +365,16 @@ export function useReactColumnsPreviewController({ wsUrl }: Args) {
     const now = Date.now();
     const items: string[] = [];
     let stalledCount = 0;
-    summariesLoadCandidates.pendingKeys.forEach(key => {
-      const meta = summariesLoadCandidates.itemMetaByKey.get(key);
+    candidates.pendingKeys.forEach(key => {
+      const meta = candidates.itemMetaByKey.get(key);
       const parsedFeedUrl = key.includes('::') ? key.slice(0, key.lastIndexOf('::')) : '';
       const parsedId = key.includes('::') ? key.slice(key.lastIndexOf('::') + 2) : key;
       const effectiveFeedUrl = meta?.feedUrl || parsedFeedUrl;
       const feedLabel = effectiveFeedUrl
-        ? (summariesLoadCandidates.feedLabelByUrl.get(effectiveFeedUrl) || effectiveFeedUrl)
+        ? (candidates.feedLabelByUrl.get(effectiveFeedUrl) || effectiveFeedUrl)
         : 'unknown';
       const title = meta?.title || parsedId;
-      const sinceMs = summaryActiveSinceRef.current[key] || now;
+      const sinceMs = activeSince[key] || now;
       const ageMs = Math.max(0, now - sinceMs);
       const stalled = ageMs >= SUMMARY_STALL_THRESHOLD_MS;
       if (stalled) stalledCount += 1;
@@ -320,11 +382,24 @@ export function useReactColumnsPreviewController({ wsUrl }: Args) {
     });
 
     return {
-      count: summariesLoadCandidates.pendingKeys.length,
+      count: candidates.pendingKeys.length,
       stalledCount,
       items
     };
-  }, [summariesLoadCandidates, summaryStatusTick, ui.aiAvailable, ui.aiEnabled]);
+  };
+
+  const summariesLoading = useMemo(
+    () => computePendingLoadState(summariesLoadCandidates, summaryActiveSinceRef.current),
+    [summariesLoadCandidates, summaryStatusTick, ui.aiAvailable, ui.aiEnabled]
+  );
+  const researchesLoading = useMemo(
+    () => computePendingLoadState(researchesLoadCandidates, researchActiveSinceRef.current),
+    [researchesLoadCandidates, summaryStatusTick, ui.aiAvailable, ui.aiEnabled]
+  );
+  const titlesLoading = useMemo(
+    () => computePendingLoadState(titlesLoadCandidates, titleTranslateActiveSinceRef.current),
+    [titlesLoadCandidates, summaryStatusTick, ui.aiAvailable, ui.aiEnabled]
+  );
 
   const { filteredColumnItems, duplicateMatchById } = useMemo(() => {
     const all = Object.values(itemsByFeed).flatMap(items => Array.isArray(items) ? items : []);
@@ -470,6 +545,7 @@ export function useReactColumnsPreviewController({ wsUrl }: Args) {
     deleteAgeByUrl,
     summaryPendingById,
     researchPendingById,
+    titleTranslatePendingById,
     pinnedNewsById,
     askByItem,
     bodyModes,
@@ -508,7 +584,15 @@ export function useReactColumnsPreviewController({ wsUrl }: Args) {
         summariesLoadingCount: summariesLoading.count,
         summariesStalledCount: summariesLoading.stalledCount,
         summariesLoadingLabel: labels.summariesLoading,
-        summariesLoadingItems: summariesLoading.items
+        summariesLoadingItems: summariesLoading.items,
+        researchesLoadingCount: researchesLoading.count,
+        researchesStalledCount: researchesLoading.stalledCount,
+        researchesLoadingLabel: labels.researchesLoading || labels.researching,
+        researchesLoadingItems: researchesLoading.items,
+        titlesLoadingCount: titlesLoading.count,
+        titlesStalledCount: titlesLoading.stalledCount,
+        titlesLoadingLabel: labels.titlesLoading || labels.showTranslatedTitle,
+        titlesLoadingItems: titlesLoading.items
       },
       clipboard: {
         open: clipboardNoticeOpen,
@@ -523,7 +607,37 @@ export function useReactColumnsPreviewController({ wsUrl }: Args) {
       onGridDrop,
       buildDragState
     }),
-    [buildDragState, clipboardNotice, clipboardNoticeOpen, connected, handlersModel, labels.disconnected, labels.linkCopied, labels.live, labels.previewTitle, labels.summariesLoading, onGridDragOver, onGridDrop, renderedFeeds, stateModel, status, summariesLoading.count, summariesLoading.items, summariesLoading.stalledCount, viewModel]
+    [
+      buildDragState,
+      clipboardNotice,
+      clipboardNoticeOpen,
+      connected,
+      handlersModel,
+      labels.disconnected,
+      labels.linkCopied,
+      labels.live,
+      labels.previewTitle,
+      labels.researchesLoading,
+      labels.researching,
+      labels.showTranslatedTitle,
+      labels.summariesLoading,
+      labels.titlesLoading,
+      onGridDragOver,
+      onGridDrop,
+      renderedFeeds,
+      researchesLoading.count,
+      researchesLoading.items,
+      researchesLoading.stalledCount,
+      stateModel,
+      status,
+      summariesLoading.count,
+      summariesLoading.items,
+      summariesLoading.stalledCount,
+      titlesLoading.count,
+      titlesLoading.items,
+      titlesLoading.stalledCount,
+      viewModel
+    ]
   );
 
   return {

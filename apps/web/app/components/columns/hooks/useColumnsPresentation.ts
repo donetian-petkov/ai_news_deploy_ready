@@ -38,6 +38,7 @@ type Args = {
   deleteAgeByUrl: FeedColumnStateModel['deleteAgeByUrl'];
   summaryPendingById: FeedColumnStateModel['summaryPendingById'];
   researchPendingById: FeedColumnStateModel['researchPendingById'];
+  titleTranslatePendingById: FeedColumnStateModel['titleTranslatePendingById'];
   pinnedNewsById: FeedColumnStateModel['pinnedNewsById'];
   askByItem: FeedColumnStateModel['askByItem'];
   bodyModes: FeedColumnStateModel['bodyModes'];
@@ -82,6 +83,7 @@ export function useColumnsPresentation({
   deleteAgeByUrl,
   summaryPendingById,
   researchPendingById,
+  titleTranslatePendingById,
   pinnedNewsById,
   askByItem,
   bodyModes,
@@ -122,6 +124,7 @@ export function useColumnsPresentation({
     deleteAgeByUrl,
     summaryPendingById,
     researchPendingById,
+    titleTranslatePendingById,
     pinnedNewsById,
     askByItem,
     bodyModes
