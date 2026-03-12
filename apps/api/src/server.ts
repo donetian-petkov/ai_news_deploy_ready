@@ -249,6 +249,13 @@ const providerKeyBodySchema = z.object({
 const accountSettingsSchema = z.object({
   language: z.union([z.literal('en'), z.literal('bg')]).optional(),
   colorMode: z.union([z.literal('system'), z.literal('dark'), z.literal('light')]).optional(),
+  menuCollapsed: z.boolean().optional(),
+  controlsCollapsed: z.boolean().optional(),
+  searchVisible: z.boolean().optional(),
+  addStreamVisible: z.boolean().optional(),
+  allColumnControlsHidden: z.boolean().optional(),
+  hideAllResearch: z.boolean().optional(),
+  hideAllSummaries: z.boolean().optional(),
   vibe: z.string().trim().min(1).max(64).optional(),
   summaryLang: z.union([z.literal('bg'), z.literal('en'), z.literal('bilingual')]).optional(),
   researchLang: z.union([z.literal('bg'), z.literal('en')]).optional(),
