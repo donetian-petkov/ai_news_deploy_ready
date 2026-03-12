@@ -92,118 +92,139 @@ export function useTopMenuAccountSettingsSync({ dispatch, ui, account }: Args) {
     hydratedUserIdRef.current = userId;
     loadedUserIdRef.current = null;
     isApplyingRef.current = true;
+    let cancelled = false;
     void (async () => {
+      let loaded = false;
+      const retryDelaysMs = [0, 700, 1500, 3000];
       try {
-        const remote = await fetchAccountSettings(token);
-        if (!isRecord(remote)) return;
-        const uiPatch: PersistedUiPrefs = {};
-
-        const maybeString = (k: string) => (typeof remote[k] === 'string' ? String(remote[k]) : undefined);
-        const maybeBool = (k: string) => (typeof remote[k] === 'boolean' ? Boolean(remote[k]) : undefined);
-
-        const copyUiStringKeys: Array<keyof PersistedUiPrefs> = [
-          'language',
-          'colorMode',
-          'menuCollapsed',
-          'controlsCollapsed',
-          'searchVisible',
-          'addStreamVisible',
-          'allColumnControlsHidden',
-          'hideAllResearch',
-          'hideAllSummaries',
-          'notifyEnabled',
-          'notifyMode',
-          'moodFilter',
-          'typeFilter',
-          'titleDisplayLanguage',
-          'font',
-          'fontSize',
-          'scheme',
-          'timezone',
-          'dateFormat',
-          'performanceMode',
-          'buttonMode',
-          'menuHintMode',
-          'effectIntensity',
-          'soundEnabled',
-          'soundTheme',
-          'vibe'
-        ];
-
-        copyUiStringKeys.forEach(key => {
-          const raw = remote[key as string];
-          if (typeof raw === 'string' || typeof raw === 'boolean') {
-            (uiPatch as Record<string, unknown>)[key] = raw;
+        for (const delayMs of retryDelaysMs) {
+          if (cancelled) return;
+          if (delayMs > 0) {
+            await new Promise(resolve => window.setTimeout(resolve, delayMs));
+            if (cancelled) return;
           }
-        });
-        dispatch(hydrateUiSettings(uiPatch));
 
-        const summaryLang = maybeString('summaryLang');
-        if (summaryLang === 'bg' || summaryLang === 'en' || summaryLang === 'bilingual') {
-          sendWsMessage({ type: 'set_summary_lang', lang: summaryLang });
-          dispatch(setAiSettings({ summaryLang }));
-        }
+          try {
+            const remote = await fetchAccountSettings(token);
+            if (!isRecord(remote)) continue;
+            const uiPatch: PersistedUiPrefs = {};
 
-        const researchLang = maybeString('researchLang');
-        if (researchLang === 'bg' || researchLang === 'en') {
-          sendWsMessage({ type: 'set_research_lang', lang: researchLang });
-          dispatch(setAiSettings({ researchLang }));
-        }
+            const maybeString = (k: string) => (typeof remote[k] === 'string' ? String(remote[k]) : undefined);
 
-        const allBudget = maybeString('allBudget');
-        if (allBudget === 'low' || allBudget === 'standard' || allBudget === 'high' || allBudget === 'mixed') {
-          dispatch(setAiSettings({ allBudget }));
-          if (allBudget === 'low' || allBudget === 'standard' || allBudget === 'high') {
-            sendWsMessage({ type: 'set_all_budget', budget: allBudget });
+            const copyUiStringKeys: Array<keyof PersistedUiPrefs> = [
+              'language',
+              'colorMode',
+              'menuCollapsed',
+              'controlsCollapsed',
+              'searchVisible',
+              'addStreamVisible',
+              'allColumnControlsHidden',
+              'hideAllResearch',
+              'hideAllSummaries',
+              'notifyEnabled',
+              'notifyMode',
+              'moodFilter',
+              'typeFilter',
+              'titleDisplayLanguage',
+              'font',
+              'fontSize',
+              'scheme',
+              'timezone',
+              'dateFormat',
+              'performanceMode',
+              'buttonMode',
+              'menuHintMode',
+              'effectIntensity',
+              'soundEnabled',
+              'soundTheme',
+              'vibe'
+            ];
+
+            copyUiStringKeys.forEach(key => {
+              const raw = remote[key as string];
+              if (typeof raw === 'string' || typeof raw === 'boolean') {
+                (uiPatch as Record<string, unknown>)[key] = raw;
+              }
+            });
+            dispatch(hydrateUiSettings(uiPatch));
+
+            const summaryLang = maybeString('summaryLang');
+            if (summaryLang === 'bg' || summaryLang === 'en' || summaryLang === 'bilingual') {
+              sendWsMessage({ type: 'set_summary_lang', lang: summaryLang });
+              dispatch(setAiSettings({ summaryLang }));
+            }
+
+            const researchLang = maybeString('researchLang');
+            if (researchLang === 'bg' || researchLang === 'en') {
+              sendWsMessage({ type: 'set_research_lang', lang: researchLang });
+              dispatch(setAiSettings({ researchLang }));
+            }
+
+            const allBudget = maybeString('allBudget');
+            if (allBudget === 'low' || allBudget === 'standard' || allBudget === 'high' || allBudget === 'mixed') {
+              dispatch(setAiSettings({ allBudget }));
+              if (allBudget === 'low' || allBudget === 'standard' || allBudget === 'high') {
+                sendWsMessage({ type: 'set_all_budget', budget: allBudget });
+              }
+            }
+
+            const titleDisplayLanguage = maybeString('titleDisplayLanguage');
+            if (titleDisplayLanguage === 'original' || titleDisplayLanguage === 'bg' || titleDisplayLanguage === 'en') {
+              dispatch(setTitleDisplayLanguage(titleDisplayLanguage));
+              if (titleDisplayLanguage !== 'original') {
+                sendWsMessage({ type: 'run_title_translate_backfill', max: 700 });
+              }
+            }
+
+            const aiProvider = maybeString('aiProvider');
+            if (aiProvider === 'openai' || aiProvider === 'claude' || aiProvider === 'openrouter') {
+              sendWsMessage({ type: 'set_ai_provider', provider: aiProvider as TopMenuAiProvider, authToken: token });
+              dispatch(setAiSettings({ aiProvider: aiProvider as TopMenuAiProvider }));
+            }
+
+            const summaryModel = maybeString('summaryModel');
+            const researchModel = maybeString('researchModel');
+            const askModel = maybeString('askModel');
+            if (summaryModel || researchModel || askModel) {
+              sendWsMessage({
+                type: 'set_ai_models',
+                ...(summaryModel ? { summaryModel } : {}),
+                ...(researchModel ? { researchModel } : {}),
+                ...(askModel ? { askModel } : {})
+              });
+              dispatch(setAiSettings({
+                ...(summaryModel ? { summaryModel } : {}),
+                ...(researchModel ? { researchModel } : {}),
+                ...(askModel ? { askModel } : {})
+              }));
+            }
+
+            if (Array.isArray(remote.keywords)) {
+              const keywords = remote.keywords
+                .map(v => String(v || '').trim())
+                .filter(Boolean)
+                .slice(0, 120);
+              sendWsMessage({ type: 'set_keywords', keywords });
+              dispatch(setKeywords(keywords));
+            }
+
+            loaded = true;
+            break;
+          } catch {
+            // retry below
           }
-        }
-
-        const titleDisplayLanguage = maybeString('titleDisplayLanguage');
-        if (titleDisplayLanguage === 'original' || titleDisplayLanguage === 'bg' || titleDisplayLanguage === 'en') {
-          dispatch(setTitleDisplayLanguage(titleDisplayLanguage));
-          if (titleDisplayLanguage !== 'original') {
-            sendWsMessage({ type: 'run_title_translate_backfill', max: 700 });
-          }
-        }
-
-        const aiProvider = maybeString('aiProvider');
-        if (aiProvider === 'openai' || aiProvider === 'claude' || aiProvider === 'openrouter') {
-          sendWsMessage({ type: 'set_ai_provider', provider: aiProvider as TopMenuAiProvider, authToken: token });
-          dispatch(setAiSettings({ aiProvider: aiProvider as TopMenuAiProvider }));
-        }
-
-        const summaryModel = maybeString('summaryModel');
-        const researchModel = maybeString('researchModel');
-        const askModel = maybeString('askModel');
-        if (summaryModel || researchModel || askModel) {
-          sendWsMessage({
-            type: 'set_ai_models',
-            ...(summaryModel ? { summaryModel } : {}),
-            ...(researchModel ? { researchModel } : {}),
-            ...(askModel ? { askModel } : {})
-          });
-          dispatch(setAiSettings({
-            ...(summaryModel ? { summaryModel } : {}),
-            ...(researchModel ? { researchModel } : {}),
-            ...(askModel ? { askModel } : {})
-          }));
-        }
-
-        if (Array.isArray(remote.keywords)) {
-          const keywords = remote.keywords
-            .map(v => String(v || '').trim())
-            .filter(Boolean)
-            .slice(0, 120);
-          sendWsMessage({ type: 'set_keywords', keywords });
-          dispatch(setKeywords(keywords));
         }
       } catch {
-        // Keep UI usable even when account settings storage is not initialized yet.
+        // keep UI usable
       } finally {
+        if (!loaded) hydratedUserIdRef.current = null;
         isApplyingRef.current = false;
-        loadedUserIdRef.current = userId;
+        loadedUserIdRef.current = loaded ? userId : null;
       }
     })();
+    return () => {
+      cancelled = true;
+    };
   }, [account.token, account.user?.id, dispatch]);
 
   useEffect(() => {

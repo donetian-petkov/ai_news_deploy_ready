@@ -402,6 +402,34 @@ function isMissingUserSettingsTableError(error: unknown): boolean {
   return false;
 }
 
+async function ensureUserSettingsTable(): Promise<void> {
+  await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS "UserSettings" (
+      "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+      "userId" INTEGER NOT NULL,
+      "settingsJson" TEXT NOT NULL,
+      "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      CONSTRAINT "UserSettings_userId_fkey"
+        FOREIGN KEY ("userId") REFERENCES "User" ("id")
+        ON DELETE CASCADE ON UPDATE CASCADE
+    )
+  `);
+  await prisma.$executeRawUnsafe(
+    'CREATE UNIQUE INDEX IF NOT EXISTS "UserSettings_userId_key" ON "UserSettings"("userId")'
+  );
+}
+
+async function withUserSettingsTableRetry<T>(fn: () => Promise<T>): Promise<T> {
+  try {
+    return await fn();
+  } catch (error) {
+    if (!isMissingUserSettingsTableError(error)) throw error;
+    await ensureUserSettingsTable();
+    return fn();
+  }
+}
+
 app.post('/api/auth/register', async (req, res) => {
   const parsed = authCredentialsSchema.safeParse(req.body || {});
   if (!parsed.success) {
@@ -535,10 +563,10 @@ app.get('/api/account/settings', async (req, res) => {
   try {
     const user = await requireAuthUser(req, res);
     if (!user) return;
-    const row = await prisma.userSettings.findUnique({
+    const row = await withUserSettingsTableRetry(() => prisma.userSettings.findUnique({
       where: { userId: user.id },
       select: { settingsJson: true }
-    });
+    }));
     if (!row || !row.settingsJson) {
       res.json({ settings: {} });
       return;
@@ -551,10 +579,6 @@ app.get('/api/account/settings', async (req, res) => {
     }
     res.json({ settings: normalizeAccountSettings(parsed) });
   } catch (error) {
-    if (isMissingUserSettingsTableError(error)) {
-      res.json({ settings: {}, fallback: 'settings_table_missing' });
-      return;
-    }
     res.status(500).json({ error: (error as Error).message || 'Failed to load account settings.' });
   }
 });
@@ -564,7 +588,7 @@ app.put('/api/account/settings', async (req, res) => {
     const user = await requireAuthUser(req, res);
     if (!user) return;
     const normalized = normalizeAccountSettings((req.body as { settings?: unknown } | undefined)?.settings || {});
-    await prisma.userSettings.upsert({
+    await withUserSettingsTableRetry(() => prisma.userSettings.upsert({
       where: { userId: user.id },
       create: {
         userId: user.id,
@@ -573,13 +597,9 @@ app.put('/api/account/settings', async (req, res) => {
       update: {
         settingsJson: JSON.stringify(normalized)
       }
-    });
+    }));
     res.json({ saved: true, settings: normalized });
   } catch (error) {
-    if (isMissingUserSettingsTableError(error)) {
-      res.json({ saved: false, settings: {}, fallback: 'settings_table_missing' });
-      return;
-    }
     res.status(500).json({ error: (error as Error).message || 'Failed to save account settings.' });
   }
 });
