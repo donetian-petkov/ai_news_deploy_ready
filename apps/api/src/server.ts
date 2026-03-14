@@ -99,6 +99,7 @@ type ImpactLevel = 'low' | 'medium' | 'high';
 type PerspectiveKey = 'investor' | 'government' | 'consumer' | 'tech';
 type BriefingDelivery = 'site' | 'email';
 type BriefingFormat = 'executive' | 'bullets' | 'narrative';
+type InsightStatus = 'pending' | 'ready' | 'empty';
 
 type AiInsightFeatureSettings = {
   biasDetection: boolean;
@@ -260,6 +261,7 @@ type News = {
   research?: string;
   researchPending?: boolean;
   titleTranslatePending?: boolean;
+  insightStatus?: InsightStatus;
   insights?: NewsInsights;
   topicHits?: string[];
   emergingSignal?: EmergingStorySignal;
@@ -2202,6 +2204,30 @@ function reviewGeneratedInsights(item: NewsInternal, insights: NewsInsights): Ne
   return Object.keys(reviewed).length ? reviewed : undefined;
 }
 
+function hasEligibleInsightFeatureForBudget(budget: BudgetMode): boolean {
+  return (
+    (aiFeatures.biasDetection && insightFeatureAllowed('biasDetection', budget)) ||
+    (aiFeatures.sensationalismDetection && insightFeatureAllowed('sensationalismDetection', budget)) ||
+    (aiFeatures.factHighlights && insightFeatureAllowed('factHighlights', budget)) ||
+    (aiFeatures.storyImpact && insightFeatureAllowed('storyImpact', budget)) ||
+    (aiFeatures.perspectiveSimulator && insightFeatureAllowed('perspectiveSimulator', budget)) ||
+    (aiFeatures.topicTracking && insightFeatureAllowed('topicTracking', budget)) ||
+    (aiFeatures.emergingStoryDetector && insightFeatureAllowed('emergingStoryDetector', budget)) ||
+    (aiFeatures.historicalComparison && insightFeatureAllowed('historicalComparison', budget)) ||
+    (aiFeatures.futureScenarioGenerator && insightFeatureAllowed('futureScenarioGenerator', budget)) ||
+    (aiFeatures.localImpactDetector && insightFeatureAllowed('localImpactDetector', budget))
+  );
+}
+
+function computeInsightStatus(item: NewsInternal, budget: BudgetMode, insights: NewsInsights | undefined): InsightStatus | undefined {
+  if (!aiEnabled || !aiAvailable) return undefined;
+  if (!hasEligibleInsightFeatureForBudget(budget)) return undefined;
+  if (insights && Object.keys(insights).length) return 'ready';
+  const waitingForSummary = shouldHaveSummary(item) && (!item.summary || !item.summary.trim() || hasSummaryJobQueuedOrRunning(item.id, item.feedUrl));
+  const waitingForResearch = shouldHaveResearch(item) && (!item.research || !item.research.trim() || hasResearchJobQueuedOrRunning(item.id, item.feedUrl));
+  return waitingForSummary || waitingForResearch ? 'pending' : 'empty';
+}
+
 function topicHitsForItem(item: NewsInternal): string[] {
   if (!aiFeatures.topicTracking || !trackedTopics.length) return [];
   const text = combinedInsightText(item).toLocaleLowerCase();
@@ -2279,7 +2305,9 @@ function generateInsightsForItem(item: NewsInternal, budget: BudgetMode): NewsIn
 
 function refreshDerivedDataForItem(item: NewsInternal) {
   const budget = feedSettings.get(item.feedUrl)?.budget || 'standard';
-  item.insights = generateInsightsForItem(item, budget);
+  const insights = generateInsightsForItem(item, budget);
+  item.insights = insights;
+  item.insightStatus = computeInsightStatus(item, budget, insights);
   item.topicHits = topicHitsForItem(item);
   item.emergingSignal = emergingSignalForItem(item);
 }
@@ -3079,6 +3107,10 @@ function sendSnapshotToSocket(ws: WebSocket) {
       research: item.research,
       researchPending: hasResearchJobQueuedOrRunning(item.id, item.feedUrl),
       titleTranslatePending: hasTitleTranslateJobQueuedOrRunning(item.id, item.feedUrl),
+      insightStatus: item.insightStatus,
+      insights: item.insights,
+      topicHits: item.topicHits,
+      emergingSignal: item.emergingSignal,
       mood: item.mood,
       newsType: item.newsType
     } satisfies News));
