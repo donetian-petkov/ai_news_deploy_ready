@@ -3,7 +3,9 @@
 import { useMemo } from 'react';
 import type { FeedColumnStateModel } from '../reactColumns.types';
 
-type Args = FeedColumnStateModel;
+type Args = Omit<FeedColumnStateModel, 'titleTranslatePendingById'> & {
+  titleTranslatePendingById?: Record<string, true>;
+};
 
 export function useFeedColumnStateModel(args: Args) {
   return useMemo<FeedColumnStateModel>(() => ({
@@ -18,7 +20,7 @@ export function useFeedColumnStateModel(args: Args) {
     deleteAgeByUrl: args.deleteAgeByUrl,
     summaryPendingById: args.summaryPendingById,
     researchPendingById: args.researchPendingById,
-    titleTranslatePendingById: args.titleTranslatePendingById,
+    titleTranslatePendingById: {},
     pinnedNewsById: args.pinnedNewsById,
     askByItem: args.askByItem,
     bodyModes: args.bodyModes
@@ -36,7 +38,6 @@ export function useFeedColumnStateModel(args: Args) {
     args.pinnedNewsById,
     args.researchPendingById,
     args.summaryPendingById,
-    args.titleTranslatePendingById,
     args.visibleByFeed
   ]);
 }

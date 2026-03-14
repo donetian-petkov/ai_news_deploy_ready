@@ -22,6 +22,9 @@ type Args = {
     hideAllSummaries: boolean;
     aiEnabled: boolean;
     aiAvailable: boolean;
+    insightFeatures: FeedColumnViewModel['insightFeatures'];
+    localImpactRegion: string;
+    trackedTopics: string[];
     keywords: string[];
   };
   labels: Record<string, string>;
@@ -38,7 +41,6 @@ type Args = {
   deleteAgeByUrl: FeedColumnStateModel['deleteAgeByUrl'];
   summaryPendingById: FeedColumnStateModel['summaryPendingById'];
   researchPendingById: FeedColumnStateModel['researchPendingById'];
-  titleTranslatePendingById: FeedColumnStateModel['titleTranslatePendingById'];
   pinnedNewsById: FeedColumnStateModel['pinnedNewsById'];
   askByItem: FeedColumnStateModel['askByItem'];
   bodyModes: FeedColumnStateModel['bodyModes'];
@@ -83,7 +85,6 @@ export function useColumnsPresentation({
   deleteAgeByUrl,
   summaryPendingById,
   researchPendingById,
-  titleTranslatePendingById,
   pinnedNewsById,
   askByItem,
   bodyModes,
@@ -124,7 +125,6 @@ export function useColumnsPresentation({
     deleteAgeByUrl,
     summaryPendingById,
     researchPendingById,
-    titleTranslatePendingById,
     pinnedNewsById,
     askByItem,
     bodyModes

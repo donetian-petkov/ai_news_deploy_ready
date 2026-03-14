@@ -28,10 +28,47 @@ type AccountSettingsPayload = PersistedUiPrefs & {
   researchModel: string;
   askModel: string;
   keywords: string[];
+  insightFeatures: RootState['ui']['insightFeatures'];
+  localImpactRegion: RootState['ui']['localImpactRegion'];
+  trackedTopics: RootState['ui']['trackedTopics'];
+  dailyBriefingDelivery: RootState['ui']['dailyBriefingDelivery'];
+  dailyBriefingEmail: RootState['ui']['dailyBriefingEmail'];
+  dailyBriefingFormat: RootState['ui']['dailyBriefingFormat'];
+  dailyBriefingAudio: RootState['ui']['dailyBriefingAudio'];
+  dailyBriefingFeedUrls: RootState['ui']['dailyBriefingFeedUrls'];
 };
 
 function isRecord(raw: unknown): raw is Record<string, unknown> {
   return !!raw && typeof raw === 'object' && !Array.isArray(raw);
+}
+
+const LEGACY_DISABLED_INSIGHT_FEATURES: RootState['ui']['insightFeatures'] = {
+  biasDetection: false,
+  sensationalismDetection: false,
+  factHighlights: false,
+  storyImpact: false,
+  dailyBriefing: false,
+  topicTracking: false,
+  perspectiveSimulator: false,
+  emergingStoryDetector: false,
+  historicalComparison: false,
+  futureScenarioGenerator: false,
+  localImpactDetector: false
+};
+
+function isLegacyAutoEnabledInsightFeatures(input: unknown): boolean {
+  if (!isRecord(input)) return false;
+  return input.biasDetection === true
+    && input.sensationalismDetection === true
+    && input.factHighlights === true
+    && input.storyImpact === true
+    && input.dailyBriefing === true
+    && input.topicTracking === true
+    && input.perspectiveSimulator === true
+    && input.emergingStoryDetector === true
+    && input.historicalComparison === false
+    && input.futureScenarioGenerator === false
+    && input.localImpactDetector === false;
 }
 
 export function useTopMenuAccountSettingsSync({ dispatch, ui, account }: Args) {
@@ -56,6 +93,14 @@ export function useTopMenuAccountSettingsSync({ dispatch, ui, account }: Args) {
     moodFilter: ui.moodFilter,
     typeFilter: ui.typeFilter,
     titleDisplayLanguage: ui.titleDisplayLanguage,
+    insightFeatures: ui.insightFeatures,
+    localImpactRegion: ui.localImpactRegion,
+    trackedTopics: ui.trackedTopics,
+    dailyBriefingDelivery: ui.dailyBriefingDelivery,
+    dailyBriefingEmail: ui.dailyBriefingEmail,
+    dailyBriefingFormat: ui.dailyBriefingFormat,
+    dailyBriefingAudio: ui.dailyBriefingAudio,
+    dailyBriefingFeedUrls: ui.dailyBriefingFeedUrls,
     font: ui.font,
     fontSize: ui.fontSize,
     scheme: ui.scheme,
@@ -76,7 +121,7 @@ export function useTopMenuAccountSettingsSync({ dispatch, ui, account }: Args) {
     researchModel: ui.researchModel,
     askModel: ui.askModel,
     keywords: Array.isArray(ui.keywords) ? ui.keywords : []
-  }), [ui.addStreamVisible, ui.aiProvider, ui.allBudget, ui.allColumnControlsHidden, ui.askModel, ui.buttonMode, ui.colorMode, ui.controlsCollapsed, ui.dateFormat, ui.effectIntensity, ui.font, ui.fontSize, ui.hideAllResearch, ui.hideAllSummaries, ui.keywords, ui.language, ui.menuCollapsed, ui.menuHintMode, ui.moodFilter, ui.notifyEnabled, ui.notifyMode, ui.performanceMode, ui.researchLang, ui.researchModel, ui.scheme, ui.searchVisible, ui.soundEnabled, ui.soundTheme, ui.summaryLang, ui.summaryModel, ui.timezone, ui.titleDisplayLanguage, ui.typeFilter, ui.vibe]);
+  }), [ui.addStreamVisible, ui.aiProvider, ui.allBudget, ui.allColumnControlsHidden, ui.askModel, ui.buttonMode, ui.colorMode, ui.controlsCollapsed, ui.dailyBriefingAudio, ui.dailyBriefingDelivery, ui.dailyBriefingEmail, ui.dailyBriefingFeedUrls, ui.dailyBriefingFormat, ui.dateFormat, ui.effectIntensity, ui.font, ui.fontSize, ui.hideAllResearch, ui.hideAllSummaries, ui.insightFeatures, ui.keywords, ui.language, ui.localImpactRegion, ui.menuCollapsed, ui.menuHintMode, ui.moodFilter, ui.notifyEnabled, ui.notifyMode, ui.performanceMode, ui.researchLang, ui.researchModel, ui.scheme, ui.searchVisible, ui.soundEnabled, ui.soundTheme, ui.summaryLang, ui.summaryModel, ui.timezone, ui.titleDisplayLanguage, ui.trackedTopics, ui.typeFilter, ui.vibe]);
 
   useEffect(() => {
     const userId = account.user?.id ?? null;
@@ -174,6 +219,44 @@ export function useTopMenuAccountSettingsSync({ dispatch, ui, account }: Args) {
               if (titleDisplayLanguage !== 'original') {
                 sendWsMessage({ type: 'run_title_translate_backfill', max: 220 });
               }
+            }
+
+            const insightFeatures = isRecord(remote.insightFeatures)
+              ? (
+                  isLegacyAutoEnabledInsightFeatures(remote.insightFeatures)
+                    ? LEGACY_DISABLED_INSIGHT_FEATURES
+                    : remote.insightFeatures as RootState['ui']['insightFeatures']
+                )
+              : undefined;
+            const localImpactRegion = maybeString('localImpactRegion');
+            const trackedTopics = Array.isArray(remote.trackedTopics)
+              ? remote.trackedTopics.map(v => String(v || '').trim()).filter(Boolean).slice(0, 80)
+              : undefined;
+            const dailyBriefingDelivery = maybeString('dailyBriefingDelivery');
+            const dailyBriefingEmail = maybeString('dailyBriefingEmail');
+            const dailyBriefingFormat = maybeString('dailyBriefingFormat');
+            const dailyBriefingAudio = typeof remote.dailyBriefingAudio === 'boolean' ? remote.dailyBriefingAudio : undefined;
+            const dailyBriefingFeedUrls = Array.isArray(remote.dailyBriefingFeedUrls)
+              ? remote.dailyBriefingFeedUrls.map(v => String(v || '').trim()).filter(Boolean).slice(0, 80)
+              : undefined;
+
+            dispatch(hydrateUiSettings({
+              ...(insightFeatures ? { insightFeatures } : {}),
+              ...(localImpactRegion ? { localImpactRegion } : {}),
+              ...(trackedTopics ? { trackedTopics } : {}),
+              ...(dailyBriefingDelivery === 'site' || dailyBriefingDelivery === 'email' ? { dailyBriefingDelivery } : {}),
+              ...(typeof dailyBriefingEmail === 'string' ? { dailyBriefingEmail } : {}),
+              ...(dailyBriefingFormat === 'executive' || dailyBriefingFormat === 'bullets' || dailyBriefingFormat === 'narrative' ? { dailyBriefingFormat } : {}),
+              ...(typeof dailyBriefingAudio === 'boolean' ? { dailyBriefingAudio } : {}),
+              ...(dailyBriefingFeedUrls ? { dailyBriefingFeedUrls } : {})
+            }));
+            if (insightFeatures || localImpactRegion || trackedTopics) {
+              sendWsMessage({
+                type: 'set_ai_features',
+                ...(insightFeatures ? { features: insightFeatures } : {}),
+                ...(localImpactRegion ? { localRegion: localImpactRegion } : {}),
+                ...(trackedTopics ? { trackedTopics } : {})
+              });
             }
 
             const aiProvider = maybeString('aiProvider');

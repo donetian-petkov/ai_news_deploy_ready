@@ -24,6 +24,15 @@ describe('shared clientMsgSchema', () => {
     expect(openrouter.success).toBe(true);
   });
 
+  it('accepts provider switching with auth token', () => {
+    const result = clientMsgSchema.safeParse({
+      type: 'set_ai_provider',
+      provider: 'openai',
+      authToken: 'token-123'
+    });
+    expect(result.success).toBe(true);
+  });
+
   it('rejects unsupported provider values', () => {
     const result = clientMsgSchema.safeParse({
       type: 'set_ai_provider',
@@ -41,6 +50,64 @@ describe('shared clientMsgSchema', () => {
     expect(clientMsgSchema.safeParse({ type: 'set_research_lang', lang: 'de' }).success).toBe(false);
     expect(clientMsgSchema.safeParse({ type: 'set_keywords', keywords: 'war, energy, budget' }).success).toBe(true);
     expect(clientMsgSchema.safeParse({ type: 'set_keywords', keywords: ['war', 'energy'] }).success).toBe(true);
+  });
+
+  it('accepts AI insight feature settings payloads', () => {
+    expect(clientMsgSchema.safeParse({
+      type: 'set_ai_features',
+      features: {
+        biasDetection: true,
+        sensationalismDetection: true,
+        factHighlights: true,
+        storyImpact: false
+      },
+      localRegion: 'Bulgaria',
+      trackedTopics: ['AI', 'War in Ukraine']
+    }).success).toBe(true);
+  });
+
+  it('accepts daily briefing generation payloads', () => {
+    expect(clientMsgSchema.safeParse({
+      type: 'generate_daily_briefing',
+      delivery: 'email',
+      email: 'briefing@example.com',
+      format: 'bullets',
+      includeAudio: true,
+      feedUrls: ['https://feed.example/rss']
+    }).success).toBe(true);
+    expect(clientMsgSchema.safeParse({
+      type: 'generate_daily_briefing',
+      format: 'weekly'
+    }).success).toBe(false);
+  });
+
+  it('accepts AI insight feature settings payloads', () => {
+    expect(clientMsgSchema.safeParse({
+      type: 'set_ai_features',
+      features: {
+        biasDetection: true,
+        sensationalismDetection: true,
+        factHighlights: true,
+        storyImpact: false
+      },
+      localRegion: 'Bulgaria',
+      trackedTopics: ['AI', 'War in Ukraine']
+    }).success).toBe(true);
+  });
+
+  it('accepts daily briefing generation payloads', () => {
+    expect(clientMsgSchema.safeParse({
+      type: 'generate_daily_briefing',
+      delivery: 'email',
+      email: 'briefing@example.com',
+      format: 'bullets',
+      includeAudio: true,
+      feedUrls: ['https://feed.example/rss']
+    }).success).toBe(true);
+    expect(clientMsgSchema.safeParse({
+      type: 'generate_daily_briefing',
+      format: 'weekly'
+    }).success).toBe(false);
   });
 
   it('accepts model update payloads', () => {

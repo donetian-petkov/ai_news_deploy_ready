@@ -3,9 +3,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAppDispatch } from '../../../store/hooks';
-import { FILTERED_FEED_URL } from '../../../store/constants';
+import { EMERGING_FEED_URL, FILTERED_FEED_URL } from '../../../store/constants';
 import type { NewsItem } from '../../../store/types';
-import { sendWsMessage, startWsConnection, stopWsConnection } from '../../../store/wsClient';
+import { startWsConnection, stopWsConnection } from '../../../store/wsClient';
 import {
   type SchemeValue,
   type VibeValue
@@ -172,22 +172,12 @@ export function useReactColumnsPreviewController({ wsUrl }: Args) {
   const { connection, ui, feeds: feedsState, news: newsState } = useReactColumnsState();
   const { connected, status } = connection;
   const { feeds, pinnedByUrl, controlsOpenByUrl, deleteAgeByUrl, orderByUrl } = feedsState;
-  const {
-    itemsByFeed,
-    summaryPendingById,
-    researchPendingById,
-    titleTranslatePendingById,
-    pinnedNewsById,
-    askByItem
-  } = newsState;
+  const { itemsByFeed, summaryPendingById, researchPendingById, pinnedNewsById, askByItem } = newsState;
 
   const hydratedFeedUiRef = useRef(false);
   const summaryActiveSinceRef = useRef<Record<string, number>>({});
-  const researchActiveSinceRef = useRef<Record<string, number>>({});
-  const titleTranslateActiveSinceRef = useRef<Record<string, number>>({});
   const [advancedControlsByUrl, setAdvancedControlsByUrl] = useState<Record<string, boolean>>({});
   const [summaryStatusTick, setSummaryStatusTick] = useState(0);
-  const lastTitleBackfillRequestAtRef = useRef(0);
   const labels = useMemo(
     () => t('columns', { returnObjects: true }) as Record<string, string>,
     [t]
@@ -210,18 +200,6 @@ export function useReactColumnsPreviewController({ wsUrl }: Args) {
     return () => window.clearInterval(timer);
   }, []);
 
-  useEffect(() => {
-    if (!connected) return;
-    if (!ui.aiEnabled || !ui.aiAvailable) return;
-    if (ui.titleDisplayLanguage === 'original') return;
-    const now = Date.now();
-    if (now - lastTitleBackfillRequestAtRef.current < 20_000) return;
-    const ok = sendWsMessage({ type: 'run_title_translate_backfill', max: 220 });
-    if (ok) {
-      lastTitleBackfillRequestAtRef.current = now;
-    }
-  }, [connected, ui.aiAvailable, ui.aiEnabled, ui.titleDisplayLanguage]);
-
   useFeedUiPersistence({
     dispatch,
     feeds,
@@ -237,7 +215,9 @@ export function useReactColumnsPreviewController({ wsUrl }: Args) {
     itemsByFeed,
     notifyEnabled: ui.notifyEnabled,
     notifyMode: ui.notifyMode,
-    pinnedByUrl
+    pinnedByUrl,
+    topicTrackingEnabled: ui.insightFeatures.topicTracking,
+    trackedTopics: ui.trackedTopics
   });
 
   useAllColumnControlsSync({
@@ -246,35 +226,7 @@ export function useReactColumnsPreviewController({ wsUrl }: Args) {
     feedsCount: feeds.length
   });
 
-  const renderedFeeds = useMemo(() => {
-    if (feeds.length) {
-      const list = [...feeds];
-      const orderIndex = new Map(orderByUrl.map((url, idx) => [url, idx]));
-      list.sort((a, b) => {
-        const aFiltered = a.url === FILTERED_FEED_URL;
-        const bFiltered = b.url === FILTERED_FEED_URL;
-        if (aFiltered !== bFiltered) return aFiltered ? -1 : 1;
-        const ai = orderIndex.get(a.url) ?? Number.MAX_SAFE_INTEGER;
-        const bi = orderIndex.get(b.url) ?? Number.MAX_SAFE_INTEGER;
-        return ai - bi;
-      });
-      return list;
-    }
-
-    return Object.keys(itemsByFeed).map(url => ({
-      url,
-      label: url,
-      kind: 'rss' as const,
-      intervalSec: 120,
-      summaryEnabled: false,
-      researchEnabled: false,
-      budget: 'standard' as const,
-      sortMode: 'newest' as const,
-      filters: { onlyMatches: false, onlyResearched: false, onlySummaries: false }
-    }));
-  }, [feeds, itemsByFeed, orderByUrl]);
-
-  const buildPendingLoadCandidates = (pendingById: Record<string, true>) => {
+  const summariesLoadCandidates = useMemo(() => {
     if (!ui.aiEnabled || !ui.aiAvailable) {
       return {
         pendingKeys: [] as string[],
@@ -283,9 +235,9 @@ export function useReactColumnsPreviewController({ wsUrl }: Args) {
       };
     }
 
-    const feedLabelByUrl = new Map(renderedFeeds.map(feed => [feed.url, feed.label]));
+    const feedLabelByUrl = new Map<string, string>(feeds.map(feed => [feed.url, feed.label]));
     const itemMetaByKey = new Map<string, { title: string; feedUrl: string }>();
-    const pendingSet = new Set(Object.keys(pendingById));
+    const pendingSet = new Set(Object.keys(summaryPendingById));
 
     Object.entries(itemsByFeed).forEach(([feedUrl, feedItems]) => {
       if (!Array.isArray(feedItems)) return;
@@ -305,20 +257,7 @@ export function useReactColumnsPreviewController({ wsUrl }: Args) {
       itemMetaByKey,
       feedLabelByUrl
     };
-  };
-
-  const summariesLoadCandidates = useMemo(
-    () => buildPendingLoadCandidates(summaryPendingById),
-    [itemsByFeed, renderedFeeds, summaryPendingById, ui.aiAvailable, ui.aiEnabled]
-  );
-  const researchesLoadCandidates = useMemo(
-    () => buildPendingLoadCandidates(researchPendingById),
-    [itemsByFeed, renderedFeeds, researchPendingById, ui.aiAvailable, ui.aiEnabled]
-  );
-  const titlesLoadCandidates = useMemo(
-    () => buildPendingLoadCandidates(titleTranslatePendingById),
-    [itemsByFeed, renderedFeeds, titleTranslatePendingById, ui.aiAvailable, ui.aiEnabled]
-  );
+  }, [feeds, itemsByFeed, summaryPendingById, ui.aiAvailable, ui.aiEnabled]);
 
   useEffect(() => {
     const now = Date.now();
@@ -330,34 +269,7 @@ export function useReactColumnsPreviewController({ wsUrl }: Args) {
     summaryActiveSinceRef.current = next;
   }, [summariesLoadCandidates.pendingKeys]);
 
-  useEffect(() => {
-    const now = Date.now();
-    const prev = researchActiveSinceRef.current;
-    const next: Record<string, number> = {};
-    researchesLoadCandidates.pendingKeys.forEach(key => {
-      next[key] = prev[key] || now;
-    });
-    researchActiveSinceRef.current = next;
-  }, [researchesLoadCandidates.pendingKeys]);
-
-  useEffect(() => {
-    const now = Date.now();
-    const prev = titleTranslateActiveSinceRef.current;
-    const next: Record<string, number> = {};
-    titlesLoadCandidates.pendingKeys.forEach(key => {
-      next[key] = prev[key] || now;
-    });
-    titleTranslateActiveSinceRef.current = next;
-  }, [titlesLoadCandidates.pendingKeys]);
-
-  const computePendingLoadState = (
-    candidates: {
-      pendingKeys: string[];
-      itemMetaByKey: Map<string, { title: string; feedUrl: string }>;
-      feedLabelByUrl: Map<string, string>;
-    },
-    activeSince: Record<string, number>
-  ) => {
+  const summariesLoading = useMemo(() => {
     if (!ui.aiEnabled || !ui.aiAvailable) {
       return { count: 0, stalledCount: 0, items: [] as string[] };
     }
@@ -365,16 +277,16 @@ export function useReactColumnsPreviewController({ wsUrl }: Args) {
     const now = Date.now();
     const items: string[] = [];
     let stalledCount = 0;
-    candidates.pendingKeys.forEach(key => {
-      const meta = candidates.itemMetaByKey.get(key);
+    summariesLoadCandidates.pendingKeys.forEach(key => {
+      const meta = summariesLoadCandidates.itemMetaByKey.get(key);
       const parsedFeedUrl = key.includes('::') ? key.slice(0, key.lastIndexOf('::')) : '';
       const parsedId = key.includes('::') ? key.slice(key.lastIndexOf('::') + 2) : key;
       const effectiveFeedUrl = meta?.feedUrl || parsedFeedUrl;
       const feedLabel = effectiveFeedUrl
-        ? (candidates.feedLabelByUrl.get(effectiveFeedUrl) || effectiveFeedUrl)
+        ? (summariesLoadCandidates.feedLabelByUrl.get(effectiveFeedUrl) || effectiveFeedUrl)
         : 'unknown';
       const title = meta?.title || parsedId;
-      const sinceMs = activeSince[key] || now;
+      const sinceMs = summaryActiveSinceRef.current[key] || now;
       const ageMs = Math.max(0, now - sinceMs);
       const stalled = ageMs >= SUMMARY_STALL_THRESHOLD_MS;
       if (stalled) stalledCount += 1;
@@ -382,24 +294,11 @@ export function useReactColumnsPreviewController({ wsUrl }: Args) {
     });
 
     return {
-      count: candidates.pendingKeys.length,
+      count: summariesLoadCandidates.pendingKeys.length,
       stalledCount,
       items
     };
-  };
-
-  const summariesLoading = useMemo(
-    () => computePendingLoadState(summariesLoadCandidates, summaryActiveSinceRef.current),
-    [summariesLoadCandidates, summaryStatusTick, ui.aiAvailable, ui.aiEnabled]
-  );
-  const researchesLoading = useMemo(
-    () => computePendingLoadState(researchesLoadCandidates, researchActiveSinceRef.current),
-    [researchesLoadCandidates, summaryStatusTick, ui.aiAvailable, ui.aiEnabled]
-  );
-  const titlesLoading = useMemo(
-    () => computePendingLoadState(titlesLoadCandidates, titleTranslateActiveSinceRef.current),
-    [titlesLoadCandidates, summaryStatusTick, ui.aiAvailable, ui.aiEnabled]
-  );
+  }, [summariesLoadCandidates, summaryStatusTick, ui.aiAvailable, ui.aiEnabled]);
 
   const { filteredColumnItems, duplicateMatchById } = useMemo(() => {
     const all = Object.values(itemsByFeed).flatMap(items => Array.isArray(items) ? items : []);
@@ -463,6 +362,75 @@ export function useReactColumnsPreviewController({ wsUrl }: Args) {
       duplicateMatchById: duplicateMap
     };
   }, [itemsByFeed, pinnedNewsById, ui.allBudget, ui.performanceMode]);
+
+  const emergingColumnItems = useMemo(() => {
+    if (!ui.insightFeatures.emergingStoryDetector) return [] as NewsItem[];
+    const all = Object.values(itemsByFeed).flatMap(items => Array.isArray(items) ? items : []);
+    const byId = new Map<string, NewsItem>();
+    all.forEach(item => {
+      if (!item?.emergingSignal || item.emergingSignal.clusterSize < 2) return;
+      const current = byId.get(item.id);
+      if (!current || (current.emergingSignal?.clusterSize || 0) < item.emergingSignal.clusterSize) {
+        byId.set(item.id, { ...item, feedUrl: EMERGING_FEED_URL });
+      }
+    });
+    return Array.from(byId.values())
+      .sort((a, b) => {
+        const diff = (b.emergingSignal?.clusterSize || 0) - (a.emergingSignal?.clusterSize || 0);
+        if (diff) return diff;
+        return b.publishedMs - a.publishedMs;
+      })
+      .slice(0, 30);
+  }, [itemsByFeed, ui.insightFeatures.emergingStoryDetector]);
+
+  const itemsByFeedForPresentation = useMemo(
+    () => (emergingColumnItems.length ? { ...itemsByFeed, [EMERGING_FEED_URL]: emergingColumnItems } : itemsByFeed),
+    [emergingColumnItems, itemsByFeed]
+  );
+
+  const renderedFeeds = useMemo(() => {
+    if (feeds.length) {
+      const list = [...feeds];
+      if (ui.insightFeatures.emergingStoryDetector && emergingColumnItems.length) {
+        list.unshift({
+          url: EMERGING_FEED_URL,
+          label: labels.emergingStory || 'Emerging',
+          kind: 'rss',
+          intervalSec: 0,
+          summaryEnabled: false,
+          researchEnabled: false,
+          budget: 'high',
+          sortMode: 'matched',
+          filters: { onlyMatches: true, onlyResearched: false, onlySummaries: false }
+        });
+      }
+      const orderIndex = new Map(orderByUrl.map((url, idx) => [url, idx]));
+      list.sort((a, b) => {
+        const aEmerging = a.url === EMERGING_FEED_URL;
+        const bEmerging = b.url === EMERGING_FEED_URL;
+        if (aEmerging !== bEmerging) return aEmerging ? -1 : 1;
+        const aFiltered = a.url === FILTERED_FEED_URL;
+        const bFiltered = b.url === FILTERED_FEED_URL;
+        if (aFiltered !== bFiltered) return aFiltered ? -1 : 1;
+        const ai = orderIndex.get(a.url) ?? Number.MAX_SAFE_INTEGER;
+        const bi = orderIndex.get(b.url) ?? Number.MAX_SAFE_INTEGER;
+        return ai - bi;
+      });
+      return list;
+    }
+
+    return Object.keys(itemsByFeedForPresentation).map(url => ({
+      url,
+      label: url === EMERGING_FEED_URL ? (labels.emergingStory || 'Emerging') : url,
+      kind: 'rss' as const,
+      intervalSec: 120,
+      summaryEnabled: false,
+      researchEnabled: false,
+      budget: 'standard' as const,
+      sortMode: 'newest' as const,
+      filters: { onlyMatches: false, onlyResearched: false, onlySummaries: false }
+    }));
+  }, [emergingColumnItems.length, feeds, itemsByFeedForPresentation, labels.emergingStory, orderByUrl, ui.insightFeatures.emergingStoryDetector]);
 
   const { onGridDragOver, onGridDrop, buildDragState, columnNodesRef } = useColumnDragDrop({
     dispatch,
@@ -529,6 +497,9 @@ export function useReactColumnsPreviewController({ wsUrl }: Args) {
       hideAllSummaries: ui.hideAllSummaries,
       aiEnabled: ui.aiEnabled,
       aiAvailable: ui.aiAvailable,
+      insightFeatures: ui.insightFeatures,
+      localImpactRegion: ui.localImpactRegion,
+      trackedTopics: ui.trackedTopics,
       keywords: ui.keywords
     },
     labels,
@@ -536,7 +507,7 @@ export function useReactColumnsPreviewController({ wsUrl }: Args) {
     status,
     filteredColumnItems,
     duplicateMatchById,
-    itemsByFeed,
+    itemsByFeed: itemsByFeedForPresentation,
     visibleByFeed,
     hydratedColumns,
     pinnedByUrl,
@@ -545,7 +516,6 @@ export function useReactColumnsPreviewController({ wsUrl }: Args) {
     deleteAgeByUrl,
     summaryPendingById,
     researchPendingById,
-    titleTranslatePendingById,
     pinnedNewsById,
     askByItem,
     bodyModes,
@@ -585,14 +555,14 @@ export function useReactColumnsPreviewController({ wsUrl }: Args) {
         summariesStalledCount: summariesLoading.stalledCount,
         summariesLoadingLabel: labels.summariesLoading,
         summariesLoadingItems: summariesLoading.items,
-        researchesLoadingCount: researchesLoading.count,
-        researchesStalledCount: researchesLoading.stalledCount,
-        researchesLoadingLabel: labels.researchesLoading || labels.researching,
-        researchesLoadingItems: researchesLoading.items,
-        titlesLoadingCount: titlesLoading.count,
-        titlesStalledCount: titlesLoading.stalledCount,
-        titlesLoadingLabel: labels.titlesLoading || labels.showTranslatedTitle,
-        titlesLoadingItems: titlesLoading.items
+        researchesLoadingCount: 0,
+        researchesStalledCount: 0,
+        researchesLoadingLabel: labels.researching || 'Research loading',
+        researchesLoadingItems: [],
+        titlesLoadingCount: 0,
+        titlesStalledCount: 0,
+        titlesLoadingLabel: labels.showTranslatedTitle || 'Titles loading',
+        titlesLoadingItems: []
       },
       clipboard: {
         open: clipboardNoticeOpen,
@@ -607,37 +577,7 @@ export function useReactColumnsPreviewController({ wsUrl }: Args) {
       onGridDrop,
       buildDragState
     }),
-    [
-      buildDragState,
-      clipboardNotice,
-      clipboardNoticeOpen,
-      connected,
-      handlersModel,
-      labels.disconnected,
-      labels.linkCopied,
-      labels.live,
-      labels.previewTitle,
-      labels.researchesLoading,
-      labels.researching,
-      labels.showTranslatedTitle,
-      labels.summariesLoading,
-      labels.titlesLoading,
-      onGridDragOver,
-      onGridDrop,
-      renderedFeeds,
-      researchesLoading.count,
-      researchesLoading.items,
-      researchesLoading.stalledCount,
-      stateModel,
-      status,
-      summariesLoading.count,
-      summariesLoading.items,
-      summariesLoading.stalledCount,
-      titlesLoading.count,
-      titlesLoading.items,
-      titlesLoading.stalledCount,
-      viewModel
-    ]
+    [buildDragState, clipboardNotice, clipboardNoticeOpen, connected, handlersModel, labels.disconnected, labels.linkCopied, labels.live, labels.previewTitle, labels.summariesLoading, onGridDragOver, onGridDrop, renderedFeeds, stateModel, status, summariesLoading.count, summariesLoading.items, summariesLoading.stalledCount, viewModel]
   );
 
   return {
