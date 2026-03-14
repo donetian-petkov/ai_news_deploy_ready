@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import {
   Alert,
+  Autocomplete,
   Box,
   Button,
   Checkbox,
@@ -11,6 +12,7 @@ import {
   FormControlLabel,
   LinearProgress,
   Stack,
+  Switch,
   TextField,
   Typography
 } from '@mui/material';
@@ -28,22 +30,66 @@ import {
 import { useTopMenuContext } from './context/useTopMenuContext';
 
 const FEATURE_ROWS: Array<{ key: keyof ReturnType<typeof useTopMenuContext>['controls']['model']['aiSettings']['insightFeatures']; label: string; hint: string }> = [
-  { key: 'biasDetection', label: 'Bias detector', hint: 'Political leaning, tone, and framing.' },
-  { key: 'sensationalismDetection', label: 'Rage bait detector', hint: 'Flags clickbait headlines and suggests safer alternatives.' },
-  { key: 'factHighlights', label: 'Fact highlights', hint: 'People, places, dates, numbers, and quotes under each story.' },
-  { key: 'storyImpact', label: 'Impact prediction', hint: 'Economic, political, and tech implications.' },
-  { key: 'perspectiveSimulator', label: 'Perspective simulator', hint: 'Investor, government, consumer, and tech views.' },
-  { key: 'historicalComparison', label: 'Historical comparison', hint: 'Similar past events and patterns.' },
-  { key: 'futureScenarioGenerator', label: 'Future scenarios', hint: 'Possible next outcomes with a disclaimer.' },
-  { key: 'localImpactDetector', label: 'Local impact', hint: 'How global stories affect the selected region.' },
-  { key: 'topicTracking', label: 'Topic tracking', hint: 'Follow recurring topics and only surface major updates.' },
-  { key: 'emergingStoryDetector', label: 'Emerging stories', hint: 'Optional column for repeated stories rising fast.' },
-  { key: 'dailyBriefing', label: 'Daily briefing', hint: 'Enables the on-demand briefing generator below.' }
+  { key: 'biasDetection', label: 'Bias detector', hint: 'Political leaning, tone, and framing. Budget: standard or high.' },
+  { key: 'sensationalismDetection', label: 'Rage bait detector', hint: 'Flags clickbait headlines and suggests safer alternatives. Budget: standard or high.' },
+  { key: 'factHighlights', label: 'Fact highlights', hint: 'People, places, dates, numbers, and quotes under each story. Budget: standard or high.' },
+  { key: 'storyImpact', label: 'Impact prediction', hint: 'Economic, political, and tech implications. Budget: high only.' },
+  { key: 'perspectiveSimulator', label: 'Perspective simulator', hint: 'Investor, government, consumer, and tech views. Budget: high only.' },
+  { key: 'historicalComparison', label: 'Historical comparison', hint: 'Similar past events and patterns. Budget: high only.' },
+  { key: 'futureScenarioGenerator', label: 'Future scenarios', hint: 'Possible next outcomes with a disclaimer. Budget: high only.' },
+  { key: 'localImpactDetector', label: 'Local impact', hint: 'How global stories affect the selected region. Budget: high only.' },
+  { key: 'topicTracking', label: 'Topic tracking', hint: 'Follow recurring topics and only surface major updates. Budget: high only.' },
+  { key: 'emergingStoryDetector', label: 'Emerging stories', hint: 'Optional column for repeated stories rising fast. Budget: high only.' },
+  { key: 'dailyBriefing', label: 'Daily briefing', hint: 'Enables the on-demand briefing generator below. Budget: high only.' }
+];
+
+const LOCAL_IMPACT_REGION_OPTIONS = [
+  'United States',
+  'United Kingdom',
+  'European Union',
+  'Bulgaria',
+  'Germany',
+  'France',
+  'Italy',
+  'Spain',
+  'Netherlands',
+  'Belgium',
+  'Poland',
+  'Romania',
+  'Greece',
+  'Turkey',
+  'Ukraine',
+  'Russia',
+  'Canada',
+  'Mexico',
+  'Brazil',
+  'Argentina',
+  'Chile',
+  'Australia',
+  'New Zealand',
+  'Japan',
+  'South Korea',
+  'China',
+  'Taiwan',
+  'Hong Kong',
+  'India',
+  'Singapore',
+  'Indonesia',
+  'Vietnam',
+  'Thailand',
+  'Philippines',
+  'Middle East',
+  'Saudi Arabia',
+  'United Arab Emirates',
+  'Israel',
+  'Africa',
+  'South Africa'
 ];
 
 export function TopMenuAiSettingsSection() {
   const {
     labels,
+    account,
     controls: {
       model: { aiSettings },
       actions
@@ -54,6 +100,13 @@ export function TopMenuAiSettingsSection() {
   const [providerKeyDraft, setProviderKeyDraft] = useState('');
   const [keywordsDraft, setKeywordsDraft] = useState('');
   const [topicsDraft, setTopicsDraft] = useState('');
+  const compactActionButtonSx = {
+    whiteSpace: 'nowrap',
+    minWidth: { xs: 112, sm: 108 },
+    alignSelf: { xs: 'flex-start', sm: 'center' },
+    px: 2,
+    borderRadius: '14px'
+  } as const;
 
   const briefingFeedSelection = useMemo(() => {
     if (aiSettings.dailyBriefingFeedUrls.length) {
@@ -259,9 +312,21 @@ export function TopMenuAiSettingsSection() {
         </div>
 
         <Box className="topMenuCardBlock" sx={{ width: '100%', border: '1px solid var(--panel-border)', borderRadius: 2, p: 1 }}>
-          <Typography variant="caption" sx={{ display: 'block', mb: 0.8 }}>
-            {labels.providerKeyTitle || 'Provider API key'}
-          </Typography>
+          <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 0.8, gap: 1 }}>
+            <Typography variant="caption">
+              {labels.providerKeyTitle || 'Provider API key'}
+            </Typography>
+            <Chip
+              size="small"
+              color={account.hasSavedKey ? 'success' : 'default'}
+              variant={account.hasSavedKey ? 'filled' : 'outlined'}
+              label={
+                account.hasSavedKey
+                  ? (labels.providerKeyStoredYes || 'Saved key available')
+                  : (labels.providerKeyStoredNo || 'No saved key')
+              }
+            />
+          </Stack>
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
             <TextField
               size="small"
@@ -275,6 +340,7 @@ export function TopMenuAiSettingsSection() {
             <Button
               size="small"
               variant="contained"
+              sx={compactActionButtonSx}
               onClick={() => {
                 const next = String(providerKeyDraft || '').trim();
                 if (!next) return;
@@ -292,24 +358,33 @@ export function TopMenuAiSettingsSection() {
           <Typography variant="caption" sx={{ display: 'block', mb: 0.8 }}>
             AI features
           </Typography>
-          <div className="topMenuFieldGrid">
+          <div className="topMenuFieldGrid topMenuFeatureGrid">
             {FEATURE_ROWS.map(feature => (
-              <Box key={feature.key} className="topMenuField" sx={{ border: '1px solid var(--panel-border)', borderRadius: 1.5, px: 1, py: 0.6 }}>
+              <Box key={feature.key} className="topMenuField topMenuFeatureCard" sx={{ border: '1px solid var(--panel-border)', borderRadius: 1.5, px: 1, py: 0.6 }}>
                 <FormControlLabel
                   control={
-                    <Checkbox
+                    <Switch
                       size="small"
                       checked={!!aiSettings.insightFeatures[feature.key]}
                       onChange={event => actions.onSetInsightFeature(feature.key, event.target.checked)}
+                      sx={{ ml: 0.25, mr: 0.75 }}
                     />
                   }
                   label={
-                    <Box>
+                    <Box className="topMenuFeatureCopy">
                       <Typography variant="body2" sx={{ fontWeight: 700 }}>{feature.label}</Typography>
                       <Typography variant="caption" sx={{ color: 'text.secondary' }}>{feature.hint}</Typography>
                     </Box>
                   }
-                  sx={{ alignItems: 'flex-start', m: 0 }}
+                  sx={{
+                    alignItems: 'flex-start',
+                    m: 0,
+                    width: '100%',
+                    '.MuiFormControlLabel-label': {
+                      minWidth: 0,
+                      flex: 1
+                    }
+                  }}
                 />
               </Box>
             ))}
@@ -386,13 +461,26 @@ export function TopMenuAiSettingsSection() {
 
           <Divider sx={{ my: 1.1 }} />
 
-          <TextField
-            size="small"
+          <Autocomplete
+            freeSolo
             fullWidth
-            label="Local impact region"
-            placeholder="United States"
+            options={LOCAL_IMPACT_REGION_OPTIONS}
             value={aiSettings.localImpactRegion}
-            onChange={e => actions.onSetLocalImpactRegion(e.target.value)}
+            inputValue={aiSettings.localImpactRegion}
+            onChange={(_, value) => actions.onSetLocalImpactRegion(typeof value === 'string' ? value : '')}
+            onInputChange={(_, value, reason) => {
+              if (reason === 'input' || reason === 'clear') {
+                actions.onSetLocalImpactRegion(value);
+              }
+            }}
+            renderInput={params => (
+              <TextField
+                {...params}
+                size="small"
+                label="Local impact region"
+                placeholder="Search region"
+              />
+            )}
           />
         </Box>
 

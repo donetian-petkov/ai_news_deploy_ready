@@ -13,7 +13,10 @@ export function TopMenuAccountSection() {
   } = useTopMenuContext();
   const compactAuthButtonSx = {
     whiteSpace: 'nowrap',
-    minWidth: { xs: 112, sm: 108 }
+    minWidth: { xs: 112, sm: 108 },
+    alignSelf: { xs: 'flex-start', sm: 'center' },
+    px: 2,
+    borderRadius: '14px'
   } as const;
 
   return (
@@ -28,7 +31,7 @@ export function TopMenuAccountSection() {
           {account.user ? (
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems={{ xs: 'stretch', sm: 'center' }} sx={{ mb: 1 }}>
               <Typography variant="caption">{labels.authSignedInAs || 'Signed in as'}: {account.user.username}</Typography>
-              <Button size="small" variant="outlined" onClick={account.signOut} disabled={account.busy}>
+              <Button size="small" variant="outlined" onClick={account.signOut} disabled={account.busy} sx={compactAuthButtonSx}>
                 {labels.authSignOut || 'Sign out'}
               </Button>
             </Stack>
@@ -76,6 +79,7 @@ export function TopMenuAccountSection() {
             <Button
               size="small"
               variant="contained"
+              sx={compactAuthButtonSx}
               onClick={account.saveCurrentProviderKey}
               disabled={!account.user || account.busy || !String(account.apiKey || '').trim()}
             >
@@ -92,6 +96,7 @@ export function TopMenuAccountSection() {
             <Button
               size="small"
               variant="outlined"
+              sx={compactAuthButtonSx}
               onClick={() => account.switchProviderWithSavedKey(aiSettings.aiProvider)}
               disabled={!account.user || !account.hasSavedKey || account.busy}
             >

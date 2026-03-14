@@ -3931,7 +3931,7 @@ function applyLoadedState(st: PersistedState | null) {
       ? { ...DEFAULT_AI_INSIGHT_FEATURES }
       : normalizeAiFeatureSettings(st.aiFeatures, aiFeatures);
   }
-  if (typeof st.localRegion === 'string' && st.localRegion.trim()) {
+  if (typeof st.localRegion === 'string') {
     localRegion = st.localRegion.trim().slice(0, 120);
   }
   if (Array.isArray(st.trackedTopics)) {
@@ -4349,7 +4349,7 @@ wss.on('connection', (ws: WebSocket) => {
       if (msg.features) {
         aiFeatures = normalizeAiFeatureSettings(msg.features, aiFeatures);
       }
-      if (typeof msg.localRegion === 'string' && msg.localRegion.trim()) {
+      if (typeof msg.localRegion === 'string') {
         localRegion = msg.localRegion.trim().slice(0, 120);
       }
       if (Array.isArray(msg.trackedTopics)) {

@@ -242,7 +242,7 @@ export function useTopMenuAccountSettingsSync({ dispatch, ui, account }: Args) {
 
             dispatch(hydrateUiSettings({
               ...(insightFeatures ? { insightFeatures } : {}),
-              ...(localImpactRegion ? { localImpactRegion } : {}),
+              ...(typeof localImpactRegion === 'string' ? { localImpactRegion } : {}),
               ...(trackedTopics ? { trackedTopics } : {}),
               ...(dailyBriefingDelivery === 'site' || dailyBriefingDelivery === 'email' ? { dailyBriefingDelivery } : {}),
               ...(typeof dailyBriefingEmail === 'string' ? { dailyBriefingEmail } : {}),
@@ -254,7 +254,7 @@ export function useTopMenuAccountSettingsSync({ dispatch, ui, account }: Args) {
               sendWsMessage({
                 type: 'set_ai_features',
                 ...(insightFeatures ? { features: insightFeatures } : {}),
-                ...(localImpactRegion ? { localRegion: localImpactRegion } : {}),
+                ...(typeof localImpactRegion === 'string' ? { localRegion: localImpactRegion } : {}),
                 ...(trackedTopics ? { trackedTopics } : {})
               });
             }
