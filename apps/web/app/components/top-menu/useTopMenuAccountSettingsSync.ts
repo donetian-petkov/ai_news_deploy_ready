@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { sendWsMessage } from '../../store/wsClient';
 import { hydrateUiSettings, setAiSettings, setKeywords, setTitleDisplayLanguage } from '../../store/slices/uiSlice';
 import type { AppDispatch, RootState } from '../../store/store';
@@ -89,6 +89,7 @@ export function useTopMenuAccountSettingsSync({ dispatch, ui, account }: Args) {
   const loadedUserIdRef = useRef<number | null>(null);
   const lastSavedJsonRef = useRef('');
   const saveTimerRef = useRef<number | null>(null);
+  const [saveReadyUserId, setSaveReadyUserId] = useState<number | null>(null);
 
   const settingsPayload = useMemo<AccountSettingsPayload>(() => ({
     language: ui.language,
@@ -144,12 +145,14 @@ export function useTopMenuAccountSettingsSync({ dispatch, ui, account }: Args) {
       hydratedUserIdRef.current = null;
       loadedUserIdRef.current = null;
       lastSavedJsonRef.current = '';
+      setSaveReadyUserId(null);
       return;
     }
     if (hydratedUserIdRef.current === userId) return;
 
     hydratedUserIdRef.current = userId;
     loadedUserIdRef.current = null;
+    setSaveReadyUserId(null);
     isApplyingRef.current = true;
     let cancelled = false;
     void (async () => {
@@ -331,6 +334,7 @@ export function useTopMenuAccountSettingsSync({ dispatch, ui, account }: Args) {
         if (!loaded) hydratedUserIdRef.current = null;
         isApplyingRef.current = false;
         loadedUserIdRef.current = loaded ? userId : null;
+        setSaveReadyUserId(loaded ? userId : null);
       }
     })();
     return () => {
@@ -342,7 +346,7 @@ export function useTopMenuAccountSettingsSync({ dispatch, ui, account }: Args) {
     const userId = account.user?.id ?? null;
     const token = String(account.token || '').trim();
     if (!userId || !token) return;
-    if (loadedUserIdRef.current !== userId) return;
+    if (saveReadyUserId !== userId) return;
     if (isApplyingRef.current) return;
 
     const payloadJson = JSON.stringify(settingsPayload);
@@ -366,5 +370,5 @@ export function useTopMenuAccountSettingsSync({ dispatch, ui, account }: Args) {
         saveTimerRef.current = null;
       }
     };
-  }, [account.token, account.user?.id, settingsPayload]);
+  }, [account.token, account.user?.id, saveReadyUserId, settingsPayload]);
 }
