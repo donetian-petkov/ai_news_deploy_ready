@@ -5,7 +5,7 @@ import { sendWsMessage } from '../../store/wsClient';
 import { hydrateUiSettings, setAiSettings, setKeywords, setTitleDisplayLanguage } from '../../store/slices/uiSlice';
 import type { AppDispatch, RootState } from '../../store/store';
 import { fetchAccountSettings, saveAccountSettings } from './topMenuAuth.services';
-import type { PersistedUiPrefs } from './useTopMenuUiPersistence';
+import { UI_PREFS_STORAGE_KEY, parsePersistedUiPrefs, type PersistedUiPrefs } from './useTopMenuUiPersistence';
 import type { TopMenuAiProvider } from './topMenu.services';
 
 type AccountLike = {
@@ -69,6 +69,18 @@ function isLegacyAutoEnabledInsightFeatures(input: unknown): boolean {
     && input.historicalComparison === false
     && input.futureScenarioGenerator === false
     && input.localImpactDetector === false;
+}
+
+function readLocalPersistedMeta(): { persistedAtMs: number; hasPrefs: boolean } {
+  if (typeof window === 'undefined') return { persistedAtMs: 0, hasPrefs: false };
+  const raw = window.localStorage.getItem(UI_PREFS_STORAGE_KEY);
+  if (!raw) return { persistedAtMs: 0, hasPrefs: false };
+  const parsed = parsePersistedUiPrefs(raw);
+  const persistedAtMs = typeof parsed?.persistedAtMs === 'number' && Number.isFinite(parsed.persistedAtMs)
+    ? parsed.persistedAtMs
+    : 0;
+  const hasPrefs = !!parsed && Object.keys(parsed).some(key => key !== 'persistedAtMs');
+  return { persistedAtMs, hasPrefs };
 }
 
 export function useTopMenuAccountSettingsSync({ dispatch, ui, account }: Args) {
@@ -154,6 +166,18 @@ export function useTopMenuAccountSettingsSync({ dispatch, ui, account }: Args) {
           try {
             const remote = await fetchAccountSettings(token);
             if (!isRecord(remote)) continue;
+            const localPersisted = readLocalPersistedMeta();
+            const localPersistedAtMs = localPersisted.persistedAtMs;
+            const remotePersistedAtMs = typeof remote.persistedAtMs === 'number' && Number.isFinite(remote.persistedAtMs)
+              ? remote.persistedAtMs
+              : 0;
+            const shouldApplyRemote =
+              remotePersistedAtMs > localPersistedAtMs
+              || (remotePersistedAtMs === 0 && localPersistedAtMs === 0 && !localPersisted.hasPrefs);
+            if (!shouldApplyRemote && (localPersistedAtMs > 0 || localPersisted.hasPrefs)) {
+              loaded = true;
+              break;
+            }
             const uiPatch: PersistedUiPrefs = {};
 
             const maybeString = (k: string) => (typeof remote[k] === 'string' ? String(remote[k]) : undefined);
@@ -326,7 +350,10 @@ export function useTopMenuAccountSettingsSync({ dispatch, ui, account }: Args) {
 
     if (saveTimerRef.current) window.clearTimeout(saveTimerRef.current);
     saveTimerRef.current = window.setTimeout(() => {
-      void saveAccountSettings(token, settingsPayload)
+      void saveAccountSettings(token, {
+        ...settingsPayload,
+        persistedAtMs: Date.now()
+      })
         .then(() => {
           lastSavedJsonRef.current = payloadJson;
         })

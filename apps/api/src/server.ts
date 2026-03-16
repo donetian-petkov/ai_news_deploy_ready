@@ -362,6 +362,7 @@ const providerKeyBodySchema = z.object({
 });
 
 const accountSettingsSchema = z.object({
+  persistedAtMs: z.number().finite().nonnegative().optional(),
   language: z.union([z.literal('en'), z.literal('bg')]).optional(),
   colorMode: z.union([z.literal('system'), z.literal('dark'), z.literal('light')]).optional(),
   menuCollapsed: z.boolean().optional(),
