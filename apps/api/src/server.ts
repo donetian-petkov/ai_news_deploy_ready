@@ -7,7 +7,7 @@ import crypto from 'crypto';
 import dotenv from 'dotenv';
 import OpenAI from 'openai';
 import { PrismaClient } from '@prisma/client';
-import { aiProviderSchema, clientMsgSchema, type ClientMsg } from '@ai-news/shared';
+import { aiFeatureSettingsSchema, aiProviderSchema, clientMsgSchema, type ClientMsg } from '@ai-news/shared';
 import { z } from 'zod';
 
 function bootstrapEnv() {
@@ -369,12 +369,17 @@ const accountSettingsSchema = z.object({
   searchVisible: z.boolean().optional(),
   addStreamVisible: z.boolean().optional(),
   allColumnControlsHidden: z.boolean().optional(),
+  showFilteredColumn: z.boolean().optional(),
+  showEmergingColumn: z.boolean().optional(),
   hideAllResearch: z.boolean().optional(),
   hideAllSummaries: z.boolean().optional(),
   vibe: z.string().trim().min(1).max(64).optional(),
   summaryLang: z.union([z.literal('bg'), z.literal('en'), z.literal('bilingual')]).optional(),
   researchLang: z.union([z.literal('bg'), z.literal('en')]).optional(),
   titleDisplayLanguage: z.union([z.literal('original'), z.literal('bg'), z.literal('en')]).optional(),
+  insightFeatures: aiFeatureSettingsSchema.optional(),
+  localImpactRegion: z.string().trim().max(120).optional(),
+  trackedTopics: z.array(z.string().trim().min(1).max(120)).max(80).optional(),
   font: z.string().trim().min(1).max(32).optional(),
   fontSize: z.string().trim().min(1).max(32).optional(),
   scheme: z.string().trim().min(1).max(32).optional(),
@@ -395,7 +400,12 @@ const accountSettingsSchema = z.object({
   summaryModel: z.string().trim().min(1).max(120).optional(),
   researchModel: z.string().trim().min(1).max(120).optional(),
   askModel: z.string().trim().min(1).max(120).optional(),
-  keywords: z.array(z.string().trim().min(1).max(80)).max(120).optional()
+  keywords: z.array(z.string().trim().min(1).max(80)).max(120).optional(),
+  dailyBriefingDelivery: z.union([z.literal('site'), z.literal('email')]).optional(),
+  dailyBriefingEmail: z.string().trim().max(200).optional(),
+  dailyBriefingFormat: z.union([z.literal('executive'), z.literal('bullets'), z.literal('narrative')]).optional(),
+  dailyBriefingAudio: z.boolean().optional(),
+  dailyBriefingFeedUrls: z.array(z.string().trim().min(1).max(400)).max(80).optional()
 }).strict();
 
 function hmacSha256(payload: string, secret: string): string {
