@@ -257,6 +257,7 @@ type News = {
   filteredOk: boolean;
 
   summary?: string;
+  summaryEligible?: boolean;
   summaryPending?: boolean;
   research?: string;
   researchPending?: boolean;
@@ -3078,6 +3079,7 @@ function broadcastNewsUpdate(it: NewsInternal) {
     matchScore: it.matchScore,
     filteredOk: it.filteredOk,
     summary: it.summary,
+    summaryEligible: isPublishedYesterday(it.publishedMs),
     summaryPending: hasSummaryJobQueuedOrRunning(it.id, it.feedUrl),
     research: it.research,
     researchPending: hasResearchJobQueuedOrRunning(it.id, it.feedUrl),
@@ -3114,6 +3116,7 @@ function sendSnapshotToSocket(ws: WebSocket) {
       matchScore: item.matchScore,
       filteredOk: item.filteredOk,
       summary: item.summary,
+      summaryEligible: isPublishedYesterday(item.publishedMs),
       summaryPending: hasSummaryJobQueuedOrRunning(item.id, item.feedUrl),
       research: item.research,
       researchPending: hasResearchJobQueuedOrRunning(item.id, item.feedUrl),
@@ -3161,6 +3164,24 @@ function shouldHaveSummary(it: NewsInternal): boolean {
     !!it.isMatch &&
     it.filteredOk !== false;
   return ownFeedSummary || filteredSummary;
+}
+
+function yesterdayWindowLocal(nowMs = Date.now()): { startMs: number; endMs: number } {
+  const todayStart = new Date(nowMs);
+  todayStart.setHours(0, 0, 0, 0);
+  const endMs = todayStart.getTime();
+  const startMs = endMs - 24 * 60 * 60 * 1000;
+  return { startMs, endMs };
+}
+
+function isPublishedYesterday(publishedMs: number, nowMs = Date.now()): boolean {
+  if (!Number.isFinite(publishedMs) || publishedMs <= 0) return false;
+  const { startMs, endMs } = yesterdayWindowLocal(nowMs);
+  return publishedMs >= startMs && publishedMs < endMs;
+}
+
+function isAutoSummaryEligible(it: NewsInternal, nowMs = Date.now()): boolean {
+  return shouldHaveSummary(it) && isPublishedYesterday(it.publishedMs, nowMs);
 }
 
 function shouldHaveResearch(it: NewsInternal): boolean {
@@ -3627,7 +3648,7 @@ function enqueueSummaryRecoveryPass(nowMs = Date.now()): number {
     if (queued >= AI_SUMMARY_RECOVERY_BATCH) break;
     if (!it?.id || !it.feedUrl) continue;
     if (hiddenIds.has(it.id)) continue;
-    if (!shouldHaveSummary(it)) continue;
+    if (!isAutoSummaryEligible(it, nowMs)) continue;
     if (it.summary && it.summary.trim()) {
       summaryRetryCooldownUntilMs.delete(summaryItemKey(it.id, it.feedUrl));
       continue;
@@ -4199,7 +4220,9 @@ async function processFeed(fi: FeedInfo) {
         const wantFilteredResearch =
           feedSettings.get(FILTERED_FEED_URL)?.researchEnabled && filteredOk;
 
-        if (wantFeedSummary || wantFilteredSummary) enqueueJob({ kind: 'summary', id, feedUrl: fi.url });
+        if ((wantFeedSummary || wantFilteredSummary) && isPublishedYesterday(publishedMs)) {
+          enqueueJob({ kind: 'summary', id, feedUrl: fi.url });
+        }
         if (budget === 'high') enqueueJob({ kind: 'title_translate', id, feedUrl: fi.url });
         enqueueJob({ kind: 'mood', id, feedUrl: fi.url });
         enqueueJob({ kind: 'news_type', id, feedUrl: fi.url });
@@ -4749,6 +4772,7 @@ wss.on('connection', (ws: WebSocket) => {
         for (const it of list) {
           if (done >= MAX) break;
           if (!eligibleForFeed(it, feedUrl)) continue;
+          if (!isPublishedYesterday(it.publishedMs)) continue;
           if (it.summary && it.summary.trim()) continue;
           const before = hasSummaryJobQueuedOrRunning(it.id, it.feedUrl);
           enqueueJob({ kind: 'summary', id: it.id, feedUrl: it.feedUrl });
