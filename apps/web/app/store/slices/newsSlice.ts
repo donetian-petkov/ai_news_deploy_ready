@@ -175,6 +175,9 @@ const newsSlice = createSlice({
   name: 'news',
   initialState,
   reducers: {
+    resetNewsState() {
+      return initialState;
+    },
     setHiddenIds(state, action: PayloadAction<string[]>) {
       state.hiddenIds = action.payload;
     },
@@ -313,6 +316,7 @@ const newsSlice = createSlice({
 });
 
 export const {
+  resetNewsState,
   setHiddenIds,
   hideItemLocally,
   removeOldItemsInFeed,

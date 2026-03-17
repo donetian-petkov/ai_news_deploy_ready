@@ -1,6 +1,7 @@
 'use client';
 
 import { Box } from '@mui/material';
+import { useAppSelector } from '../store/hooks';
 import { FeedColumnsProvider } from './columns/context/FeedColumnsProvider';
 import { FeedColumnsGrid } from './columns/FeedColumnsGrid';
 import { useReactColumnsPreviewController } from './columns/hooks/useReactColumnsPreviewController';
@@ -14,13 +15,18 @@ type Props = {
 
 export default function ReactColumnsPreview({ wsUrl }: Props) {
   const { columnsContextValue } = useReactColumnsPreviewController({ wsUrl });
+  const newsAccessLocked = useAppSelector(state => state.ui.newsAccessLocked);
 
   return (
     <Box className="container" sx={{ pt: 1, pb: 0.5, position: 'relative' }}>
       <FeedColumnsProvider value={columnsContextValue}>
-        <ReactColumnsHeader />
-        <FeedColumnsGrid />
-        <ClipboardNotice />
+        {!newsAccessLocked ? (
+          <>
+            <ReactColumnsHeader />
+            <FeedColumnsGrid />
+            <ClipboardNotice />
+          </>
+        ) : null}
         <NewsAccessGate />
       </FeedColumnsProvider>
     </Box>

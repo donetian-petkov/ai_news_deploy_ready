@@ -133,6 +133,7 @@ function normalizeInsightFeatures(
 }
 
 type UiState = {
+  newsAccessLocked: boolean;
   language: 'en' | 'bg';
   colorMode: 'system' | 'dark' | 'light';
   searchQuery: string;
@@ -189,6 +190,7 @@ type UiState = {
 };
 
 const initialState: UiState = {
+  newsAccessLocked: false,
   language: 'en',
   colorMode: 'system',
   searchQuery: '',
@@ -295,8 +297,9 @@ const uiSlice = createSlice({
         state.notifyMode = next.notifyMode;
       }
     },
-    setAiSettings(state, action: PayloadAction<Partial<Pick<UiState, 'aiAvailable' | 'aiEnabled' | 'aiProvider' | 'summaryLang' | 'researchLang' | 'titleDisplayLanguage' | 'insightFeatures' | 'localImpactRegion' | 'trackedTopics' | 'summaryModel' | 'researchModel' | 'askModel' | 'availableModels' | 'allBudget' | 'dailyBriefingDelivery' | 'dailyBriefingEmail' | 'dailyBriefingFormat' | 'dailyBriefingAudio' | 'dailyBriefingFeedUrls'>>>) {
+    setAiSettings(state, action: PayloadAction<Partial<Pick<UiState, 'newsAccessLocked' | 'aiAvailable' | 'aiEnabled' | 'aiProvider' | 'summaryLang' | 'researchLang' | 'titleDisplayLanguage' | 'insightFeatures' | 'localImpactRegion' | 'trackedTopics' | 'summaryModel' | 'researchModel' | 'askModel' | 'availableModels' | 'allBudget' | 'dailyBriefingDelivery' | 'dailyBriefingEmail' | 'dailyBriefingFormat' | 'dailyBriefingAudio' | 'dailyBriefingFeedUrls'>>>) {
       const next = action.payload;
+      if (typeof next.newsAccessLocked === 'boolean') state.newsAccessLocked = next.newsAccessLocked;
       if (typeof next.aiAvailable === 'boolean') state.aiAvailable = next.aiAvailable;
       if (typeof next.aiEnabled === 'boolean') state.aiEnabled = next.aiEnabled;
       if (next.aiProvider === 'openai' || next.aiProvider === 'claude' || next.aiProvider === 'openrouter') state.aiProvider = next.aiProvider;

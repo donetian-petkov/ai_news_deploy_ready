@@ -35,7 +35,7 @@ import {
 } from './valueEnums';
 import { setStatus } from './slices/connectionSlice';
 import { setFeeds } from './slices/feedsSlice';
-import { receiveAskReply, setHiddenIds, upsertNewsBatch } from './slices/newsSlice';
+import { receiveAskReply, resetNewsState, setHiddenIds, upsertNewsBatch } from './slices/newsSlice';
 import { setUsage } from './slices/aiUsageSlice';
 import { enqueueToast, setAiSettings, setKeywords } from './slices/uiSlice';
 import { failBriefing, receiveBriefing } from './slices/briefingSlice';
@@ -48,6 +48,7 @@ let pendingNewsTimer: ReturnType<typeof setTimeout> | null = null;
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 let reconnectAttempt = 0;
 let shouldReconnect = false;
+let newsAccessLockedCurrent = false;
 
 const NEWS_FLUSH_INTERVAL_MS = 45;
 const NEWS_FLUSH_MAX_BATCH = 80;
@@ -530,6 +531,7 @@ function openWsConnection(dispatch: AppDispatch, nextUrl: string, isReconnect: b
       dispatch(setFeeds(parsedFeeds));
       dispatch(setKeywords(parsedKeywords));
       dispatch(setAiSettings({
+        newsAccessLocked: !!msg.newsAccessLocked,
         aiAvailable: !!msg.aiAvailable,
         aiEnabled: !!msg.aiEnabled,
         aiProvider: isAiProvider(msg.aiProvider)
@@ -550,6 +552,12 @@ function openWsConnection(dispatch: AppDispatch, nextUrl: string, isReconnect: b
         localImpactRegion: isString(msg.localRegion) ? msg.localRegion : undefined,
         trackedTopics: parseTrimmedList(msg.trackedTopics, 80)
       }));
+      newsAccessLockedCurrent = !!msg.newsAccessLocked;
+      if (newsAccessLockedCurrent) {
+        resetPendingNews();
+        hiddenIds = new Set();
+        dispatch(resetNewsState());
+      }
 
       const hidden: string[] = [];
       if (Array.isArray(msg.hiddenIds)) {
@@ -645,6 +653,7 @@ function openWsConnection(dispatch: AppDispatch, nextUrl: string, isReconnect: b
 
     const news = parseNews(msg);
     if (!news) return;
+    if (newsAccessLockedCurrent) return;
     if (hiddenIds.has(news.id)) return;
     pendingNews.push(news);
     if (pendingNews.length >= NEWS_FLUSH_MAX_BATCH) {

@@ -6,6 +6,7 @@ describe('uiSlice', () => {
   it('returns the initial state', () => {
     const state = uiReducer(undefined, { type: '@@INIT' });
     expect(state).toEqual({
+      newsAccessLocked: false,
       language: 'en',
       colorMode: 'system',
       searchQuery: '',
