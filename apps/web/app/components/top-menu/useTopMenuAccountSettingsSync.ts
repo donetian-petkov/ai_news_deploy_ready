@@ -101,8 +101,6 @@ export function useTopMenuAccountSettingsSync({ dispatch, ui, account }: Args) {
     allColumnControlsHidden: ui.allColumnControlsHidden,
     showFilteredColumn: ui.showFilteredColumn,
     showEmergingColumn: ui.showEmergingColumn,
-    hideAllResearch: ui.hideAllResearch,
-    hideAllSummaries: ui.hideAllSummaries,
     notifyEnabled: ui.notifyEnabled,
     notifyMode: ui.notifyMode,
     moodFilter: ui.moodFilter,
@@ -136,7 +134,7 @@ export function useTopMenuAccountSettingsSync({ dispatch, ui, account }: Args) {
     researchModel: ui.researchModel,
     askModel: ui.askModel,
     keywords: Array.isArray(ui.keywords) ? ui.keywords : []
-  }), [ui.addStreamVisible, ui.aiProvider, ui.allBudget, ui.allColumnControlsHidden, ui.askModel, ui.buttonMode, ui.colorMode, ui.controlsCollapsed, ui.dailyBriefingAudio, ui.dailyBriefingDelivery, ui.dailyBriefingEmail, ui.dailyBriefingFeedUrls, ui.dailyBriefingFormat, ui.dateFormat, ui.effectIntensity, ui.font, ui.fontSize, ui.hideAllResearch, ui.hideAllSummaries, ui.insightFeatures, ui.keywords, ui.language, ui.localImpactRegion, ui.menuCollapsed, ui.menuHintMode, ui.moodFilter, ui.notifyEnabled, ui.notifyMode, ui.performanceMode, ui.researchLang, ui.researchModel, ui.scheme, ui.searchVisible, ui.soundEnabled, ui.soundTheme, ui.summaryLang, ui.summaryModel, ui.timezone, ui.titleDisplayLanguage, ui.trackedTopics, ui.typeFilter, ui.vibe]);
+  }), [ui.addStreamVisible, ui.aiProvider, ui.allBudget, ui.allColumnControlsHidden, ui.askModel, ui.buttonMode, ui.colorMode, ui.controlsCollapsed, ui.dailyBriefingAudio, ui.dailyBriefingDelivery, ui.dailyBriefingEmail, ui.dailyBriefingFeedUrls, ui.dailyBriefingFormat, ui.dateFormat, ui.effectIntensity, ui.font, ui.fontSize, ui.insightFeatures, ui.keywords, ui.language, ui.localImpactRegion, ui.menuCollapsed, ui.menuHintMode, ui.moodFilter, ui.notifyEnabled, ui.notifyMode, ui.performanceMode, ui.researchLang, ui.researchModel, ui.scheme, ui.searchVisible, ui.soundEnabled, ui.soundTheme, ui.summaryLang, ui.summaryModel, ui.timezone, ui.titleDisplayLanguage, ui.trackedTopics, ui.typeFilter, ui.vibe]);
 
   useEffect(() => {
     const userId = account.user?.id ?? null;
@@ -195,8 +193,6 @@ export function useTopMenuAccountSettingsSync({ dispatch, ui, account }: Args) {
               'allColumnControlsHidden',
               'showFilteredColumn',
               'showEmergingColumn',
-              'hideAllResearch',
-              'hideAllSummaries',
               'notifyEnabled',
               'notifyMode',
               'moodFilter',
