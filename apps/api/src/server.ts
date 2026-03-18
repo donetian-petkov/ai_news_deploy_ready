@@ -1859,23 +1859,36 @@ const FACT_HIGHLIGHT_HEADLINE_STOPWORDS = new Set([
   'after',
   'against',
   'amid',
+  'best',
   'before',
+  'can',
   'during',
   'for',
   'from',
+  'how',
   'inside',
   'keep',
+  'live',
   'near',
   'new',
+  'online',
   'only',
   'over',
   'pays',
+  'should',
   'speak',
   'silent',
+  'top',
   'tribute',
   'under',
+  'watch',
+  'what',
   'when',
   'with',
+  'who',
+  'why',
+  'will',
+  'worst',
   'you'
 ]);
 
@@ -1883,8 +1896,7 @@ function factHighlightSourceText(item: NewsInternal): string {
   return [
     item.summary,
     item.research,
-    item.__ctx,
-    item.__linkText
+    item.__ctx
   ]
     .filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
     .join('\n');
@@ -1951,7 +1963,7 @@ function isLikelyQuoteFact(value: string): boolean {
 }
 
 function extractFactHighlights(item: NewsInternal): FactHighlightsInsight | undefined {
-  const text = factHighlightSourceText(item) || combinedInsightText(item);
+  const text = factHighlightSourceText(item);
   if (!text) return undefined;
   const peopleMatches = collectRegexMatches(text, /([\p{Lu}][\p{Ll}]+(?:[-\s]+[\p{Lu}][\p{Ll}]+){1,2})/gu);
   const locationMatches = collectRegexMatches(text, /(?:\b(?:in|from|at|near|across|inside|outside|around|within)\s+)([\p{Lu}][\p{Ll}]+(?:[-\s]+[\p{Lu}][\p{Ll}]+){0,2})/gu);
