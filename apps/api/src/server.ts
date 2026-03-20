@@ -284,6 +284,22 @@ type AiModelKind = 'summary' | 'research' | 'ask';
 type AiModelSelection = Record<AiModelKind, string>;
 type ProviderModelOptions = Record<AiModelKind, string[]>;
 type ModelOptionsByProvider = Record<AIProvider, ProviderModelOptions>;
+type AiUsageKindStats = {
+  requests: number;
+  inputTokens: number;
+  outputTokens: number;
+  totalTokens: number;
+};
+type AiUsageRecentEntry = {
+  id: string;
+  kind: AiModelKind;
+  model: string;
+  label: string;
+  inputTokens: number;
+  outputTokens: number;
+  totalTokens: number;
+  createdAt: number;
+};
 
 type Config = {
   type: 'config';
@@ -316,6 +332,9 @@ type Config = {
   aiUsageInputTokens: number;
   aiUsageOutputTokens: number;
   aiUsageTotalTokens: number;
+  aiUsageRuntimeStartedAt: number;
+  aiUsageByKind: Record<AiModelKind, AiUsageKindStats>;
+  aiUsageRecent: AiUsageRecentEntry[];
 };
 
 type AskAgentReply = {
@@ -1250,49 +1269,111 @@ if (!['bg', 'en', 'bilingual'].includes(summaryLang)) summaryLang = 'bilingual';
 let researchLang: ResearchLang = (process.env.RESEARCH_LANG as ResearchLang) || 'bg';
 if (!['bg', 'en'].includes(researchLang)) researchLang = 'bg';
 
+const AI_USAGE_LOG_LIMIT = 80;
+const aiUsageRuntimeStartedAt = Date.now();
 let aiUsageInputTokens = 0;
 let aiUsageOutputTokens = 0;
 let aiUsageTotalTokens = 0;
+let aiUsageSequence = 0;
+const aiUsageByKind: Record<AiModelKind, AiUsageKindStats> = {
+  summary: { requests: 0, inputTokens: 0, outputTokens: 0, totalTokens: 0 },
+  research: { requests: 0, inputTokens: 0, outputTokens: 0, totalTokens: 0 },
+  ask: { requests: 0, inputTokens: 0, outputTokens: 0, totalTokens: 0 }
+};
+const aiUsageRecent: AiUsageRecentEntry[] = [];
 
-function trackUsage(inputRaw: unknown, outputRaw: unknown, totalRaw: unknown) {
+function normalizeAiUsageLabel(labelRaw: unknown) {
+  const label = String(labelRaw || '').replace(/\s+/g, ' ').trim();
+  if (!label) return '';
+  if (label.length <= 120) return label;
+  const cut = label.slice(0, 120);
+  const lastSpace = cut.lastIndexOf(' ');
+  return `${(lastSpace > 48 ? cut.slice(0, lastSpace) : cut).trim()}...`;
+}
+
+function buildAiUsagePayload() {
+  return {
+    aiUsageInputTokens,
+    aiUsageOutputTokens,
+    aiUsageTotalTokens,
+    aiUsageRuntimeStartedAt,
+    aiUsageByKind: {
+      summary: { ...aiUsageByKind.summary },
+      research: { ...aiUsageByKind.research },
+      ask: { ...aiUsageByKind.ask }
+    },
+    aiUsageRecent: aiUsageRecent.map(entry => ({ ...entry }))
+  };
+}
+
+function trackUsage(
+  kind: AiModelKind,
+  model: string,
+  inputRaw: unknown,
+  outputRaw: unknown,
+  totalRaw: unknown,
+  labelRaw?: unknown
+) {
   const input = Number(inputRaw || 0);
   const output = Number(outputRaw || 0);
   const total = Number(totalRaw || (input + output) || 0);
   if (!Number.isFinite(input) && !Number.isFinite(output) && !Number.isFinite(total)) return;
 
-  aiUsageInputTokens += Number.isFinite(input) ? Math.max(0, Math.floor(input)) : 0;
-  aiUsageOutputTokens += Number.isFinite(output) ? Math.max(0, Math.floor(output)) : 0;
-  aiUsageTotalTokens += Number.isFinite(total)
+  const safeInput = Number.isFinite(input) ? Math.max(0, Math.floor(input)) : 0;
+  const safeOutput = Number.isFinite(output) ? Math.max(0, Math.floor(output)) : 0;
+  const safeTotal = Number.isFinite(total)
     ? Math.max(0, Math.floor(total))
     : Math.max(0, Math.floor(input + output));
+  aiUsageInputTokens += safeInput;
+  aiUsageOutputTokens += safeOutput;
+  aiUsageTotalTokens += safeTotal;
+
+  aiUsageByKind[kind].requests += 1;
+  aiUsageByKind[kind].inputTokens += safeInput;
+  aiUsageByKind[kind].outputTokens += safeOutput;
+  aiUsageByKind[kind].totalTokens += safeTotal;
+
+  aiUsageRecent.unshift({
+    id: `usage-${++aiUsageSequence}`,
+    kind,
+    model: String(model || '').trim() || 'unknown',
+    label: normalizeAiUsageLabel(labelRaw) || `${kind} request`,
+    inputTokens: safeInput,
+    outputTokens: safeOutput,
+    totalTokens: safeTotal,
+    createdAt: Date.now()
+  });
+  if (aiUsageRecent.length > AI_USAGE_LOG_LIMIT) aiUsageRecent.length = AI_USAGE_LOG_LIMIT;
 
   const payload = JSON.stringify({
     type: 'ai_usage',
     inputTokens: aiUsageInputTokens,
     outputTokens: aiUsageOutputTokens,
-    totalTokens: aiUsageTotalTokens
+    totalTokens: aiUsageTotalTokens,
+    runtimeStartedAt: aiUsageRuntimeStartedAt,
+    byKind: {
+      summary: { ...aiUsageByKind.summary },
+      research: { ...aiUsageByKind.research },
+      ask: { ...aiUsageByKind.ask }
+    },
+    recent: aiUsageRecent.map(entry => ({ ...entry }))
   });
   wss.clients.forEach((c: WebSocket) => {
     if (c.readyState === WebSocket.OPEN) c.send(payload);
   });
-
-  void prisma.aiUsageSnapshot.create({
-    data: {
-      inputTokens: aiUsageInputTokens,
-      outputTokens: aiUsageOutputTokens,
-      totalTokens: aiUsageTotalTokens
-    }
-  }).catch(() => {});
 }
 
-function trackUsageFromResponse(resp: any) {
+function trackUsageFromResponse(kind: AiModelKind, model: string, resp: any, labelRaw?: unknown) {
   const usage = (resp && typeof resp === 'object') ? (resp as any).usage : null;
   if (!usage || typeof usage !== 'object') return;
 
   trackUsage(
+    kind,
+    model,
     usage.input_tokens || usage.prompt_tokens || 0,
     usage.output_tokens || usage.completion_tokens || 0,
-    usage.total_tokens || 0
+    usage.total_tokens || 0,
+    labelRaw
   );
 }
 
@@ -3006,10 +3087,12 @@ async function fetchArticleText(link: string, maxChars: number): Promise<string>
 
 // ---------------- AI calls ----------------
 async function generateWithOpenAiLike(
+  kind: AiModelKind,
   model: string,
   input: string,
   maxOutputTokens: number,
-  temperature: number
+  temperature: number,
+  labelRaw?: unknown
 ): Promise<string | undefined> {
   const client = activeOpenAiLikeClient();
   if (!client) return undefined;
@@ -3019,16 +3102,18 @@ async function generateWithOpenAiLike(
     max_output_tokens: maxOutputTokens,
     temperature
   });
-  trackUsageFromResponse(resp);
+  trackUsageFromResponse(kind, model, resp, labelRaw);
   const text = (resp.output_text || '').trim();
   return text || undefined;
 }
 
 async function generateWithClaude(
+  kind: AiModelKind,
   model: string,
   input: string,
   maxOutputTokens: number,
-  temperature: number
+  temperature: number,
+  labelRaw?: unknown
 ): Promise<string | undefined> {
   if (!providerApiKeys.claude) return undefined;
 
@@ -3053,7 +3138,7 @@ async function generateWithClaude(
 
   const json = await res.json() as any;
   const usage = json?.usage || {};
-  trackUsage(usage.input_tokens || 0, usage.output_tokens || 0, 0);
+  trackUsage(kind, model, usage.input_tokens || 0, usage.output_tokens || 0, 0, labelRaw);
 
   const text = Array.isArray(json?.content)
     ? json.content
@@ -3069,16 +3154,17 @@ async function generateAiText(
   kind: 'summary' | 'research' | 'ask',
   input: string,
   maxOutputTokens: number,
-  temperature: number
+  temperature: number,
+  labelRaw?: unknown
 ): Promise<string | undefined> {
   if (!aiEnabled || !aiAvailable) return undefined;
   const model = activeModel(kind);
   if (!model || model === 'none') return undefined;
 
   if (aiProvider === 'claude') {
-    return generateWithClaude(model, input, maxOutputTokens, temperature);
+    return generateWithClaude(kind, model, input, maxOutputTokens, temperature, labelRaw);
   }
-  return generateWithOpenAiLike(model, input, maxOutputTokens, temperature);
+  return generateWithOpenAiLike(kind, model, input, maxOutputTokens, temperature, labelRaw);
 }
 
 async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string): Promise<T> {
@@ -3107,7 +3193,7 @@ async function oneLineSummary(
     `Headline: ${title}\n` +
     (context ? `Context: ${context}\n` : '');
 
-  const generated = await generateAiText('summary', input, budgetToTokensSummary(budget), 0.2);
+  const generated = await generateAiText('summary', input, budgetToTokensSummary(budget), 0.2, `Summary: ${source} - ${title}`);
   if (!generated) return generated;
   return enforceSummaryLanguage(generated, summaryLang);
 }
@@ -3129,7 +3215,8 @@ async function translateTitleBilingual(
       'summary',
       `${titleTranslateSingleInstruction(lang)}\nSource: ${source}\nHeadline: ${originalTitle}\n`,
       maxTokens,
-      0
+      0,
+      `Title translation (${lang}): ${source} - ${originalTitle}`
     );
     return normalizeTitleValue(retryText || '');
   };
@@ -3139,7 +3226,7 @@ async function translateTitleBilingual(
     `Source: ${source}\n` +
     `Headline: ${originalTitle}\n`;
 
-  const text = await generateAiText('summary', input, maxTokens, 0);
+  const text = await generateAiText('summary', input, maxTokens, 0, `Title translation: ${source} - ${originalTitle}`);
   const parsed = text ? parseTitleTranslation(text) : undefined;
 
   let bg = normalizeTitleValue(parsed?.bg || '');
@@ -3218,7 +3305,7 @@ async function oneItemResearch(
     (context ? `RSS context: ${context}\n` : '') +
     (linkText ? `Article text (may be partial): ${linkText}\n` : '');
 
-  return generateAiText('research', input, budgetToTokensResearch(budget), 0.25);
+  return generateAiText('research', input, budgetToTokensResearch(budget), 0.25, `Research: ${source} - ${title}`);
 }
 
 async function oneItemResearchFallback(
@@ -3237,7 +3324,7 @@ async function oneItemResearchFallback(
     'Note: article body fetch was slow/unavailable. Use available context only.';
 
   const maxTokens = Math.max(220, Math.floor(budgetToTokensResearch(budget) * 0.62));
-  return generateAiText('research', input, maxTokens, 0.2);
+  return generateAiText('research', input, maxTokens, 0.2, `Research fallback: ${source} - ${title}`);
 }
 
 async function classifyMoodForItem(
@@ -3255,7 +3342,7 @@ async function classifyMoodForItem(
     (context ? `Context: ${context}\n` : '') +
     (summary ? `Summary: ${summary}\n` : '') +
     (research ? `Research: ${research}\n` : '');
-  const text = await generateAiText('research', input, Math.max(12, Math.min(28, budgetToTokensSummary(budget))), 0);
+  const text = await generateAiText('research', input, Math.max(12, Math.min(28, budgetToTokensSummary(budget))), 0, `Mood classification: ${source} - ${title}`);
   if (!text) return undefined;
   return normalizeMood(text);
 }
@@ -3275,7 +3362,7 @@ async function classifyNewsTypeForItem(
     (context ? `Context: ${context}\n` : '') +
     (summary ? `Summary: ${summary}\n` : '') +
     (research ? `Research: ${research}\n` : '');
-  const text = await generateAiText('research', input, Math.max(16, Math.min(34, budgetToTokensSummary(budget))), 0);
+  const text = await generateAiText('research', input, Math.max(16, Math.min(34, budgetToTokensSummary(budget))), 0, `Type classification: ${source} - ${title}`);
   if (!text) return undefined;
   return normalizeNewsType(text) || 'other';
 }
@@ -3312,7 +3399,7 @@ async function askAgentAboutItem(
     (item.__ctx ? `RSS context: ${item.__ctx}\n` : '') +
     (item.__linkText ? `Article text (may be partial): ${item.__linkText}\n` : '');
 
-  return generateAiText('ask', input, budgetToTokensAsk(budget), 0.2);
+  return generateAiText('ask', input, budgetToTokensAsk(budget), 0.2, `Ask agent: ${item.source} - ${item.title}`);
 }
 // -----------------------------------------
 
@@ -3346,9 +3433,7 @@ function broadcastConfig() {
     feeds: currentFeeds(),
     feedSettings: feedSettingsObj(),
     hiddenIds: Array.from(hiddenIds),
-    aiUsageInputTokens,
-    aiUsageOutputTokens,
-    aiUsageTotalTokens
+    ...buildAiUsagePayload()
   };
 
   const payload = JSON.stringify(cfg);
@@ -4703,9 +4788,7 @@ wss.on('connection', (ws: WebSocket) => {
     feeds: currentFeeds(),
     feedSettings: feedSettingsObj(),
     hiddenIds: Array.from(hiddenIds),
-    aiUsageInputTokens,
-    aiUsageOutputTokens,
-    aiUsageTotalTokens
+    ...buildAiUsagePayload()
   } satisfies Config));
 
   reprocessCachedItems(false);
