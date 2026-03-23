@@ -831,6 +831,33 @@ app.get('/api/ops/ai-jobs', (req, res) => {
   });
 });
 
+app.get('/api/ops/ai-summary-debug', (req, res) => {
+  const itemId = String(req.query.itemId || '').trim();
+  const feedUrl = String(req.query.feedUrl || '').trim();
+  const statusRaw = String(req.query.status || '').trim();
+  const limitRaw = Number(req.query.limit);
+  const limit = Number.isFinite(limitRaw) ? Math.max(1, Math.min(500, Math.floor(limitRaw))) : 80;
+  const statuses: SummaryDebugEvent['status'][] = ['start', 'success', 'empty', 'error'];
+  const status = statuses.includes(statusRaw as SummaryDebugEvent['status'])
+    ? (statusRaw as SummaryDebugEvent['status'])
+    : '';
+
+  const events = summaryDebugEvents
+    .filter(event => (!itemId || event.itemId === itemId) && (!feedUrl || event.feedUrl === feedUrl) && (!status || event.status === status))
+    .slice(-limit)
+    .reverse();
+
+  res.json({
+    ok: true,
+    now: new Date().toISOString(),
+    provider: aiProvider,
+    model: activeModel('summary'),
+    aiAvailable,
+    aiEnabled,
+    events
+  });
+});
+
 const server = app.listen(PORT, () =>
   console.log(`Live RSS running at http://localhost:${PORT}`)
 );
@@ -1375,6 +1402,59 @@ function trackUsageFromResponse(kind: AiModelKind, model: string, resp: any, lab
     usage.total_tokens || 0,
     labelRaw
   );
+}
+
+function previewText(raw: unknown, limit = 360): string {
+  const text = String(raw || '').replace(/\s+/g, ' ').trim();
+  if (!text) return '';
+  if (text.length <= limit) return text;
+  return `${text.slice(0, Math.max(0, limit - 3)).trim()}...`;
+}
+
+function previewJson(raw: unknown, limit = 900): string {
+  try {
+    return previewText(JSON.stringify(raw), limit);
+  } catch {
+    return previewText(raw, limit);
+  }
+}
+
+function recordSummaryDebugEvent(event: SummaryDebugEvent) {
+  summaryDebugEvents.push(event);
+  if (summaryDebugEvents.length > AI_SUMMARY_DEBUG_MAX) {
+    summaryDebugEvents.splice(0, summaryDebugEvents.length - AI_SUMMARY_DEBUG_MAX);
+  }
+}
+
+function extractOpenAiLikeText(resp: any): { text: string; extractionSource: string } {
+  const direct = String(resp?.output_text || '').trim();
+  if (direct) {
+    return { text: direct, extractionSource: 'output_text' };
+  }
+
+  const output = Array.isArray(resp?.output) ? resp.output : [];
+  const parts: string[] = [];
+  for (const item of output) {
+    const content = Array.isArray(item?.content) ? item.content : [];
+    for (const block of content) {
+      if (!block || typeof block !== 'object') continue;
+      const text = typeof block.text === 'string'
+        ? block.text
+        : typeof block.value === 'string'
+          ? block.value
+          : '';
+      if (!text) continue;
+      const type = String(block.type || '').trim();
+      if (type === 'output_text' || type === 'text' || !type) {
+        parts.push(text);
+      }
+    }
+  }
+
+  return {
+    text: parts.join('\n').trim(),
+    extractionSource: parts.length ? 'output.content' : 'none'
+  };
 }
 
 // ---------------- Persistence (JSON) ----------------
@@ -3092,19 +3172,63 @@ async function generateWithOpenAiLike(
   input: string,
   maxOutputTokens: number,
   temperature: number,
-  labelRaw?: unknown
+  labelRaw?: unknown,
+  debugMeta?: SummaryDebugMeta
 ): Promise<string | undefined> {
   const client = activeOpenAiLikeClient();
   if (!client) return undefined;
-  const resp = await client.responses.create({
-    model,
-    input,
-    max_output_tokens: maxOutputTokens,
-    temperature
-  });
-  trackUsageFromResponse(kind, model, resp, labelRaw);
-  const text = (resp.output_text || '').trim();
-  return text || undefined;
+  const startedAt = Date.now();
+  try {
+    const resp = await client.responses.create({
+      model,
+      input,
+      max_output_tokens: maxOutputTokens,
+      temperature
+    });
+    trackUsageFromResponse(kind, model, resp, labelRaw);
+    const extracted = extractOpenAiLikeText(resp);
+    if (kind === 'summary' && debugMeta) {
+      recordSummaryDebugEvent({
+        atMs: Date.now(),
+        isoTime: new Date().toISOString(),
+        itemId: debugMeta.itemId,
+        feedUrl: debugMeta.feedUrl,
+        source: debugMeta.source,
+        title: debugMeta.title,
+        provider: aiProvider,
+        model,
+        status: extracted.text ? 'success' : 'empty',
+        durationMs: Date.now() - startedAt,
+        extractionSource: extracted.extractionSource,
+        promptPreview: previewText(input),
+        responsePreview: previewJson({
+          output_text: resp?.output_text,
+          output: resp?.output,
+          usage: resp?.usage
+        }),
+        summaryPreview: previewText(extracted.text)
+      });
+    }
+    return extracted.text || undefined;
+  } catch (error) {
+    if (kind === 'summary' && debugMeta) {
+      recordSummaryDebugEvent({
+        atMs: Date.now(),
+        isoTime: new Date().toISOString(),
+        itemId: debugMeta.itemId,
+        feedUrl: debugMeta.feedUrl,
+        source: debugMeta.source,
+        title: debugMeta.title,
+        provider: aiProvider,
+        model,
+        status: 'error',
+        durationMs: Date.now() - startedAt,
+        promptPreview: previewText(input),
+        error: previewText((error as Error)?.message || error, 500)
+      });
+    }
+    throw error;
+  }
 }
 
 async function generateWithClaude(
@@ -3113,41 +3237,85 @@ async function generateWithClaude(
   input: string,
   maxOutputTokens: number,
   temperature: number,
-  labelRaw?: unknown
+  labelRaw?: unknown,
+  debugMeta?: SummaryDebugMeta
 ): Promise<string | undefined> {
   if (!providerApiKeys.claude) return undefined;
+  const startedAt = Date.now();
 
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': providerApiKeys.claude,
-      'anthropic-version': '2023-06-01'
-    },
-    body: JSON.stringify({
-      model,
-      max_tokens: maxOutputTokens,
-      temperature,
-      messages: [{ role: 'user', content: input }]
-    })
-  });
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': providerApiKeys.claude,
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify({
+        model,
+        max_tokens: maxOutputTokens,
+        temperature,
+        messages: [{ role: 'user', content: input }]
+      })
+    });
 
-  if (!res.ok) {
-    throw new Error(`Claude HTTP ${res.status}`);
+    if (!res.ok) {
+      throw new Error(`Claude HTTP ${res.status}`);
+    }
+
+    const json = await res.json() as any;
+    const usage = json?.usage || {};
+    trackUsage(kind, model, usage.input_tokens || 0, usage.output_tokens || 0, 0, labelRaw);
+
+    const text = Array.isArray(json?.content)
+      ? json.content
+        .filter((x: any) => x && x.type === 'text' && typeof x.text === 'string')
+        .map((x: any) => String(x.text))
+        .join('\n')
+        .trim()
+      : '';
+
+    if (kind === 'summary' && debugMeta) {
+      recordSummaryDebugEvent({
+        atMs: Date.now(),
+        isoTime: new Date().toISOString(),
+        itemId: debugMeta.itemId,
+        feedUrl: debugMeta.feedUrl,
+        source: debugMeta.source,
+        title: debugMeta.title,
+        provider: aiProvider,
+        model,
+        status: text ? 'success' : 'empty',
+        durationMs: Date.now() - startedAt,
+        extractionSource: text ? 'content.text' : 'none',
+        promptPreview: previewText(input),
+        responsePreview: previewJson({
+          content: json?.content,
+          usage: json?.usage
+        }),
+        summaryPreview: previewText(text)
+      });
+    }
+    return text || undefined;
+  } catch (error) {
+    if (kind === 'summary' && debugMeta) {
+      recordSummaryDebugEvent({
+        atMs: Date.now(),
+        isoTime: new Date().toISOString(),
+        itemId: debugMeta.itemId,
+        feedUrl: debugMeta.feedUrl,
+        source: debugMeta.source,
+        title: debugMeta.title,
+        provider: aiProvider,
+        model,
+        status: 'error',
+        durationMs: Date.now() - startedAt,
+        promptPreview: previewText(input),
+        error: previewText((error as Error)?.message || error, 500)
+      });
+    }
+    throw error;
   }
-
-  const json = await res.json() as any;
-  const usage = json?.usage || {};
-  trackUsage(kind, model, usage.input_tokens || 0, usage.output_tokens || 0, 0, labelRaw);
-
-  const text = Array.isArray(json?.content)
-    ? json.content
-      .filter((x: any) => x && x.type === 'text' && typeof x.text === 'string')
-      .map((x: any) => String(x.text))
-      .join('\n')
-      .trim()
-    : '';
-  return text || undefined;
 }
 
 async function generateAiText(
@@ -3155,16 +3323,17 @@ async function generateAiText(
   input: string,
   maxOutputTokens: number,
   temperature: number,
-  labelRaw?: unknown
+  labelRaw?: unknown,
+  debugMeta?: SummaryDebugMeta
 ): Promise<string | undefined> {
   if (!aiEnabled || !aiAvailable) return undefined;
   const model = activeModel(kind);
   if (!model || model === 'none') return undefined;
 
   if (aiProvider === 'claude') {
-    return generateWithClaude(kind, model, input, maxOutputTokens, temperature, labelRaw);
+    return generateWithClaude(kind, model, input, maxOutputTokens, temperature, labelRaw, debugMeta);
   }
-  return generateWithOpenAiLike(kind, model, input, maxOutputTokens, temperature, labelRaw);
+  return generateWithOpenAiLike(kind, model, input, maxOutputTokens, temperature, labelRaw, debugMeta);
 }
 
 async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string): Promise<T> {
@@ -3182,6 +3351,8 @@ async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: str
 }
 
 async function oneLineSummary(
+  itemId: string,
+  feedUrl: string,
   title: string,
   source: string,
   context: string,
@@ -3193,7 +3364,14 @@ async function oneLineSummary(
     `Headline: ${title}\n` +
     (context ? `Context: ${context}\n` : '');
 
-  const generated = await generateAiText('summary', input, budgetToTokensSummary(budget), 0.2, `Summary: ${source} - ${title}`);
+  const generated = await generateAiText(
+    'summary',
+    input,
+    budgetToTokensSummary(budget),
+    0.2,
+    `Summary: ${source} - ${title}`,
+    { itemId, feedUrl, source, title }
+  );
   if (!generated) return generated;
   return enforceSummaryLanguage(generated, summaryLang);
 }
@@ -3599,11 +3777,35 @@ type AiJobLogEvent = {
   queueLength: number;
   inFlight: number;
 };
+type SummaryDebugMeta = {
+  itemId: string;
+  feedUrl: string;
+  source: string;
+  title: string;
+};
+type SummaryDebugEvent = {
+  atMs: number;
+  isoTime: string;
+  itemId: string;
+  feedUrl: string;
+  source: string;
+  title: string;
+  provider: AIProvider;
+  model: string;
+  status: 'start' | 'success' | 'empty' | 'error';
+  durationMs?: number;
+  extractionSource?: string;
+  promptPreview?: string;
+  responsePreview?: string;
+  summaryPreview?: string;
+  error?: string;
+};
 
 const aiQueue: AiJob[] = [];
 const aiInFlight = new Set<string>();
 const aiDeadLetters: DeadLetterAiJob[] = [];
 const aiJobLogEvents: AiJobLogEvent[] = [];
+const summaryDebugEvents: SummaryDebugEvent[] = [];
 const lastAiJobErrorAtMs = new Map<string, number>();
 
 const AI_MAX_CONCURRENCY = Math.max(1, parseInt(process.env.AI_MAX_CONCURRENCY || '1', 10));
@@ -3636,6 +3838,10 @@ const AI_JOB_LOG_FLUSH_INTERVAL_MS = Math.max(
   250,
   Number.parseInt(process.env.AI_JOB_LOG_FLUSH_INTERVAL_MS ?? '1500', 10) || 1500
 );
+const AI_SUMMARY_DEBUG_MAX = Math.max(
+  50,
+  Number.parseInt(process.env.AI_SUMMARY_DEBUG_MAX ?? '240', 10) || 240
+);
 const aiJobLogFileBuffer: string[] = [];
 let aiJobLogFlushTimer: NodeJS.Timeout | null = null;
 let aiJobLogFlushInProgress = false;
@@ -3643,6 +3849,10 @@ const AI_SUMMARY_TIMEOUT_MS = Math.max(4_000, Number.parseInt(process.env.AI_SUM
 const AI_SUMMARY_RETRY_COOLDOWN_MS = Math.max(5_000, Number.parseInt(process.env.AI_SUMMARY_RETRY_COOLDOWN_MS ?? '20_000', 10) || 20_000);
 const AI_SUMMARY_RECOVERY_INTERVAL_MS = Math.max(2_000, Number.parseInt(process.env.AI_SUMMARY_RECOVERY_INTERVAL_MS ?? '8_000', 10) || 8_000);
 const AI_SUMMARY_RECOVERY_BATCH = Math.max(1, Math.min(100, Number.parseInt(process.env.AI_SUMMARY_RECOVERY_BATCH ?? '24', 10) || 24));
+const AI_SUMMARY_BACKLOG_PAUSE_TITLE_TRANSLATE = Math.max(
+  1,
+  Number.parseInt(process.env.AI_SUMMARY_BACKLOG_PAUSE_TITLE_TRANSLATE ?? '8', 10) || 8
+);
 const AI_TITLE_RECOVERY_INTERVAL_MS = Math.max(3_000, Number.parseInt(process.env.AI_TITLE_RECOVERY_INTERVAL_MS ?? '9_000', 10) || 9_000);
 const AI_TITLE_RECOVERY_BATCH = Math.max(1, Math.min(120, Number.parseInt(process.env.AI_TITLE_RECOVERY_BATCH ?? '32', 10) || 32));
 const AI_RESEARCH_RECOVERY_INTERVAL_MS = Math.max(4_000, Number.parseInt(process.env.AI_RESEARCH_RECOVERY_INTERVAL_MS ?? '12_000', 10) || 12_000);
@@ -3812,6 +4022,15 @@ function aiQueueCounts() {
   return counts;
 }
 
+function hasSummaryBacklog(): boolean {
+  const counts = aiQueueCounts();
+  if (counts.summary >= AI_SUMMARY_BACKLOG_PAUSE_TITLE_TRANSLATE) return true;
+  for (const key of aiInFlight) {
+    if (key.startsWith('summary:')) return true;
+  }
+  return false;
+}
+
 function recordAiJobEvent(job: Pick<AiJob, 'kind' | 'id' | 'feedUrl' | 'manual'>, stage: AiJobLogStage, opts?: {
   reason?: string;
   durationMs?: number;
@@ -3872,8 +4091,8 @@ function jobPriority(j: AiJob): number {
     if (j.kind === 'mood') return 6;
     return 7; // news_type
   }
-  if (j.kind === 'title_translate') return 3;
-  if (j.kind === 'summary') return 4;
+  if (j.kind === 'summary') return 3;
+  if (j.kind === 'title_translate') return 4;
   if (j.kind === 'research') return 5;
   if (j.kind === 'mood') return 6;
   return 7; // news_type
@@ -3985,6 +4204,7 @@ function enqueueTitleTranslateBackfill(options?: {
   const targetFeedUrl = String(options?.feedUrl || '').trim();
   const max = Math.max(1, Math.min(2_000, Math.floor(options?.max ?? 320)));
   const manual = !!options?.manual;
+  if (!manual && hasSummaryBacklog()) return 0;
   const list = recent.slice().sort((a, b) => b.publishedMs - a.publishedMs);
   let done = 0;
 
@@ -4051,6 +4271,7 @@ function enqueueTitleTranslateRecoveryPass(nowMs = Date.now()): number {
   if (activeModel('summary') === 'none') return 0;
   if (nowMs - lastTitleRecoveryAtMs < AI_TITLE_RECOVERY_INTERVAL_MS) return 0;
   lastTitleRecoveryAtMs = nowMs;
+  if (hasSummaryBacklog()) return 0;
 
   let queued = 0;
   const list = recent.slice().sort((a, b) => b.publishedMs - a.publishedMs);
@@ -4149,8 +4370,20 @@ async function runOneJob(job: AiJob) {
       }
 
       const ctx = it.__ctx || '';
+      recordSummaryDebugEvent({
+        atMs: Date.now(),
+        isoTime: new Date().toISOString(),
+        itemId: it.id,
+        feedUrl: it.feedUrl,
+        source: it.source,
+        title: it.title,
+        provider: aiProvider,
+        model: activeModel('summary'),
+        status: 'start',
+        promptPreview: previewText(`${it.source} | ${it.title}`)
+      });
       const text = await withTimeout(
-        oneLineSummary(it.title, it.source, ctx, budget),
+        oneLineSummary(it.id, it.feedUrl, it.title, it.source, ctx, budget),
         AI_SUMMARY_TIMEOUT_MS,
         `summary:${it.id}`
       );
@@ -4163,6 +4396,10 @@ async function runOneJob(job: AiJob) {
         markDirty();
         markSuccess('summary_generated');
       } else {
+        summaryRetryCooldownUntilMs.set(
+          summaryItemKey(it.id, it.feedUrl),
+          Date.now() + AI_SUMMARY_RETRY_COOLDOWN_MS
+        );
         markSkip('summary_empty');
       }
       return;
