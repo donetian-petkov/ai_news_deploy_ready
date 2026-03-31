@@ -104,11 +104,13 @@ export function useTopMenuViewModel({
   onPlayToggleSound,
   onReorderFeeds
 }: Args) {
+  const desktopControlsVisible = !isMobile && showDesktopBody && !controlsCollapsed && !searchVisible && !addStreamVisible;
+  const menuVisible = isMobile ? mobileDrawerOpen : showDesktopBody;
   const searchLabel = searchVisible ? labels.hideSearch : labels.search;
   const addStreamLabel = addStreamVisible ? labels.hideAddStream : labels.addStream;
-  const controlsLabel = controlsCollapsed ? labels.showTopControls : labels.hideTopControls;
+  const controlsLabel = desktopControlsVisible ? labels.hideTopControls : labels.showTopControls;
   const allColumnLabel = allColumnControlsHidden ? labels.showAllColumnControls : labels.hideAllColumnControls;
-  const menuLabel = menuCollapsed ? labels.showMenu : labels.hideMenu;
+  const menuLabel = menuVisible ? labels.hideMenu : labels.showMenu;
 
   const orderedFeeds = useMemo(() => {
     const list = [...feeds];

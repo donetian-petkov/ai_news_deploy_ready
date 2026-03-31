@@ -1,9 +1,11 @@
 'use client';
 
+import { TopMenuSelectField } from './TopMenuSelectField';
 import { useTopMenuContext } from './context/useTopMenuContext';
 
 export function TopMenuNotificationsSection() {
   const {
+    isMobile,
     labels,
     controls: {
       model: { notifications },
@@ -24,20 +26,19 @@ export function TopMenuNotificationsSection() {
           />
           <span id="notifyEnabledLabel">{labels.notifyEnabledLabel}</span>
         </label>
-        <label className="checkbox">
-          <span id="notifyPrefix">{labels.notifyPrefix}</span>
-          <select
-            id="notifyMode"
-            className="select"
-            value={notifications.notifyMode}
-            onChange={e => actions.onNotifyModeChange(e.target.value as typeof notifications.notifyMode)}
-          >
-            <option value="matched">{labels.notifyOnlyMatched}</option>
-            <option value="matched_pinned">{labels.notifyMatchedPinned}</option>
-            <option value="pinned">{labels.notifyOnlyPinned}</option>
-            <option value="all">{labels.notifyAllColumns}</option>
-          </select>
-        </label>
+        <TopMenuSelectField
+          id="notifyMode"
+          label={labels.notifyPrefix}
+          value={notifications.notifyMode}
+          onChange={actions.onNotifyModeChange}
+          options={[
+            { value: 'matched', label: labels.notifyOnlyMatched },
+            { value: 'matched_pinned', label: labels.notifyMatchedPinned },
+            { value: 'pinned', label: labels.notifyOnlyPinned },
+            { value: 'all', label: labels.notifyAllColumns }
+          ]}
+          layout={isMobile ? 'stacked' : 'inline'}
+        />
       </div>
     </details>
   );

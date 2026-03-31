@@ -129,8 +129,15 @@ export function useTopMenuController() {
     scheduleFocus
   });
 
+  const desktopSearchVisible = !isMobile && !ui.menuCollapsed && ui.searchVisible && !ui.addStreamVisible && ui.controlsCollapsed;
+  const desktopAddStreamVisible = !isMobile && !ui.menuCollapsed && ui.addStreamVisible && !ui.searchVisible && ui.controlsCollapsed;
+  const desktopControlsVisible = !isMobile && !ui.menuCollapsed && !ui.controlsCollapsed && !ui.searchVisible && !ui.addStreamVisible;
+  const searchVisible = isMobile ? ui.searchVisible : desktopSearchVisible;
+  const addStreamVisible = isMobile ? ui.addStreamVisible : desktopAddStreamVisible;
+  const showDesktopBody = desktopSearchVisible || desktopAddStreamVisible || desktopControlsVisible;
+
   useTopMenuHotkeys({
-    searchVisible: ui.searchVisible,
+    searchVisible,
     onCloseHelp: () => dispatch(setHelpOpen(false)),
     onToggleHelp: () => dispatch(setHelpOpen(!ui.helpOpen)),
     onFocusSearch: () => scheduleFocus('search', 20),
@@ -187,7 +194,6 @@ export function useTopMenuController() {
 
   const topHintAsButtons = ui.menuHintMode === 'buttons';
   const menuItemsAsIcons = ui.buttonMode === 'icons';
-  const showDesktopBody = !isMobile && !ui.menuCollapsed;
   const searchModel = useMemo<TopMenuSearchModel>(() => ({
     isMobile,
     searchDraft,
@@ -281,8 +287,8 @@ export function useTopMenuController() {
     vibe: ui.vibe,
     hideAllResearch: ui.hideAllResearch,
     hideAllSummaries: ui.hideAllSummaries,
-    searchVisible: ui.searchVisible,
-    addStreamVisible: ui.addStreamVisible,
+    searchVisible,
+    addStreamVisible,
     account,
     controlsCollapsed: ui.controlsCollapsed,
     menuCollapsed: ui.menuCollapsed,

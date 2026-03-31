@@ -15,6 +15,18 @@ function pendingKey(feedUrl: string, id: string): string {
   return `${feedUrl}::${id}`;
 }
 
+function scrollNewsTargetIntoView(target: HTMLElement) {
+  const topbar = document.querySelector('.topbar') as HTMLElement | null;
+  const topbarHeight = topbar ? topbar.getBoundingClientRect().height : 0;
+  const extraOffset = 16;
+  const targetTop = target.getBoundingClientRect().top + window.scrollY;
+  const nextTop = Math.max(0, targetTop - topbarHeight - extraOffset);
+  window.scrollTo({
+    top: nextTop,
+    behavior: 'smooth'
+  });
+}
+
 export function FeedColumnItemsList() {
   const { feed, items, itemsVisible, shownItems, isMatchColumn, accent, soft } = useFeedColumnContext();
   const { view, state, handlers } = useFeedColumnsContext();
@@ -82,13 +94,14 @@ export function FeedColumnItemsList() {
     if (!targetId) return;
 
     const newsIdEscaped = cssEscape(targetId);
-    const target = columnRoot.querySelector(`.news-item-card[data-news-id="${newsIdEscaped}"]`) as HTMLElement | null;
-    if (!target) return;
+    const card = columnRoot.querySelector(`.news-item-card[data-news-id="${newsIdEscaped}"]`) as HTMLElement | null;
+    if (!card) return;
+    const target = card.querySelector('[data-news-title-anchor="1"]') as HTMLElement | null;
 
     pendingScrollRef.current = null;
     window.requestAnimationFrame(() => {
       window.requestAnimationFrame(() => {
-        target.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' });
+        scrollNewsTargetIntoView(target || card);
       });
     });
   }, [feed.url, shownItems]);

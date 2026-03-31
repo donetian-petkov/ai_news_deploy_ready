@@ -1013,14 +1013,14 @@ function normalizeAiFeatureSettings(
     biasDetection: typeof src.biasDetection === 'boolean' ? src.biasDetection : fallback.biasDetection,
     sensationalismDetection: typeof src.sensationalismDetection === 'boolean' ? src.sensationalismDetection : fallback.sensationalismDetection,
     factHighlights: typeof src.factHighlights === 'boolean' ? src.factHighlights : fallback.factHighlights,
-    storyImpact: typeof src.storyImpact === 'boolean' ? src.storyImpact : fallback.storyImpact,
+    storyImpact: false,
     dailyBriefing: typeof src.dailyBriefing === 'boolean' ? src.dailyBriefing : fallback.dailyBriefing,
     topicTracking: typeof src.topicTracking === 'boolean' ? src.topicTracking : fallback.topicTracking,
-    perspectiveSimulator: typeof src.perspectiveSimulator === 'boolean' ? src.perspectiveSimulator : fallback.perspectiveSimulator,
+    perspectiveSimulator: false,
     emergingStoryDetector: typeof src.emergingStoryDetector === 'boolean' ? src.emergingStoryDetector : fallback.emergingStoryDetector,
-    historicalComparison: typeof src.historicalComparison === 'boolean' ? src.historicalComparison : fallback.historicalComparison,
-    futureScenarioGenerator: typeof src.futureScenarioGenerator === 'boolean' ? src.futureScenarioGenerator : fallback.futureScenarioGenerator,
-    localImpactDetector: typeof src.localImpactDetector === 'boolean' ? src.localImpactDetector : fallback.localImpactDetector
+    historicalComparison: false,
+    futureScenarioGenerator: false,
+    localImpactDetector: false
   };
 }
 
@@ -1673,6 +1673,117 @@ function normalizeText(s: string): string {
   return String(s || '').normalize('NFKC').toLocaleLowerCase('bg').trim();
 }
 
+const STORY_LINK_DROP_QUERY_PARAMS = new Set([
+  'utm_source',
+  'utm_medium',
+  'utm_campaign',
+  'utm_term',
+  'utm_content',
+  'utm_id',
+  'fbclid',
+  'gclid',
+  'mc_cid',
+  'mc_eid',
+  'ref',
+  'source',
+  't'
+]);
+
+function normalizeStoryLink(raw: string): string {
+  const input = String(raw || '').trim();
+  if (!input) return '';
+  try {
+    const url = new URL(input);
+    url.hash = '';
+    Array.from(url.searchParams.keys()).forEach(key => {
+      const normalizedKey = key.toLocaleLowerCase();
+      if (STORY_LINK_DROP_QUERY_PARAMS.has(normalizedKey) || normalizedKey.startsWith('utm_')) {
+        url.searchParams.delete(key);
+      }
+    });
+    url.searchParams.sort();
+    url.protocol = url.protocol.toLocaleLowerCase();
+    url.hostname = url.hostname.toLocaleLowerCase();
+    url.pathname = url.pathname.replace(/\/+$/, '') || '/';
+    return url.toString();
+  } catch {
+    return input.replace(/#.*$/, '');
+  }
+}
+
+function storyLinkKey(raw: string): string {
+  return normalizeText(normalizeStoryLink(raw));
+}
+
+function storyTitleKey(raw: string): string {
+  return normalizeText(String(raw || '').replace(/\s+/g, ' ')).slice(0, 240);
+}
+
+function findReusableNewsItem(
+  feedUrl: string,
+  source: string,
+  title: string,
+  link: string,
+  publishedMs: number
+): NewsInternal | undefined {
+  const normalizedSource = normalizeText(source);
+  const normalizedTitle = storyTitleKey(title);
+  const normalizedLink = storyLinkKey(link);
+  const publishedDay = Number.isFinite(publishedMs) ? Math.floor(publishedMs / 86_400_000) : 0;
+
+  for (let i = recent.length - 1; i >= 0; i -= 1) {
+    const item = recent[i];
+    if (!item || item.type !== 'news') continue;
+    if (item.feedUrl !== feedUrl) continue;
+
+    if (normalizedLink && storyLinkKey(item.link) === normalizedLink) {
+      return item;
+    }
+
+    if (normalizeText(item.source) !== normalizedSource) continue;
+    if (storyTitleKey(item.title) !== normalizedTitle) continue;
+
+    const itemDay = Number.isFinite(item.publishedMs) ? Math.floor(item.publishedMs / 86_400_000) : 0;
+    if (!publishedDay || !itemDay || Math.abs(itemDay - publishedDay) <= 2) {
+      return item;
+    }
+  }
+
+  return undefined;
+}
+
+function mergeReusableNewsItem(
+  target: NewsInternal,
+  patch: Pick<NewsInternal, 'title' | 'link' | 'published' | 'publishedMs' | 'source' | '__ctx'>
+): boolean {
+  let changed = false;
+  if (patch.title && patch.title !== target.title) {
+    target.title = patch.title;
+    changed = true;
+  }
+  if (patch.link && patch.link !== target.link) {
+    target.link = patch.link;
+    changed = true;
+  }
+  if (patch.published && patch.published !== target.published) {
+    target.published = patch.published;
+    changed = true;
+  }
+  if (Number.isFinite(patch.publishedMs) && patch.publishedMs !== target.publishedMs) {
+    target.publishedMs = patch.publishedMs;
+    changed = true;
+  }
+  if (patch.source && patch.source !== target.source) {
+    target.source = patch.source;
+    changed = true;
+  }
+  if (patch.__ctx && patch.__ctx.length > String(target.__ctx || '').length) {
+    target.__ctx = patch.__ctx;
+    changed = true;
+  }
+  return changed;
+}
+
 function toPublishedMs(item: any): { published?: string; publishedMs: number } {
   const published =
     (typeof item.isoDate === 'string' && item.isoDate) ||
@@ -1905,18 +2016,28 @@ function insightFeatureAllowed(feature: keyof AiInsightFeatureSettings, budget: 
   return budget === 'high';
 }
 
+function joinInsightTextParts(values: Array<string | undefined>): string {
+  return values
+    .filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
+    .join('\n');
+}
+
+function rawInsightContextText(item: NewsInternal): string {
+  return joinInsightTextParts([
+    item.__ctx,
+    item.__linkText
+  ]);
+}
+
 function combinedInsightText(item: NewsInternal): string {
-  return [
+  const rawContext = rawInsightContextText(item);
+  return joinInsightTextParts([
     item.title,
     item.titleBg,
     item.titleEn,
-    item.summary,
-    item.research,
-    item.__ctx,
-    item.__linkText
-  ]
-    .filter(Boolean)
-    .join('\n');
+    rawContext,
+    rawContext ? undefined : item.summary
+  ]);
 }
 
 function compactSentence(value: string, max = 220): string {
@@ -2054,13 +2175,11 @@ const FACT_HIGHLIGHT_HEADLINE_STOPWORDS = new Set([
 ]);
 
 function factHighlightSourceText(item: NewsInternal): string {
-  return [
+  return joinInsightTextParts([
+    rawInsightContextText(item),
     item.summary,
-    item.research,
-    item.__ctx
-  ]
-    .filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
-    .join('\n');
+    item.title
+  ]);
 }
 
 function collectRegexMatches(text: string, regex: RegExp): string[] {
@@ -2211,20 +2330,86 @@ function localizedIndustryLabel(key: IndustryKey, locale: InsightLocale): string
   return locale === 'bg' ? labels[key].bg : labels[key].en;
 }
 
+const CONTEXTUAL_INSIGHT_NEWS_TYPES = new Set<NewsType>([
+  NewsTypeValue.Politics,
+  NewsTypeValue.Business,
+  NewsTypeValue.Technology,
+  NewsTypeValue.World,
+  NewsTypeValue.Health,
+  NewsTypeValue.Environment,
+  NewsTypeValue.Crime
+]);
+
+const CLOUD_SIGNAL_RE = /\b(?:cloud|data center|data centres?|server|servers|hosting)\b|облач|сървър/iu;
+const POLICY_SIGNAL_RE = /\b(?:regulator|regulators|law|laws|policy|policies|vote|election|government|parliament|sanction|sanctions|commission|authority|cabinet|ministry)\b|регулац|политик|правителств|парламент|санкц|комисия|министерств/iu;
+const MARKET_SIGNAL_RE = /\b(?:market|markets|stocks?|earnings|prices?|investor|investors|trade|tariff|tariffs|bank|banks|economy|economic|deal|deals|inflation|currency|currencies|business|businesses|company|companies)\b|пазар|акци|инвест|банка|банки|иконом|сделк|цена|инфлац|валут|бизнес|компан/iu;
+const WAR_SIGNAL_RE = /\b(?:war|military|missile|drone|strike|strikes|defense|defence|iran|israel|ukraine|russia|nato|attack|attacks|security|airspace|shipping|oil)\b|войн|удар|атака|дрон|ракет|отбран|сигурност|доставк|петрол/iu;
+const HEALTH_SIGNAL_RE = /\b(?:hospital|doctor|medical|health|patient|patients|clinic|clinics)\b|лекар|болниц|медицин|пациент|здрав/iu;
+const CLIMATE_SIGNAL_RE = /\b(?:climate|weather|storm|flood|drought|fire|energy|pollution)\b|еколог|климат|буря|навод|суша|пожар|енерг|замърся/iu;
+const LEGAL_SIGNAL_RE = /\b(?:prosecutor|court|courts|police|investigation|investigations|lawsuit|lawsuits|trial|charge|charges|arrest|arrests|complaint|complaints|probe|probes)\b|прокурат|съд|полици|разслед|дело|жалб|арест|обвин/iu;
+const TOURISM_SIGNAL_RE = /\b(?:travel|tourism|airport|airports|flight|flights|airline|airlines|hotel|hotels|visitor|visitors|tourist|tourists)\b|пътуван|туриз|летищ|полет|авиокомпан|хотел|посетител|турист/iu;
+const TECHNOLOGY_STRONG_SIGNAL_RE = /\b(?:artificial intelligence|machine learning|semiconductor|semiconductors|chip|chips|software|cyber|cybersecurity|platform|platforms|cloud|cloud computing|privacy|app|apps|startup|startups|data breach|data center|data centres?)\b|изкуствен интелект|полупровод|софтуер|кибер|платформ|технолог|приложени/iu;
+const TECHNOLOGY_SUPPORT_SIGNAL_RE = /\b(?:ai|algorithm|algorithms|model|models|data|digital|internet|online)\b|алгорит|модел|данни|дигитал|интернет|онлайн/iu;
+
+function hasTechnologySignal(text: string): boolean {
+  if (!text) return false;
+  if (TECHNOLOGY_STRONG_SIGNAL_RE.test(text)) return true;
+  let supportSignals = 0;
+  if (/\bai\b/iu.test(text) || /\bизкуствен интелект\b/iu.test(text)) supportSignals += 1;
+  if (/\b(?:data|digital|internet|online)\b/iu.test(text) || /данни|дигитал|интернет|онлайн/iu.test(text)) supportSignals += 1;
+  if (/\b(?:algorithm|algorithms|model|models)\b/iu.test(text) || /алгорит|модел/iu.test(text)) supportSignals += 1;
+  return supportSignals >= 2;
+}
+
+function contextualInsightSignalCount(item: NewsInternal): number {
+  const text = combinedInsightText(item);
+  if (!text) return 0;
+  return [
+    POLICY_SIGNAL_RE.test(text),
+    MARKET_SIGNAL_RE.test(text),
+    hasTechnologySignal(text),
+    WAR_SIGNAL_RE.test(text),
+    HEALTH_SIGNAL_RE.test(text),
+    CLIMATE_SIGNAL_RE.test(text),
+    LEGAL_SIGNAL_RE.test(text),
+    TOURISM_SIGNAL_RE.test(text)
+  ].filter(Boolean).length;
+}
+
+function hasContextualInsightText(item: NewsInternal): boolean {
+  const rawContext = rawInsightContextText(item);
+  if (rawContext.length >= 220) return true;
+  return joinInsightTextParts([item.title, item.summary, rawContext]).length >= 180;
+}
+
+function shouldGenerateContextualInsights(item: NewsInternal): boolean {
+  if (!hasContextualInsightText(item)) return false;
+  const signalCount = contextualInsightSignalCount(item);
+  if (signalCount >= 2) return true;
+  const matched = item.isMatch && item.filteredOk !== false;
+  const eligibleType = !!item.newsType && CONTEXTUAL_INSIGHT_NEWS_TYPES.has(item.newsType);
+  return signalCount >= 1 && (matched || eligibleType);
+}
+
+function hasContextualInsightFeatureForBudget(budget: BudgetMode): boolean {
+  void budget;
+  return false;
+}
+
 function industryKeysForItem(item: NewsInternal): IndustryKey[] {
-  const text = combinedInsightText(item).toLocaleLowerCase();
+  const text = combinedInsightText(item);
   const industries: IndustryKey[] = [];
   const add = (key: IndustryKey) => {
     if (!industries.includes(key)) industries.push(key);
   };
-  if (/(chip|semiconductor|nvidia|tsmc|intel)/i.test(text)) add('semiconductors');
-  if (/(cloud|data center|ai model|server)/i.test(text)) add('cloud');
-  if (/(army|defense|missile|military|security)/i.test(text)) add('defense');
-  if (/(bank|finance|market|stocks|investor)/i.test(text)) add('finance');
-  if (/(regulator|law|policy|parliament|senate|european union|eu)/i.test(text)) add('policy');
-  if (/(crypto|bitcoin|blockchain)/i.test(text)) add('crypto');
-  if (/(climate|energy|oil|gas|solar|wind)/i.test(text)) add('energy');
-  if (/(ai|software|technology|platform|app)/i.test(text)) add('technology');
+  if (/\b(?:chip|chips|semiconductor|semiconductors|nvidia|tsmc|intel)\b|полупровод|чип/iu.test(text)) add('semiconductors');
+  if (CLOUD_SIGNAL_RE.test(text)) add('cloud');
+  if (/\b(?:army|defense|defence|missile|military|security)\b|армия|отбран|ракет|сигурност/iu.test(text)) add('defense');
+  if (/\b(?:bank|banks|finance|financial|market|markets|stocks?|investor|investors)\b|банка|банки|финанс|пазар|инвест/iu.test(text)) add('finance');
+  if (/\b(?:regulator|regulators|law|policy|parliament|senate|european union|eu)\b|регулац|правителств|парламент|европейски съюз/iu.test(text)) add('policy');
+  if (/\b(?:crypto|bitcoin|blockchain)\b|крипто|биткойн|блокчейн/iu.test(text)) add('crypto');
+  if (/\b(?:climate|energy|oil|gas|solar|wind)\b|климат|енерг|петрол|газ|солар|вятър/iu.test(text)) add('energy');
+  if (hasTechnologySignal(text)) add('technology');
   return industries.slice(0, 6);
 }
 
@@ -2307,13 +2492,13 @@ function industriesForItem(item: NewsInternal): string[] {
 
 function buildStoryImpact(item: NewsInternal): StoryImpactInsight | undefined {
   const locale = insightLocale(item);
-  const text = combinedInsightText(item).toLocaleLowerCase();
+  const text = combinedInsightText(item);
   if (!text) return undefined;
   const industryKeys = industryKeysForItem(item);
   const industries = industryKeys.map(key => localizedIndustryLabel(key, locale));
-  const policy = /(regulator|law|policy|vote|election|government|parliament|sanction)/i.test(text);
-  const markets = /(market|stocks|earnings|prices|investor|trade|tariff)/i.test(text);
-  const tech = /(ai|chip|software|cyber|platform|cloud|data)/i.test(text);
+  const policy = POLICY_SIGNAL_RE.test(text);
+  const markets = MARKET_SIGNAL_RE.test(text);
+  const tech = hasTechnologySignal(text);
   const score: ImpactLevel = (policy && markets) || (markets && tech) || industryKeys.length >= 3 ? 'high' : (policy || markets || tech) ? 'medium' : 'low';
   if (score === 'low') return undefined;
   const targetSectors = joinInsightList(locale, industries.slice(0, 3));
@@ -2331,7 +2516,7 @@ function buildStoryImpact(item: NewsInternal): StoryImpactInsight | undefined {
 
 function buildPerspectives(item: NewsInternal): PerspectiveInsight[] | undefined {
   const locale = insightLocale(item);
-  const text = combinedInsightText(item).toLocaleLowerCase();
+  const text = combinedInsightText(item);
   const impact = buildStoryImpact(item);
   const industries = impact?.industries.length ? impact.industries.join(', ') : insightText(locale, 'affected sectors', 'засегнатите сектори');
   const out: PerspectiveInsight[] = [];
@@ -2346,17 +2531,17 @@ function buildPerspectives(item: NewsInternal): PerspectiveInsight[] | undefined
     });
   };
 
-  const health = /(hospital|doctor|medical|health|patient|clinic|лекар|болниц|медицин|пациент|здрав)/i.test(text);
-  const legal = /(prosecutor|court|police|investigat|lawsuit|trial|charge|arrest|прокурат|съд|полици|разслед|дело|арест|обвин)/i.test(text);
-  const war = /(war|military|missile|drone|strike|defen|iran|ukraine|russia|nato|войн|удар|армия|ракет|дрон|отбра)/i.test(text);
-  const politics = /\b(election|parliament|government|minister|party|vote|cabinet|policy|campaign|coalition|cabinet)\b|избор|парламент|правителств|министр|партия|вот|политическ|политик/i.test(text);
-  const markets = /(bank|stock|market|company|business|econom|deal|invest|tariff|price|inflation|финанс|банка|иконом|компан|пазар|сделк|цена|инвест)/i.test(text);
-  const tech = /(ai|chip|software|cyber|platform|cloud|data|privacy|app|технолог|софтуер|данни|кибер|платформ|изкуствен интелект)/i.test(text);
-  const environment = /(climate|weather|storm|flood|drought|fire|energy|pollution|еколог|климат|навод|пожар|суша|замърся|енерг)/i.test(text);
-  const sports = /(match|football|soccer|uefa|fifa|basketball|tennis|coach|спорт|мач|футбол|треньор|отбор|тенис|баскет)/i.test(text);
-  const entertainment = /(film|movie|music|festival|celebrity|oscar|tv|concert|кино|филм|музик|фестивал|оскар|концерт|телевиз)/i.test(text);
-  const culture = /(zoo|gallery|museum|theatre|theater|concert|exhibition|festival|event|creative|art|artist|workshop|cultural|community|local event|зоопарк|галери|музей|теат|концерт|изложб|фестивал|събитие|творческ|култур|артист|работилниц)/i.test(text);
-  const localCommunity = /(municipality|mayor|city hall|community|local|citizens|residents|town|city|общин|кмет|местн|жител|граждан)/i.test(text);
+  const health = HEALTH_SIGNAL_RE.test(text);
+  const legal = LEGAL_SIGNAL_RE.test(text);
+  const war = WAR_SIGNAL_RE.test(text);
+  const politics = /\b(?:election|parliament|government|minister|party|vote|cabinet|policy|campaign|coalition)\b|избор|парламент|правителств|министр|партия|вот|политическ|политик/iu.test(text);
+  const markets = MARKET_SIGNAL_RE.test(text);
+  const tech = hasTechnologySignal(text);
+  const environment = CLIMATE_SIGNAL_RE.test(text);
+  const sports = /\b(?:match|football|soccer|uefa|fifa|basketball|tennis|coach)\b|спорт|мач|футбол|треньор|отбор|тенис|баскет/iu.test(text);
+  const entertainment = /\b(?:film|movie|music|festival|celebrity|oscar|tv|concert)\b|кино|филм|музик|фестивал|оскар|концерт|телевиз/iu.test(text);
+  const culture = /\b(?:zoo|gallery|museum|theatre|theater|concert|exhibition|festival|event|creative|art|artist|workshop|cultural|community|local event)\b|зоопарк|галери|музей|теат|концерт|изложб|фестивал|събитие|творческ|култур|артист|работилниц/iu.test(text);
+  const localCommunity = /\b(?:municipality|mayor|city hall|community|local|citizens|residents|town|city)\b|общин|кмет|местн|жител|граждан/iu.test(text);
 
   if (health) {
     add('patient-safety', 'Patient safety', 'Безопасност на пациентите',
@@ -2479,19 +2664,7 @@ function buildPerspectives(item: NewsInternal): PerspectiveInsight[] | undefined
       'Платформите и рекламодателите ще следят дали темата променя търсенето, натиска за модерация или риска за марките.');
   }
 
-  if (!out.length) {
-    add('public', 'Public impact', 'Обществен ефект',
-      'The main question is who is directly affected, how fast the situation can change, and whether it stays contained.',
-      'Основният въпрос е кой е пряко засегнат, колко бързо може да се промени ситуацията и дали ще остане ограничена.');
-    add('institutions', 'Institutions', 'Институции',
-      'Institutions will look at responsibility, process, and whether a formal response is needed.',
-      'Институциите ще гледат отговорността, процеса и дали е нужна официална реакция.');
-    add('businesses', 'Business effects', 'Ефект за бизнеса',
-      `Businesses will care only if the story changes cost, regulation, or trust for ${industries}.`,
-      `Бизнесът ще се интересува само ако темата променя разходите, регулацията или доверието за ${industries}.`);
-  }
-
-  return out.slice(0, 4);
+  return out.length ? out.slice(0, 4) : undefined;
 }
 
 function buildHistoricalComparison(item: NewsInternal): HistoricalComparisonInsight | undefined {
@@ -2579,7 +2752,7 @@ function buildHistoricalComparison(item: NewsInternal): HistoricalComparisonInsi
 function buildFutureScenarios(item: NewsInternal): FutureScenarioInsight | undefined {
   const locale = insightLocale(item);
   const impact = buildStoryImpact(item);
-  const text = combinedInsightText(item).toLocaleLowerCase();
+  const text = combinedInsightText(item);
   const scenarios: string[] = [];
   const hasRegulatoryActor = /\b(regulator|regulators|government|parliament|lawmakers?|ministry|commission|authority|cabinet|policy|regulation|regulations|закон|закона|закони|правителств|парламент|министерств|комисия|регулатор)\b/i.test(text);
   const hasBusinessActor = /\b(company|companies|firm|firms|startup|startups|manufacturer|manufacturers|producer|producers|operator|operators|platform|platforms|bank|banks|business|businesses|corporate|corporation|meta|google|apple|amazon|microsoft|tesla|компания|компании|фирма|фирми|производител|производители|оператор|оператори|банка|банки|бизнес)\b/i.test(text);
@@ -2602,16 +2775,16 @@ function buildFutureScenarios(item: NewsInternal): FutureScenarioInsight | undef
 
 function buildLocalImpact(item: NewsInternal, region: string): LocalImpactInsight | undefined {
   const locale = insightLocale(item);
-  const text = combinedInsightText(item).toLocaleLowerCase();
+  const text = combinedInsightText(item);
   const impact = buildStoryImpact(item);
   if (!impact) return undefined;
   const safeRegion = compactSentence(region || insightText(locale, 'United States', 'България'), 120) || insightText(locale, 'United States', 'България');
-  const war = /(war|military|missile|drone|strike|iran|israel|ukraine|russia|nato|attack|attacks|security|airspace|shipping|oil|войн|удар|атака|дрон|ракет|сигурност|въздушно пространство|доставк|петрол)/i.test(text);
-  const finance = /(bank|market|stock|invest|trade|tariff|inflation|currency|econom|финанс|банка|пазар|инвест|търгов|инфлац|валут|иконом)/i.test(text);
-  const tech = /(ai|chip|software|cyber|cloud|data|privacy|platform|технолог|софтуер|кибер|данни|платформ|изкуствен интелект)/i.test(text);
-  const health = /(hospital|doctor|medical|health|patient|clinic|лекар|болниц|медицин|пациент|здрав)/i.test(text);
-  const climate = /(climate|weather|storm|flood|drought|fire|energy|pollution|еколог|климат|буря|навод|суша|пожар|енерг|замърся)/i.test(text);
-  const tourism = /(travel|tourism|airport|flight|airline|hotel|visitor|tourist|festival|event|пътуван|туриз|летищ|полет|авиокомпан|хотел|посетител|турист|събитие)/i.test(text);
+  const war = WAR_SIGNAL_RE.test(text);
+  const finance = MARKET_SIGNAL_RE.test(text);
+  const tech = hasTechnologySignal(text);
+  const health = HEALTH_SIGNAL_RE.test(text);
+  const climate = CLIMATE_SIGNAL_RE.test(text);
+  const tourism = TOURISM_SIGNAL_RE.test(text);
 
   let summary: string;
   if (war) {
@@ -2666,10 +2839,6 @@ function reviewGeneratedInsights(item: NewsInternal, insights: NewsInsights): Ne
     if (!hasStrongKeywords) delete reviewed.facts;
   }
 
-  if (reviewed.impact && !reviewed.impact.industries.length && reviewed.impact.score === 'medium') {
-    delete reviewed.impact;
-  }
-
   return Object.keys(reviewed).length ? reviewed : undefined;
 }
 
@@ -2678,13 +2847,8 @@ function hasEligibleInsightFeatureForBudget(budget: BudgetMode): boolean {
     (aiFeatures.biasDetection && insightFeatureAllowed('biasDetection', budget)) ||
     (aiFeatures.sensationalismDetection && insightFeatureAllowed('sensationalismDetection', budget)) ||
     (aiFeatures.factHighlights && insightFeatureAllowed('factHighlights', budget)) ||
-    (aiFeatures.storyImpact && insightFeatureAllowed('storyImpact', budget)) ||
-    (aiFeatures.perspectiveSimulator && insightFeatureAllowed('perspectiveSimulator', budget)) ||
     (aiFeatures.topicTracking && insightFeatureAllowed('topicTracking', budget)) ||
-    (aiFeatures.emergingStoryDetector && insightFeatureAllowed('emergingStoryDetector', budget)) ||
-    (aiFeatures.historicalComparison && insightFeatureAllowed('historicalComparison', budget)) ||
-    (aiFeatures.futureScenarioGenerator && insightFeatureAllowed('futureScenarioGenerator', budget)) ||
-    (aiFeatures.localImpactDetector && insightFeatureAllowed('localImpactDetector', budget))
+    (aiFeatures.emergingStoryDetector && insightFeatureAllowed('emergingStoryDetector', budget))
   );
 }
 
@@ -2692,6 +2856,8 @@ function computeInsightStatus(item: NewsInternal, budget: BudgetMode, insights: 
   if (!aiEnabled || !aiAvailable) return undefined;
   if (!hasEligibleInsightFeatureForBudget(budget)) return undefined;
   if (insights && Object.keys(insights).length) return 'ready';
+  const contextualCandidate = hasContextualInsightFeatureForBudget(budget) && shouldGenerateContextualInsights(item);
+  if (!contextualCandidate) return undefined;
   const waitingForSummary = shouldHaveSummary(item) && (!item.summary || !item.summary.trim() || hasSummaryJobQueuedOrRunning(item.id, item.feedUrl));
   const waitingForResearch = shouldHaveResearch(item) && (!item.research || !item.research.trim() || hasResearchJobQueuedOrRunning(item.id, item.feedUrl));
   return waitingForSummary || waitingForResearch ? 'pending' : 'empty';
@@ -2748,26 +2914,6 @@ function generateInsightsForItem(item: NewsInternal, budget: BudgetMode): NewsIn
   if (aiFeatures.factHighlights && insightFeatureAllowed('factHighlights', budget)) {
     const facts = extractFactHighlights(item);
     if (facts) insights.facts = facts;
-  }
-  if (aiFeatures.storyImpact && insightFeatureAllowed('storyImpact', budget)) {
-    const impact = buildStoryImpact(item);
-    if (impact) insights.impact = impact;
-  }
-  if (aiFeatures.perspectiveSimulator && insightFeatureAllowed('perspectiveSimulator', budget)) {
-    const perspectives = buildPerspectives(item);
-    if (perspectives && Object.keys(perspectives).length) insights.perspectives = perspectives;
-  }
-  if (aiFeatures.historicalComparison && insightFeatureAllowed('historicalComparison', budget)) {
-    const historical = buildHistoricalComparison(item);
-    if (historical) insights.historical = historical;
-  }
-  if (aiFeatures.futureScenarioGenerator && insightFeatureAllowed('futureScenarioGenerator', budget)) {
-    const future = buildFutureScenarios(item);
-    if (future) insights.future = future;
-  }
-  if (aiFeatures.localImpactDetector && insightFeatureAllowed('localImpactDetector', budget)) {
-    const localImpact = buildLocalImpact(item, localRegion);
-    if (localImpact) insights.localImpact = localImpact;
   }
   return reviewGeneratedInsights(item, insights);
 }
@@ -3807,6 +3953,7 @@ const aiDeadLetters: DeadLetterAiJob[] = [];
 const aiJobLogEvents: AiJobLogEvent[] = [];
 const summaryDebugEvents: SummaryDebugEvent[] = [];
 const lastAiJobErrorAtMs = new Map<string, number>();
+const aiTimeoutCounts = new Map<string, number>();
 
 const AI_MAX_CONCURRENCY = Math.max(1, parseInt(process.env.AI_MAX_CONCURRENCY || '1', 10));
 const AI_QUEUE_MAX = Math.max(200, parseInt(process.env.AI_QUEUE_MAX || '600', 10));
@@ -3841,6 +3988,10 @@ const AI_JOB_LOG_FLUSH_INTERVAL_MS = Math.max(
 const AI_SUMMARY_DEBUG_MAX = Math.max(
   50,
   Number.parseInt(process.env.AI_SUMMARY_DEBUG_MAX ?? '240', 10) || 240
+);
+const AI_TIMEOUT_RETRY_LIMIT = Math.max(
+  1,
+  Number.parseInt(process.env.AI_TIMEOUT_RETRY_LIMIT ?? '4', 10) || 4
 );
 const aiJobLogFileBuffer: string[] = [];
 let aiJobLogFlushTimer: NodeJS.Timeout | null = null;
@@ -4031,6 +4182,35 @@ function hasSummaryBacklog(): boolean {
   return false;
 }
 
+function timeoutAttemptKey(job: Pick<AiJob, 'kind' | 'id' | 'feedUrl'>): string {
+  return `${job.kind}:${job.feedUrl || ''}::${job.id}`;
+}
+
+function timeoutAttemptsFor(job: Pick<AiJob, 'kind' | 'id' | 'feedUrl'>): number {
+  return aiTimeoutCounts.get(timeoutAttemptKey(job)) || 0;
+}
+
+function hasExceededTimeoutRetryLimit(job: Pick<AiJob, 'kind' | 'id' | 'feedUrl'>): boolean {
+  return timeoutAttemptsFor(job) >= AI_TIMEOUT_RETRY_LIMIT;
+}
+
+function recordTimeoutAttempt(job: Pick<AiJob, 'kind' | 'id' | 'feedUrl'>): number {
+  const key = timeoutAttemptKey(job);
+  const next = timeoutAttemptsFor(job) + 1;
+  aiTimeoutCounts.set(key, next);
+  if (aiTimeoutCounts.size > 20_000) {
+    const entries = Array.from(aiTimeoutCounts.entries());
+    for (let i = 0; i < entries.length - 10_000; i += 1) {
+      aiTimeoutCounts.delete(entries[i][0]);
+    }
+  }
+  return next;
+}
+
+function clearTimeoutAttempts(job: Pick<AiJob, 'kind' | 'id' | 'feedUrl'>) {
+  aiTimeoutCounts.delete(timeoutAttemptKey(job));
+}
+
 function recordAiJobEvent(job: Pick<AiJob, 'kind' | 'id' | 'feedUrl' | 'manual'>, stage: AiJobLogStage, opts?: {
   reason?: string;
   durationMs?: number;
@@ -4147,6 +4327,12 @@ function isTimeoutError(error: unknown): boolean {
 function enqueueJob(job: AiJobInput) {
   if (!aiEnabled || !aiAvailable) return;
   const nextJob: AiJob = { ...job, enqueuedAtMs: Date.now() };
+  if (hasExceededTimeoutRetryLimit(nextJob)) {
+    recordAiJobEvent(nextJob, 'skip', {
+      reason: `timeout_retry_limit_reached:${timeoutAttemptsFor(nextJob)}`
+    });
+    return;
+  }
   const k = jobKey(nextJob);
   if (aiInFlight.has(k)) {
     recordAiJobEvent(nextJob, 'skip', { reason: 'duplicate_inflight' });
@@ -4344,6 +4530,10 @@ async function runOneJob(job: AiJob) {
       outcomeRecorded = true;
       return;
     }
+    if (hasExceededTimeoutRetryLimit(job)) {
+      markSkip(`timeout_retry_limit_reached:${timeoutAttemptsFor(job)}`);
+      return;
+    }
 
     const it = resolveJobItem(job);
     if (!it) {
@@ -4389,6 +4579,7 @@ async function runOneJob(job: AiJob) {
       );
       if (text) {
         it.summary = text;
+        clearTimeoutAttempts(job);
         refreshDerivedDataForItem(it);
         broadcastNewsUpdate(it);
         didBroadcastUpdate = true;
@@ -4427,6 +4618,7 @@ async function runOneJob(job: AiJob) {
       if (translated) {
         it.titleBg = translated.bg;
         it.titleEn = translated.en;
+        clearTimeoutAttempts(job);
         refreshDerivedDataForItem(it);
         broadcastNewsUpdate(it);
         didBroadcastUpdate = true;
@@ -4461,6 +4653,7 @@ async function runOneJob(job: AiJob) {
       );
       if (mood) {
         it.mood = mood;
+        clearTimeoutAttempts(job);
         refreshDerivedDataForItem(it);
         broadcastNewsUpdate(it);
         didBroadcastUpdate = true;
@@ -4495,6 +4688,7 @@ async function runOneJob(job: AiJob) {
       );
       if (newsType) {
         it.newsType = newsType;
+        clearTimeoutAttempts(job);
         refreshDerivedDataForItem(it);
         broadcastNewsUpdate(it);
         didBroadcastUpdate = true;
@@ -4553,6 +4747,7 @@ async function runOneJob(job: AiJob) {
       }
       if (text) {
         it.research = text;
+        clearTimeoutAttempts(job);
         refreshDerivedDataForItem(it);
         broadcastNewsUpdate(it);
         didBroadcastUpdate = true;
@@ -4566,16 +4761,25 @@ async function runOneJob(job: AiJob) {
   } catch (err) {
     const message = (err as Error)?.message || String(err);
     const classifyJob = job.kind === 'mood' || job.kind === 'news_type';
-    if (classifyJob && isTimeoutError(err)) {
+    const timedOut = isTimeoutError(err);
+    if (timedOut) {
+      const attempts = recordTimeoutAttempt(job);
+      if (job.kind === 'summary') {
+        summaryRetryCooldownUntilMs.set(summaryItemKey(job.id, job.feedUrl), Date.now() + AI_SUMMARY_RETRY_COOLDOWN_MS);
+      }
       if (!outcomeRecorded) {
-        recordAiJobEvent(job, 'skip', { reason: 'classify_timeout', durationMs: duration() });
+        recordAiJobEvent(job, 'skip', {
+          reason: attempts >= AI_TIMEOUT_RETRY_LIMIT
+            ? `timeout_retry_limit_reached:${attempts}`
+            : `timeout_retry:${attempts}`,
+          durationMs: duration()
+        });
         outcomeRecorded = true;
       }
+      if (!classifyJob) {
+        console.warn(`AI job timed out (${job.kind}:${job.id}) attempt ${attempts}/${AI_TIMEOUT_RETRY_LIMIT}`);
+      }
       return;
-    }
-
-    if (job.kind === 'summary') {
-      summaryRetryCooldownUntilMs.set(summaryItemKey(job.id, job.feedUrl), Date.now() + AI_SUMMARY_RETRY_COOLDOWN_MS);
     }
 
     if (classifyJob) {
@@ -4767,6 +4971,23 @@ async function processFeed(fi: FeedInfo) {
 
       const title = item.title ?? '(no title)';
       const source = feed.title ?? labelForFeed(fi) ?? 'unknown';
+      const reusable = findReusableNewsItem(fi.url, source, title, link, publishedMs);
+      if (reusable) {
+        const changed = mergeReusableNewsItem(reusable, {
+          title,
+          link,
+          published,
+          publishedMs,
+          source,
+          __ctx: pickRssContextCombined(item, 1500)
+        });
+        if (changed) {
+          refreshDerivedDataForItem(reusable);
+          broadcastNewsUpdate(reusable);
+          markDirty();
+        }
+        continue;
+      }
 
       // match (+ embedding if AI)
       let isMatch = false;
@@ -4797,7 +5018,6 @@ async function processFeed(fi: FeedInfo) {
         if (isFilteredDuplicate(titleVec)) filteredOk = false;
         else addToFilteredDedupe(titleVec);
       }
-
       const ctx = pickRssContextCombined(item, 1500);
 
       const pkt: NewsInternal = {

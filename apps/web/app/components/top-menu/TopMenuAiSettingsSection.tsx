@@ -3,12 +3,10 @@
 import { useMemo, useState } from 'react';
 import {
   Alert,
-  Autocomplete,
   Box,
   Button,
   Checkbox,
   Chip,
-  Divider,
   FormControlLabel,
   LinearProgress,
   Stack,
@@ -34,60 +32,12 @@ const FEATURE_ROWS: Array<{ key: keyof ReturnType<typeof useTopMenuContext>['con
   { key: 'biasDetection', label: 'Bias detector', hint: 'Political leaning, tone, and framing. Budget: standard or high.' },
   { key: 'sensationalismDetection', label: 'Rage bait detector', hint: 'Flags clickbait headlines and suggests safer alternatives. Budget: standard or high.' },
   { key: 'factHighlights', label: 'Fact highlights', hint: 'People, places, dates, numbers, and quotes under each story. Budget: standard or high.' },
-  { key: 'storyImpact', label: 'Impact prediction', hint: 'Economic, political, and tech implications. Budget: high only.' },
-  { key: 'perspectiveSimulator', label: 'Perspective simulator', hint: 'Investor, government, consumer, and tech views. Budget: high only.' },
-  { key: 'historicalComparison', label: 'Historical comparison', hint: 'Similar past events and patterns. Budget: high only.' },
-  { key: 'futureScenarioGenerator', label: 'Future scenarios', hint: 'Possible next outcomes with a disclaimer. Budget: high only.' },
-  { key: 'localImpactDetector', label: 'Local impact', hint: 'How global stories affect the selected region. Budget: high only.' },
   { key: 'topicTracking', label: 'Topic tracking', hint: 'Follow recurring topics and only surface major updates. Budget: high only.' },
   { key: 'emergingStoryDetector', label: 'Emerging stories', hint: 'Optional column for repeated stories rising fast. Budget: high only.' },
   { key: 'dailyBriefing', label: 'Daily briefing', hint: 'Enables the on-demand briefing generator below. Budget: high only.' }
 ];
 
-const LOCAL_IMPACT_REGION_OPTIONS = [
-  'United States',
-  'United Kingdom',
-  'European Union',
-  'Bulgaria',
-  'Germany',
-  'France',
-  'Italy',
-  'Spain',
-  'Netherlands',
-  'Belgium',
-  'Poland',
-  'Romania',
-  'Greece',
-  'Turkey',
-  'Ukraine',
-  'Russia',
-  'Canada',
-  'Mexico',
-  'Brazil',
-  'Argentina',
-  'Chile',
-  'Australia',
-  'New Zealand',
-  'Japan',
-  'South Korea',
-  'China',
-  'Taiwan',
-  'Hong Kong',
-  'India',
-  'Singapore',
-  'Indonesia',
-  'Vietnam',
-  'Thailand',
-  'Philippines',
-  'Middle East',
-  'Saudi Arabia',
-  'United Arab Emirates',
-  'Israel',
-  'Africa',
-  'South Africa'
-];
-
-type AiMenuSection = 'setup' | 'analysis' | 'targeting' | 'briefing';
+type AiMenuSection = 'setup' | 'analysis' | 'targeting' | 'briefing' | 'usage';
 
 function SectionTabs({
   activeSection,
@@ -102,7 +52,8 @@ function SectionTabs({
         { value: 'setup', label: 'Setup' },
         { value: 'analysis', label: 'Analysis' },
         { value: 'targeting', label: 'Targeting' },
-        { value: 'briefing', label: 'Briefing' }
+        { value: 'briefing', label: 'Briefing' },
+        { value: 'usage', label: 'Usage' }
       ].map(section => (
         <Button
           key={section.value}
@@ -130,6 +81,7 @@ function SubsectionHeader({ title, hint }: { title: string; hint: string }) {
 export function TopMenuAiSettingsSection() {
   const aiUsage = useAppSelector(s => s.aiUsage);
   const {
+    isMobile,
     labels,
     account,
     controls: {
@@ -143,10 +95,13 @@ export function TopMenuAiSettingsSection() {
   const [keywordsDraft, setKeywordsDraft] = useState('');
   const [topicsDraft, setTopicsDraft] = useState('');
   const [activeSection, setActiveSection] = useState<AiMenuSection>('setup');
+  const rowDirection = isMobile ? 'column' : { xs: 'column', sm: 'row' } as const;
+  const rowAlignItems = isMobile ? 'stretch' : { xs: 'stretch', sm: 'center' } as const;
   const compactActionButtonSx = {
     whiteSpace: 'nowrap',
-    minWidth: { xs: 112, sm: 108 },
-    alignSelf: { xs: 'flex-start', sm: 'center' },
+    width: { xs: '100%', sm: 'auto' },
+    minWidth: { xs: 0, sm: 108 },
+    alignSelf: { xs: 'stretch', sm: 'center' },
     px: 2,
     borderRadius: '14px'
   } as const;
@@ -243,7 +198,7 @@ export function TopMenuAiSettingsSection() {
                 title="Language and models"
                 hint="Provider, output languages, model selection, and global AI budget."
               />
-              <div className="topMenuFieldGrid">
+              <div className="topMenuFieldGrid topMenuSetupGrid">
                 <TopMenuSelectField id="aiProviderSelect" label={labels.aiProvider} value={aiSettings.aiProvider} onChange={actions.onChangeAiProvider} options={buildAiProviderOptions(labels)} layout="stacked" wrapperClassName="topMenuField" />
                 <TopMenuSelectField id="summaryLang" label={labels.summaryPrefix} value={aiSettings.summaryLang} disabled={!aiSettings.aiAvailable} onChange={actions.onSummaryLangChange} options={buildSummaryLangOptions()} layout="stacked" wrapperClassName="topMenuField" />
                 <TopMenuSelectField id="researchLang" label={labels.researchPrefix} value={aiSettings.researchLang} disabled={!aiSettings.aiAvailable} onChange={actions.onResearchLangChange} options={buildResearchLangOptions()} layout="stacked" wrapperClassName="topMenuField" />
@@ -287,7 +242,7 @@ export function TopMenuAiSettingsSection() {
                 title={labels.providerKeyTitle || 'Provider API key'}
                 hint="Saved to your signed-in account for the selected provider."
               />
-              <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 0.8, gap: 1 }}>
+              <Stack direction={isMobile ? 'column' : 'row'} justifyContent="space-between" alignItems={isMobile ? 'stretch' : 'center'} sx={{ mb: 0.8, gap: 1 }}>
                 <span />
                 <Chip
                   size="small"
@@ -296,7 +251,7 @@ export function TopMenuAiSettingsSection() {
                   label={account.hasSavedKey ? (labels.providerKeyStoredYes || 'Saved key available') : (labels.providerKeyStoredNo || 'No saved key')}
                 />
               </Stack>
-              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+              <Stack direction={rowDirection} spacing={1}>
                 <TextField size="small" fullWidth type="password" label={labels.providerKeyLabel || 'API key'} placeholder={labels.providerKeyPlaceholder || 'Paste key for selected provider'} value={providerKeyDraft} onChange={e => setProviderKeyDraft(e.target.value)} />
                 <Button
                   size="small"
@@ -315,60 +270,6 @@ export function TopMenuAiSettingsSection() {
               </Stack>
             </Box>
 
-            <Box className="topMenuCardBlock topMenuSubsection" sx={{ width: '100%', border: '1px solid var(--panel-border)', borderRadius: 2, p: 1 }}>
-              <SubsectionHeader
-                title="Token usage this run"
-                hint="Runtime-only AI usage log. It clears when the API server restarts."
-              />
-              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} useFlexGap flexWrap="wrap" sx={{ mb: 1 }}>
-                <Chip size="small" color="primary" variant="outlined" label={`Total: ${formatTokenCount(aiUsage.totalTokens)}`} />
-                <Chip size="small" variant="outlined" label={`Input: ${formatTokenCount(aiUsage.inputTokens)}`} />
-                <Chip size="small" variant="outlined" label={`Output: ${formatTokenCount(aiUsage.outputTokens)}`} />
-              </Stack>
-              <Typography variant="caption" sx={{ display: 'block', mb: 1, color: 'text.secondary' }}>
-                Started: {runtimeStartedLabel}
-              </Typography>
-              <div className="topMenuFieldGrid">
-                {([
-                  ['summary', 'Summaries'],
-                  ['research', 'Research'],
-                  ['ask', 'Ask agent']
-                ] as const).map(([kind, label]) => (
-                  <Box key={kind} sx={{ border: '1px solid var(--panel-border)', borderRadius: 1.5, p: 1 }}>
-                    <Typography variant="body2" sx={{ fontWeight: 700 }}>{label}</Typography>
-                    <Typography variant="caption" sx={{ display: 'block', mt: 0.4, color: 'text.secondary' }}>
-                      Requests: {formatTokenCount(aiUsage.byKind[kind].requests)} · Tokens: {formatTokenCount(aiUsage.byKind[kind].totalTokens)}
-                    </Typography>
-                  </Box>
-                ))}
-              </div>
-              <Typography variant="caption" sx={{ display: 'block', mt: 1, mb: 0.5, color: 'text.secondary' }}>
-                Recent AI calls
-              </Typography>
-              {recentUsage.length ? (
-                <Stack spacing={0.7}>
-                  {recentUsage.map(entry => (
-                    <Box key={entry.id} sx={{ border: '1px solid var(--panel-border)', borderRadius: 1.5, px: 1, py: 0.8, background: 'rgba(255,255,255,0.02)' }}>
-                      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} justifyContent="space-between">
-                        <Typography variant="body2" sx={{ fontWeight: 700 }}>
-                          {entry.kind.toUpperCase()} · {entry.model}
-                        </Typography>
-                        <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                          {new Date(entry.createdAt).toLocaleTimeString(tokenLocale)} · {formatTokenCount(entry.totalTokens)} tokens
-                        </Typography>
-                      </Stack>
-                      <Typography variant="caption" sx={{ display: 'block', mt: 0.3, color: 'text.secondary' }}>
-                        {entry.label}
-                      </Typography>
-                    </Box>
-                  ))}
-                </Stack>
-              ) : (
-                <Alert severity="info" sx={{ mt: 0.5, py: 0.2 }}>
-                  No AI calls recorded in this server run yet.
-                </Alert>
-              )}
-            </Box>
           </div>
         ) : null}
 
@@ -382,7 +283,7 @@ export function TopMenuAiSettingsSection() {
               <Alert severity="info" sx={{ mb: 1.1, py: 0.2 }}>
                 Feature changes apply to new or refreshed stories. Cards with AI output show an explicit AI insights status.
               </Alert>
-              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ mb: 1.1 }}>
+              <Stack direction={rowDirection} spacing={1} sx={{ mb: 1.1 }}>
                 <Box className="topMenuFeatureCard" sx={{ border: '1px solid var(--panel-border)', px: 1.2, py: 0.9, flex: 1 }}>
                   <FormControlLabel
                     control={<Switch size="small" checked={aiSettings.showFilteredColumn} onChange={event => actions.onToggleSpecialColumn('filtered', event.target.checked)} sx={{ ml: 0.25, mr: 0.75 }} />}
@@ -420,7 +321,7 @@ export function TopMenuAiSettingsSection() {
                 title={labels.matchKeywordsLabel || 'Filtered match keywords'}
                 hint="Keywords that drive the filtered column."
               />
-              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+              <Stack direction={rowDirection} spacing={1}>
                 <TextField size="small" fullWidth label={labels.matchKeywordsInputLabel || 'Keywords'} placeholder={labels.matchKeywordsPlaceholder || 'keyword1, keyword2, keyword3'} value={keywordsDraft} onChange={e => setKeywordsDraft(e.target.value)} />
                 <Button size="small" variant="contained" onClick={addKeywords} disabled={!String(keywordsDraft || '').trim()}>
                   {labels.matchKeywordsApply || 'Add'}
@@ -437,10 +338,10 @@ export function TopMenuAiSettingsSection() {
 
             <Box className="topMenuCardBlock topMenuSubsection" sx={{ width: '100%', border: '1px solid var(--panel-border)', borderRadius: 2, p: 1 }}>
               <SubsectionHeader
-                title="Topic and region tracking"
-                hint="Tracked topics and the target region for local-impact analysis."
+                title="Topic tracking"
+                hint="Topics to watch for recurring coverage and major updates."
               />
-              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+              <Stack direction={rowDirection} spacing={1}>
                 <TextField size="small" fullWidth label="Tracked topics" placeholder="Artificial Intelligence, War in Ukraine, Climate Change" value={topicsDraft} onChange={e => setTopicsDraft(e.target.value)} />
                 <Button size="small" variant="contained" onClick={addTopics} disabled={!String(topicsDraft || '').trim()}>
                   Add
@@ -453,19 +354,6 @@ export function TopMenuAiSettingsSection() {
                   ))}
                 </Stack>
               ) : null}
-              <Divider sx={{ my: 1.1 }} />
-              <Autocomplete
-                freeSolo
-                fullWidth
-                options={LOCAL_IMPACT_REGION_OPTIONS}
-                value={aiSettings.localImpactRegion}
-                inputValue={aiSettings.localImpactRegion}
-                onChange={(_, value) => actions.onSetLocalImpactRegion(typeof value === 'string' ? value : '')}
-                onInputChange={(_, value, reason) => {
-                  if (reason === 'input' || reason === 'clear') actions.onSetLocalImpactRegion(value);
-                }}
-                renderInput={params => <TextField {...params} size="small" label="Local impact region" placeholder="Search region" />}
-              />
             </Box>
           </div>
         ) : null}
@@ -477,7 +365,7 @@ export function TopMenuAiSettingsSection() {
                 title="Daily briefing"
                 hint="Generate a site briefing or email draft from selected columns."
               />
-              <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 0.8 }}>
+              <Stack direction={isMobile ? 'column' : 'row'} justifyContent="space-between" alignItems={isMobile ? 'stretch' : 'center'} sx={{ mb: 0.8, gap: 1 }}>
                 <span />
                 {aiSettings.briefing.loading ? <LinearProgress sx={{ width: 120 }} /> : null}
               </Stack>
@@ -506,7 +394,7 @@ export function TopMenuAiSettingsSection() {
                   );
                 })}
               </Stack>
-              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ mt: 1 }}>
+              <Stack direction={rowDirection} spacing={1} sx={{ mt: 1 }}>
                 <Button size="small" variant="contained" onClick={actions.onGenerateDailyBriefing} disabled={aiSettings.briefing.loading}>
                   Generate briefing
                 </Button>
@@ -537,6 +425,65 @@ export function TopMenuAiSettingsSection() {
                   </Typography>
                 </Box>
               ) : null}
+            </Box>
+          </div>
+        ) : null}
+
+        {activeSection === 'usage' ? (
+          <div className="topMenuPanelStack">
+            <Box className="topMenuCardBlock topMenuSubsection" sx={{ width: '100%', border: '1px solid var(--panel-border)', borderRadius: 2, p: 1 }}>
+              <SubsectionHeader
+                title="Token usage this run"
+                hint="Runtime-only AI usage log. It clears when the API server restarts."
+              />
+              <Stack direction={rowDirection} spacing={1} useFlexGap flexWrap="wrap" alignItems={rowAlignItems} sx={{ mb: 1 }}>
+                <Chip size="small" color="primary" variant="outlined" label={`Total: ${formatTokenCount(aiUsage.totalTokens)}`} />
+                <Chip size="small" variant="outlined" label={`Input: ${formatTokenCount(aiUsage.inputTokens)}`} />
+                <Chip size="small" variant="outlined" label={`Output: ${formatTokenCount(aiUsage.outputTokens)}`} />
+              </Stack>
+              <Typography variant="caption" sx={{ display: 'block', mb: 1, color: 'text.secondary' }}>
+                Started: {runtimeStartedLabel}
+              </Typography>
+              <div className="topMenuFieldGrid">
+                {([
+                  ['summary', 'Summaries'],
+                  ['research', 'Research'],
+                  ['ask', 'Ask agent']
+                ] as const).map(([kind, label]) => (
+                  <Box key={kind} sx={{ border: '1px solid var(--panel-border)', borderRadius: 1.5, p: 1 }}>
+                    <Typography variant="body2" sx={{ fontWeight: 700 }}>{label}</Typography>
+                    <Typography variant="caption" sx={{ display: 'block', mt: 0.4, color: 'text.secondary' }}>
+                      Requests: {formatTokenCount(aiUsage.byKind[kind].requests)} · Tokens: {formatTokenCount(aiUsage.byKind[kind].totalTokens)}
+                    </Typography>
+                  </Box>
+                ))}
+              </div>
+              <Typography variant="caption" sx={{ display: 'block', mt: 1, mb: 0.5, color: 'text.secondary' }}>
+                Recent AI calls
+              </Typography>
+              {recentUsage.length ? (
+                <Stack spacing={0.7}>
+                  {recentUsage.map(entry => (
+                    <Box key={entry.id} sx={{ border: '1px solid var(--panel-border)', borderRadius: 1.5, px: 1, py: 0.8, background: 'rgba(255,255,255,0.02)' }}>
+                      <Stack direction={rowDirection} spacing={1} justifyContent="space-between" alignItems={rowAlignItems}>
+                        <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                          {entry.kind.toUpperCase()} · {entry.model}
+                        </Typography>
+                        <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                          {new Date(entry.createdAt).toLocaleTimeString(tokenLocale)} · {formatTokenCount(entry.totalTokens)} tokens
+                        </Typography>
+                      </Stack>
+                      <Typography variant="caption" sx={{ display: 'block', mt: 0.3, color: 'text.secondary' }}>
+                        {entry.label}
+                      </Typography>
+                    </Box>
+                  ))}
+                </Stack>
+              ) : (
+                <Alert severity="info" sx={{ mt: 0.5, py: 0.2 }}>
+                  No AI calls recorded in this server run yet.
+                </Alert>
+              )}
             </Box>
           </div>
         ) : null}

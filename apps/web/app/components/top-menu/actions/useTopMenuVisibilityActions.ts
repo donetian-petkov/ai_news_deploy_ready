@@ -20,19 +20,46 @@ export function useTopMenuVisibilityActions({
   setMobileDrawerOpen,
   scheduleFocus
 }: Args) {
+  const desktopSearchPanelVisible = !ui.menuCollapsed && ui.searchVisible && !ui.addStreamVisible && ui.controlsCollapsed;
+  const desktopAddStreamPanelVisible = !ui.menuCollapsed && ui.addStreamVisible && !ui.searchVisible && ui.controlsCollapsed;
+  const desktopControlsPanelVisible = !ui.menuCollapsed && !ui.controlsCollapsed && !ui.searchVisible && !ui.addStreamVisible;
+  const desktopMenuVisible = desktopSearchPanelVisible || desktopAddStreamPanelVisible || desktopControlsPanelVisible;
+
   const toggleSearch = useCallback(() => {
-    const nextSearchVisible = !ui.searchVisible;
-    if (isMobile) setMobileDrawerOpen(true);
-    dispatch(setTopUiState({ menuCollapsed: false, searchVisible: nextSearchVisible }));
-    if (nextSearchVisible) scheduleFocus('search', isMobile ? 80 : 30);
-  }, [dispatch, isMobile, scheduleFocus, setMobileDrawerOpen, ui.searchVisible]);
+    const nextSearchVisible = !desktopSearchPanelVisible;
+    if (isMobile) {
+      setMobileDrawerOpen(true);
+      dispatch(setTopUiState({ menuCollapsed: false, searchVisible: nextSearchVisible }));
+      if (nextSearchVisible) scheduleFocus('search', 80);
+      return;
+    }
+
+    dispatch(setTopUiState({
+      menuCollapsed: !nextSearchVisible,
+      controlsCollapsed: true,
+      searchVisible: nextSearchVisible,
+      addStreamVisible: false
+    }));
+    if (nextSearchVisible) scheduleFocus('search', 30);
+  }, [desktopSearchPanelVisible, dispatch, isMobile, scheduleFocus, setMobileDrawerOpen]);
 
   const toggleAddStream = useCallback(() => {
-    const nextAddStreamVisible = !ui.addStreamVisible;
-    if (isMobile) setMobileDrawerOpen(true);
-    dispatch(setTopUiState({ menuCollapsed: false, addStreamVisible: nextAddStreamVisible }));
-    if (nextAddStreamVisible) scheduleFocus('addStream', isMobile ? 80 : 30);
-  }, [dispatch, isMobile, scheduleFocus, setMobileDrawerOpen, ui.addStreamVisible]);
+    const nextAddStreamVisible = !desktopAddStreamPanelVisible;
+    if (isMobile) {
+      setMobileDrawerOpen(true);
+      dispatch(setTopUiState({ menuCollapsed: false, addStreamVisible: nextAddStreamVisible }));
+      if (nextAddStreamVisible) scheduleFocus('addStream', 80);
+      return;
+    }
+
+    dispatch(setTopUiState({
+      menuCollapsed: !nextAddStreamVisible,
+      controlsCollapsed: true,
+      searchVisible: false,
+      addStreamVisible: nextAddStreamVisible
+    }));
+    if (nextAddStreamVisible) scheduleFocus('addStream', 30);
+  }, [desktopAddStreamPanelVisible, dispatch, isMobile, scheduleFocus, setMobileDrawerOpen]);
 
   const toggleControls = useCallback(() => {
     if (isMobile) {
@@ -41,7 +68,12 @@ export function useTopMenuVisibilityActions({
       return;
     }
 
-    dispatch(setTopUiState({ menuCollapsed: false, controlsCollapsed: false }));
+    dispatch(setTopUiState({
+      menuCollapsed: false,
+      controlsCollapsed: false,
+      searchVisible: false,
+      addStreamVisible: false
+    }));
   }, [dispatch, isMobile, setMobileDrawerOpen]);
 
   const toggleMenu = useCallback(() => {
@@ -50,12 +82,14 @@ export function useTopMenuVisibilityActions({
       return;
     }
 
-    const nextMenuCollapsed = !ui.menuCollapsed;
+    const nextMenuCollapsed = desktopMenuVisible;
     dispatch(setTopUiState({
       menuCollapsed: nextMenuCollapsed,
-      controlsCollapsed: nextMenuCollapsed ? ui.controlsCollapsed : false
+      controlsCollapsed: nextMenuCollapsed ? true : false,
+      searchVisible: false,
+      addStreamVisible: false
     }));
-  }, [dispatch, isMobile, setMobileDrawerOpen, ui.controlsCollapsed, ui.menuCollapsed]);
+  }, [desktopMenuVisible, dispatch, isMobile, setMobileDrawerOpen]);
 
   const toggleAllColumnControls = useCallback(() => {
     dispatch(setTopUiState({ allColumnControlsHidden: !ui.allColumnControlsHidden }));

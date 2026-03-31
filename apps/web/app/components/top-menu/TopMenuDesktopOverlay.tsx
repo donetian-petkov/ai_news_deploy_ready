@@ -14,12 +14,17 @@ export function TopMenuDesktopOverlay() {
     labels,
     searchVisible,
     addStreamVisible,
+    controls: {
+      model: { collapsed: controlsCollapsed }
+    },
     onToggleMenu
   } = useTopMenuContext();
 
   const handleClose = () => onToggleMenu();
 
   if (isMobile || !showDesktopBody) return null;
+
+  const showControlsPanel = !controlsCollapsed && !searchVisible && !addStreamVisible;
 
   return (
     <Dialog
@@ -48,9 +53,11 @@ export function TopMenuDesktopOverlay() {
             <AddStreamSection />
           </Box>
         ) : null}
-        <Box className="desktopOverlaySection">
-          <TopMenuControlsPanel />
-        </Box>
+        {showControlsPanel ? (
+          <Box className="desktopOverlaySection">
+            <TopMenuControlsPanel />
+          </Box>
+        ) : null}
       </Box>
     </Dialog>
   );

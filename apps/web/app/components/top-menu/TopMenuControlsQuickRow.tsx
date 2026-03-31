@@ -1,12 +1,12 @@
 'use client';
 
-import type { ChangeEvent } from 'react';
 import { UiButton } from '../design-system/UiButton';
-import { UiSelect } from '../design-system/UiSelect';
+import { TopMenuSelectField } from './TopMenuSelectField';
 import { useTopMenuContext } from './context/useTopMenuContext';
 
 export function TopMenuControlsQuickRow() {
   const {
+    isMobile,
     labels,
     controls: {
       model: { deleteAgeAll, quickRow },
@@ -14,33 +14,35 @@ export function TopMenuControlsQuickRow() {
     }
   } = useTopMenuContext();
 
-  const onDeleteAgeChange = (e: ChangeEvent<HTMLSelectElement>) => actions.onDeleteAgeAllChange(e.target.value as typeof deleteAgeAll);
+  const onDeleteAgeChange = (next: typeof deleteAgeAll) => actions.onDeleteAgeAllChange(next);
 
   return (
     <div className="controlsCompactRow controlsRow">
-      <div className="controlGroup">
-        <UiButton id="resetBtn" onClick={actions.onResetAllNewest}>{labels.resetAllToNewestTen}</UiButton>
-        <UiButton id="showMoreNewsAllBtn" onClick={actions.onShowMoreNewsAll}>
+      <div className={['controlGroup', 'controlGroupQuickRow', isMobile ? 'controlGroupQuickRowMobile' : ''].filter(Boolean).join(' ')}>
+        <UiButton className="topMenuQuickAction" id="resetBtn" onClick={actions.onResetAllNewest}>{labels.resetAllToNewestTen}</UiButton>
+        <UiButton className="topMenuQuickAction" id="showMoreNewsAllBtn" onClick={actions.onShowMoreNewsAll}>
           {labels.showMoreNewsAll}
         </UiButton>
-        <UiButton id="resetNewsShownAllBtn" onClick={actions.onResetNewsShownAll}>
+        <UiButton className="topMenuQuickAction" id="resetNewsShownAllBtn" onClick={actions.onResetNewsShownAll}>
           {labels.resetNewsShownAll}
         </UiButton>
-        <UiSelect
+        <TopMenuSelectField
           id="deleteAgeSelect"
           label={labels.deleteAgePrefix}
-          labelId="deleteAgePrefix"
           title="Delete old news by age from all columns"
           value={deleteAgeAll}
           onChange={onDeleteAgeChange}
-        >
-          <option value="yesterday">{labels.ageYesterday}</option>
-          <option value="week">{labels.agePastWeek}</option>
-          <option value="month">{labels.agePastMonth}</option>
-          <option value="year">{labels.agePastYear}</option>
-        </UiSelect>
-        <UiButton id="deleteAgeAllBtn" variant="danger" onClick={actions.onDeleteOldAllColumns}>{labels.deleteOldAllColumns}</UiButton>
-        <label className="checkbox" title="Embeddings matching, AI dedupe, summaries, research">
+          layout={isMobile ? 'stacked' : 'inline'}
+          wrapperClassName="topMenuQuickSelect"
+          options={[
+            { value: 'yesterday', label: labels.ageYesterday },
+            { value: 'week', label: labels.agePastWeek },
+            { value: 'month', label: labels.agePastMonth },
+            { value: 'year', label: labels.agePastYear }
+          ]}
+        />
+        <UiButton className="topMenuQuickAction" id="deleteAgeAllBtn" variant="danger" onClick={actions.onDeleteOldAllColumns}>{labels.deleteOldAllColumns}</UiButton>
+        <label className={isMobile ? 'checkbox topMenuQuickToggle' : 'checkbox'} title="Embeddings matching, AI dedupe, summaries, research">
           {quickRow.aiAvailable ? (
             <>
               <input
@@ -56,7 +58,7 @@ export function TopMenuControlsQuickRow() {
             <span id="aiUnavailableLabel">{labels.aiUnavailable}</span>
           )}
         </label>
-        <UiButton id="helpBtn" onClick={actions.onOpenHelp}>{labels.helpTitle}</UiButton>
+        <UiButton className="topMenuQuickAction" id="helpBtn" onClick={actions.onOpenHelp}>{labels.helpTitle}</UiButton>
       </div>
     </div>
   );

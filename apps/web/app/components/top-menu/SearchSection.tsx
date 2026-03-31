@@ -5,10 +5,11 @@ import { useTopMenuContext } from './context/useTopMenuContext';
 
 export function SearchSection() {
   const { labels, search } = useTopMenuContext();
+  const rowDirection = search.isMobile ? 'column' : { xs: 'column', sm: 'row' } as const;
 
   return (
     <Box className="topMenuSearchSection">
-      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+      <Stack className="topMenuSearchRow" direction={rowDirection} spacing={1}>
         <TextField
           inputRef={search.searchInputRef}
           size={search.isMobile ? 'medium' : 'small'}

@@ -29,7 +29,7 @@ export function TopMenuAppearanceSection() {
   return (
     <details className="controlSection controlSectionAppearance" open>
       <summary id="appearanceSummary">{labels.appearanceSummary}</summary>
-      <div className="controlGroup controlGroupAppearance" id="appearanceGroup">
+      <div className="controlGroup controlGroupAppearance topMenuFieldGrid" id="appearanceGroup">
         <TopMenuSelectField
           id="fontSelect"
           title="Change UI font"

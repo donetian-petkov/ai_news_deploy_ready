@@ -5,16 +5,20 @@ import { useTopMenuContext } from './context/useTopMenuContext';
 
 export function TopMenuAccountSection() {
   const {
+    isMobile,
     labels,
     controls: {
       model: { aiSettings }
     },
     account
   } = useTopMenuContext();
+  const rowDirection = isMobile ? 'column' : { xs: 'column', sm: 'row' } as const;
+  const rowAlignItems = isMobile ? 'stretch' : { xs: 'stretch', sm: 'center' } as const;
   const compactAuthButtonSx = {
     whiteSpace: 'nowrap',
-    minWidth: { xs: 112, sm: 108 },
-    alignSelf: { xs: 'flex-start', sm: 'center' },
+    width: { xs: '100%', sm: 'auto' },
+    minWidth: { xs: 0, sm: 108 },
+    alignSelf: { xs: 'stretch', sm: 'center' },
     px: 2,
     borderRadius: '14px'
   } as const;
@@ -29,7 +33,7 @@ export function TopMenuAccountSection() {
           </Typography>
 
           {account.user ? (
-            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems={{ xs: 'stretch', sm: 'center' }} sx={{ mb: 1 }}>
+            <Stack direction={rowDirection} spacing={1} alignItems={rowAlignItems} sx={{ mb: 1 }}>
               <Typography variant="caption">{labels.authSignedInAs || 'Signed in as'}: {account.user.username}</Typography>
               <Button size="small" variant="outlined" onClick={account.signOut} disabled={account.busy} sx={compactAuthButtonSx}>
                 {labels.authSignOut || 'Sign out'}
@@ -37,7 +41,7 @@ export function TopMenuAccountSection() {
             </Stack>
           ) : (
             <Stack spacing={1} sx={{ mb: 1 }}>
-              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+              <Stack direction={rowDirection} spacing={1}>
                 <TextField
                   size="small"
                   fullWidth
@@ -54,7 +58,7 @@ export function TopMenuAccountSection() {
                   onChange={e => account.setPassword(e.target.value)}
                 />
               </Stack>
-              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+              <Stack direction={rowDirection} spacing={1}>
                 <Button size="small" variant="contained" onClick={account.signIn} disabled={account.busy} sx={compactAuthButtonSx}>
                   {labels.authSignIn || 'Sign in'}
                 </Button>
@@ -65,7 +69,7 @@ export function TopMenuAccountSection() {
             </Stack>
           )}
 
-          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ mb: 1 }}>
+          <Stack direction={rowDirection} spacing={1} sx={{ mb: 1 }}>
             <TextField
               size="small"
               fullWidth
@@ -87,7 +91,7 @@ export function TopMenuAccountSection() {
             </Button>
           </Stack>
 
-          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems={{ xs: 'stretch', sm: 'center' }} sx={{ mb: 1 }}>
+          <Stack direction={rowDirection} spacing={1} alignItems={rowAlignItems} sx={{ mb: 1 }}>
             <Typography variant="caption">
               {account.hasSavedKey
                 ? (labels.authKeyStoredYes || 'Saved key exists for selected provider.')

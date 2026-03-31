@@ -262,6 +262,8 @@ export function NewsCardHeader() {
           <Typography
             component="button"
             type="button"
+            className="news-card-title-anchor"
+            data-news-title-anchor="1"
             onClick={() => {
               if (hasAnyTranslation) {
                 setTitleOverride(displayTranslated ? 'original' : 'translated');
