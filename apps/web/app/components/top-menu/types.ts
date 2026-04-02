@@ -104,7 +104,7 @@ export type TopMenuControlsModel = {
     dailyBriefingFormat: TopMenuUiState['dailyBriefingFormat'];
     dailyBriefingAudio: TopMenuUiState['dailyBriefingAudio'];
     dailyBriefingFeedUrls: TopMenuUiState['dailyBriefingFeedUrls'];
-    availableFeeds: Array<{ url: string; label: string }>;
+    availableFeeds: Array<{ url: string; label: string; kind: RootState['feeds']['feeds'][number]['kind']; summaryEnabled: boolean }>;
     briefing: RootState['briefing'];
   };
   appearance: {
@@ -137,6 +137,7 @@ export type TopMenuAppearancePatch = {
   soundTheme?: TopMenuUiState['soundTheme'];
   soundEnabled?: TopMenuUiState['soundEnabled'];
   vibe?: TopMenuUiState['vibe'];
+  colorMode?: TopMenuUiState['colorMode'];
   performanceMode?: TopMenuUiState['performanceMode'];
 };
 
@@ -170,6 +171,8 @@ export type TopMenuControlsActions = {
   onGenerateDailyBriefing: () => void;
   onSetAppearance: (patch: TopMenuAppearancePatch) => void;
   onSetLanguage: (lang: 'en' | 'bg') => void;
+  onSetFeedSummaryEnabled: (feedUrl: string, enabled: boolean) => void;
+  onSetAllFeedSummaries: (enabled: boolean) => void;
   onCycleTheme: () => void;
   onTogglePerformanceMode: () => void;
   onToggleSoundEnabled: () => void;
