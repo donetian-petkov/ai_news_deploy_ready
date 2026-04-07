@@ -80,6 +80,7 @@ describe('uiSlice', () => {
       scheme: 'classic',
       timezone: 'system',
       dateFormat: 'ddmmyy',
+      showNewsCovers: true,
       performanceMode: false,
       buttonMode: 'icons',
       menuHintMode: 'text',
@@ -140,6 +141,7 @@ describe('uiSlice', () => {
       font: 'sora',
       fontSize: 'lg',
       scheme: 'neon',
+      showNewsCovers: false,
       performanceMode: true,
       buttonMode: 'text',
       menuHintMode: 'buttons',
@@ -150,6 +152,7 @@ describe('uiSlice', () => {
     expect(state.font).toBe('sora');
     expect(state.fontSize).toBe('lg');
     expect(state.scheme).toBe('neon');
+    expect(state.showNewsCovers).toBe(false);
     expect(state.performanceMode).toBe(true);
     expect(state.buttonMode).toBe('text');
     expect(state.menuHintMode).toBe('buttons');
@@ -240,6 +243,7 @@ describe('uiSlice', () => {
       addStreamVisible: true,
       showFilteredColumn: false,
       showEmergingColumn: false,
+      showNewsCovers: false,
       performanceMode: true,
       menuHintMode: 'buttons',
       effectIntensity: 'low',
@@ -253,6 +257,7 @@ describe('uiSlice', () => {
     expect(state.addStreamVisible).toBe(true);
     expect(state.showFilteredColumn).toBe(false);
     expect(state.showEmergingColumn).toBe(false);
+    expect(state.showNewsCovers).toBe(false);
     expect(state.hideAllResearch).toBe(false);
     expect(state.hideAllSummaries).toBe(false);
     expect(state.performanceMode).toBe(true);

@@ -251,6 +251,7 @@ type News = {
   title: string;
   titleBg?: string;
   titleEn?: string;
+  coverUrl?: string;
   link: string;
   source: string;
   published?: string;
@@ -348,7 +349,18 @@ type AskAgentReply = {
   remaining: number;
 };
 
-const parser: Parser = new Parser({ timeout: 10_000 });
+const parser: Parser = new Parser({
+  timeout: 10_000,
+  customFields: {
+    item: [
+      ['media:thumbnail', 'mediaThumbnail', { keepArray: true }],
+      ['media:content', 'mediaContent', { keepArray: true }],
+      ['media:group', 'mediaGroup'],
+      ['itunes:image', 'itunesImage', { keepArray: true }],
+      ['yt:videoId', 'ytVideoId']
+    ]
+  }
+});
 
 app.use(express.json({ limit: '512kb' }));
 app.use((req, res, next) => {
@@ -411,6 +423,7 @@ const accountSettingsSchema = z.object({
   scheme: z.string().trim().min(1).max(32).optional(),
   timezone: z.string().trim().min(1).max(80).optional(),
   dateFormat: z.string().trim().min(1).max(32).optional(),
+  showNewsCovers: z.boolean().optional(),
   performanceMode: z.boolean().optional(),
   buttonMode: z.union([z.literal('icons'), z.literal('text')]).optional(),
   menuHintMode: z.union([z.literal('text'), z.literal('buttons')]).optional(),
@@ -1754,7 +1767,7 @@ function findReusableNewsItem(
 
 function mergeReusableNewsItem(
   target: NewsInternal,
-  patch: Pick<NewsInternal, 'title' | 'link' | 'published' | 'publishedMs' | 'source' | '__ctx'>
+  patch: Pick<NewsInternal, 'title' | 'link' | 'published' | 'publishedMs' | 'source' | '__ctx' | 'coverUrl'>
 ): boolean {
   let changed = false;
   if (patch.title && patch.title !== target.title) {
@@ -1779,6 +1792,10 @@ function mergeReusableNewsItem(
   }
   if (patch.__ctx && patch.__ctx.length > String(target.__ctx || '').length) {
     target.__ctx = patch.__ctx;
+    changed = true;
+  }
+  if (patch.coverUrl && patch.coverUrl !== target.coverUrl) {
+    target.coverUrl = patch.coverUrl;
     changed = true;
   }
   return changed;
@@ -1977,6 +1994,143 @@ function stripHtml(input: string): string {
     .replace(/&#039;/g, "'")
     .replace(/\s+/g, ' ')
     .trim();
+}
+
+function decodeHtmlEntities(input: string): string {
+  return String(input || '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#039;/g, "'")
+    .trim();
+}
+
+function toAbsoluteHttpUrl(raw: string, base?: string): string | undefined {
+  const input = decodeHtmlEntities(raw);
+  if (!input) return undefined;
+  const normalized = input.startsWith('//') ? `https:${input}` : input;
+  try {
+    const parsed = base ? new URL(normalized, base) : new URL(normalized);
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return undefined;
+    return parsed.toString();
+  } catch {
+    return undefined;
+  }
+}
+
+function isLikelyImageUrl(raw: string): boolean {
+  const value = String(raw || '').toLowerCase();
+  return /\.(avif|gif|jpe?g|png|svg|webp)(?:[?#].*)?$/.test(value)
+    || value.includes('ytimg.com/')
+    || value.includes('img.youtube.com/')
+    || value.includes('preview.redd.it/')
+    || value.includes('i.redd.it/');
+}
+
+function extractMediaUrl(node: unknown, base?: string): string | undefined {
+  if (!node) return undefined;
+  if (Array.isArray(node)) {
+    for (const entry of node) {
+      const url = extractMediaUrl(entry, base);
+      if (url) return url;
+    }
+    return undefined;
+  }
+  if (typeof node === 'string') {
+    return toAbsoluteHttpUrl(node, base);
+  }
+  if (typeof node !== 'object') return undefined;
+
+  const record = node as Record<string, unknown>;
+  const attrs = (record.$ && typeof record.$ === 'object') ? (record.$ as Record<string, unknown>) : null;
+  const rawUrl = typeof attrs?.url === 'string'
+    ? attrs.url
+    : typeof attrs?.href === 'string'
+      ? attrs.href
+      : typeof record.url === 'string'
+        ? record.url
+        : typeof record.href === 'string'
+          ? record.href
+          : '';
+  const directUrl = toAbsoluteHttpUrl(rawUrl, base);
+  const medium = typeof attrs?.medium === 'string' ? attrs.medium.toLowerCase() : '';
+  const type = typeof attrs?.type === 'string' ? attrs.type.toLowerCase() : '';
+  if (directUrl && (medium === 'image' || type.startsWith('image/') || isLikelyImageUrl(directUrl))) {
+    return directUrl;
+  }
+
+  for (const nestedKey of ['media:thumbnail', 'media:content', 'url']) {
+    if (!(nestedKey in record)) continue;
+    const url = extractMediaUrl(record[nestedKey], base);
+    if (url) return url;
+  }
+
+  return undefined;
+}
+
+function extractEnclosureImageUrl(node: unknown, base?: string): string | undefined {
+  if (!node || typeof node !== 'object') return undefined;
+  const record = node as Record<string, unknown>;
+  const url = toAbsoluteHttpUrl(typeof record.url === 'string' ? record.url : '', base);
+  if (!url) return undefined;
+  const type = typeof record.type === 'string' ? record.type.toLowerCase() : '';
+  if (type.startsWith('image/') || isLikelyImageUrl(url)) return url;
+  return undefined;
+}
+
+function extractImageUrlFromHtml(raw: unknown, base?: string): string | undefined {
+  if (typeof raw !== 'string' || !raw.trim()) return undefined;
+  const match = raw.match(/<img[^>]+src=["']([^"']+)["']/i);
+  if (!match) return undefined;
+  return toAbsoluteHttpUrl(match[1], base);
+}
+
+function extractYouTubeVideoId(raw: unknown): string | undefined {
+  const input = String(raw || '').trim();
+  if (!input) return undefined;
+  try {
+    const parsed = new URL(input);
+    const host = parsed.hostname.replace(/^www\./i, '').toLowerCase();
+    if (host === 'youtu.be') {
+      const id = parsed.pathname.replace(/^\/+/, '').split('/')[0];
+      return id || undefined;
+    }
+    if (!host.endsWith('youtube.com')) return undefined;
+    const watchId = parsed.searchParams.get('v');
+    if (watchId) return watchId;
+    const parts = parsed.pathname.split('/').filter(Boolean);
+    if (parts[0] === 'shorts' || parts[0] === 'embed' || parts[0] === 'v') {
+      return parts[1] || undefined;
+    }
+    return undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function buildYouTubeThumbnailUrl(videoId: string): string | undefined {
+  const clean = String(videoId || '').trim();
+  if (!/^[A-Za-z0-9_-]{6,}$/.test(clean)) return undefined;
+  return `https://i3.ytimg.com/vi/${clean}/hqdefault.jpg`;
+}
+
+function extractCoverUrlFromItem(item: any, fi: FeedInfo, link: string): string | undefined {
+  const base = toAbsoluteHttpUrl(link) || toAbsoluteHttpUrl(fi.url) || fi.url;
+  const youtubeId = typeof item.ytVideoId === 'string' && item.ytVideoId.trim()
+    ? item.ytVideoId.trim()
+    : extractYouTubeVideoId(link) || '';
+
+  return extractEnclosureImageUrl(item.enclosure, base)
+    || extractMediaUrl(item.mediaThumbnail, base)
+    || extractMediaUrl(item.mediaContent, base)
+    || extractMediaUrl(item.mediaGroup, base)
+    || extractMediaUrl(item.itunesImage, base)
+    || extractImageUrlFromHtml(item.description, base)
+    || extractImageUrlFromHtml(item.content, base)
+    || extractImageUrlFromHtml(item.summary, base)
+    || buildYouTubeThumbnailUrl(youtubeId);
 }
 
 function pickRssContextCombined(item: any, limitChars: number): string {
@@ -3775,6 +3929,7 @@ function broadcastNewsUpdate(it: NewsInternal) {
     title: it.title,
     titleBg: it.titleBg,
     titleEn: it.titleEn,
+    coverUrl: it.coverUrl,
     link: it.link,
     source: it.source,
     published: it.published,
@@ -3812,6 +3967,7 @@ function sendSnapshotToSocket(ws: WebSocket) {
       title: item.title,
       titleBg: item.titleBg,
       titleEn: item.titleEn,
+      coverUrl: item.coverUrl,
       link: item.link,
       source: item.source,
       published: item.published,
@@ -4971,6 +5127,7 @@ async function processFeed(fi: FeedInfo) {
 
       const title = item.title ?? '(no title)';
       const source = feed.title ?? labelForFeed(fi) ?? 'unknown';
+      const coverUrl = extractCoverUrlFromItem(item, fi, link);
       const reusable = findReusableNewsItem(fi.url, source, title, link, publishedMs);
       if (reusable) {
         const changed = mergeReusableNewsItem(reusable, {
@@ -4979,7 +5136,8 @@ async function processFeed(fi: FeedInfo) {
           published,
           publishedMs,
           source,
-          __ctx: pickRssContextCombined(item, 1500)
+          __ctx: pickRssContextCombined(item, 1500),
+          coverUrl
         });
         if (changed) {
           refreshDerivedDataForItem(reusable);
@@ -5026,6 +5184,7 @@ async function processFeed(fi: FeedInfo) {
         title,
         titleBg: undefined,
         titleEn: undefined,
+        coverUrl,
         link,
         source,
         published,
