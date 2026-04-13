@@ -53,6 +53,7 @@ type Args = {
   getBodyMode: FeedColumnHandlers['getBodyMode'];
   getDefaultBodyMode: FeedColumnHandlers['getDefaultBodyMode'];
   setBodyMode: FeedColumnHandlers['setBodyMode'];
+  moveFeedToTop: FeedColumnHandlers['onMoveFeedToTop'];
   removeFeed: FeedColumnHandlers['onRemoveFeed'];
   toggleFeedSummary: FeedColumnHandlers['onToggleFeedSummary'];
   toggleFeedResearch: FeedColumnHandlers['onToggleFeedResearch'];
@@ -97,6 +98,7 @@ export function useColumnsPresentation({
   getBodyMode,
   getDefaultBodyMode,
   setBodyMode,
+  moveFeedToTop,
   removeFeed,
   toggleFeedSummary,
   toggleFeedResearch,
@@ -141,6 +143,7 @@ export function useColumnsPresentation({
     setBodyMode,
     setAdvancedControlsByUrl,
     setVisibleByFeed,
+    moveFeedToTop,
     removeFeed,
     toggleFeedSummary,
     toggleFeedResearch,

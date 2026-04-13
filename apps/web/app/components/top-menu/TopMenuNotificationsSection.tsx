@@ -5,7 +5,6 @@ import { useTopMenuContext } from './context/useTopMenuContext';
 
 export function TopMenuNotificationsSection() {
   const {
-    isMobile,
     labels,
     controls: {
       model: { notifications },
@@ -16,8 +15,8 @@ export function TopMenuNotificationsSection() {
   return (
     <details className="controlSection controlSectionNotifications" open>
       <summary id="notificationsSummary">{labels.notificationsSummary}</summary>
-      <div className="controlGroup controlGroupNotifications">
-        <label className="checkbox">
+      <div className="controlGroup controlGroupNotifications topMenuFieldGrid">
+        <label className="checkbox topMenuToggleField topMenuField">
           <input
             id="notifyEnabled"
             type="checkbox"
@@ -31,13 +30,14 @@ export function TopMenuNotificationsSection() {
           label={labels.notifyPrefix}
           value={notifications.notifyMode}
           onChange={actions.onNotifyModeChange}
+          wrapperClassName="topMenuField"
           options={[
             { value: 'matched', label: labels.notifyOnlyMatched },
             { value: 'matched_pinned', label: labels.notifyMatchedPinned },
             { value: 'pinned', label: labels.notifyOnlyPinned },
             { value: 'all', label: labels.notifyAllColumns }
           ]}
-          layout={isMobile ? 'stacked' : 'inline'}
+          layout="stacked"
         />
       </div>
     </details>

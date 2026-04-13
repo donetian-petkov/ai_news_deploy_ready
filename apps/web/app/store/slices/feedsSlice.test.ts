@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import feedsReducer, {
+  moveFeedToTopAfterSpecials,
   removeFeedLocally,
   setAllFeedControlsOpen,
   setFeedBudgetSetting,
@@ -11,6 +12,7 @@ import feedsReducer, {
   togglePinned
 } from './feedsSlice';
 import type { FeedInfo } from '../types';
+import { FILTERED_FEED_URL } from '../constants';
 
 const makeFeed = (url: string, label = 'Feed'): FeedInfo => ({
   url,
@@ -112,6 +114,19 @@ describe('feedsSlice', () => {
     expect(state.deleteAgeByUrl['https://c']).toBe('year');
     expect(state.deleteAgeByUrl['https://missing']).toBeUndefined();
     expect(state.orderByUrl).toEqual(['https://c', 'https://b', 'https://a']);
+  });
+
+  it('moves a feed to the top of regular columns while keeping filtered first', () => {
+    let state = feedsReducer(undefined, setFeeds([
+      makeFeed(FILTERED_FEED_URL, 'Filtered'),
+      makeFeed('https://a', 'A'),
+      makeFeed('https://b', 'B'),
+      makeFeed('https://c', 'C')
+    ]));
+
+    state = feedsReducer(state, moveFeedToTopAfterSpecials('https://c'));
+
+    expect(state.orderByUrl).toEqual([FILTERED_FEED_URL, 'https://c', 'https://a', 'https://b']);
   });
 
   it('sets all feed controls open/closed', () => {

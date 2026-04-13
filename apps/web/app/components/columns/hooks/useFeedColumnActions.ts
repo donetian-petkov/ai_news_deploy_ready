@@ -2,7 +2,7 @@
 
 import { useCallback } from 'react';
 import type { AppDispatch } from '../../../store/store';
-import { removeFeedLocally, setFeedBudgetSetting, setFeedColumnSettings, setFeedIntervalSetting, setFeedResearchSetting, setFeedSummarySetting } from '../../../store/slices/feedsSlice';
+import { moveFeedToTopAfterSpecials, removeFeedLocally, setFeedBudgetSetting, setFeedColumnSettings, setFeedIntervalSetting, setFeedResearchSetting, setFeedSummarySetting } from '../../../store/slices/feedsSlice';
 import { removeOldItemsInFeed } from '../../../store/slices/newsSlice';
 import { setKeywords as setUiKeywords } from '../../../store/slices/uiSlice';
 import { sendWsMessage } from '../../../store/wsClient';
@@ -100,7 +100,12 @@ export function useFeedColumnActions({
     }));
   }, [deleteAgeByUrl, dispatch]);
 
+  const moveFeedToTop = useCallback((feedUrl: string) => {
+    dispatch(moveFeedToTopAfterSpecials(feedUrl));
+  }, [dispatch]);
+
   return {
+    moveFeedToTop,
     removeFeed,
     toggleFeedSummary,
     toggleFeedResearch,

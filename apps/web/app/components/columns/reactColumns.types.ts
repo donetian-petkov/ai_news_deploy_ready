@@ -200,6 +200,7 @@ export type FeedColumnHandlers = {
   getDefaultBodyMode: (text: string, threshold: number) => BodyMode;
   setBodyMode: (key: string, mode: BodyMode) => void;
   onTogglePinnedColumn: (feedUrl: string) => void;
+  onMoveFeedToTop: (feedUrl: string) => void;
   onRemoveFeed: (feedUrl: string) => void;
   onToggleFeedControls: (feedUrl: string) => void;
   onToggleFeedSummary: (feed: FeedInfo) => void;

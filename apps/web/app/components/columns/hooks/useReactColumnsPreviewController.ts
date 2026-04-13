@@ -356,6 +356,7 @@ export function useReactColumnsPreviewController({ wsUrl }: Args) {
   });
 
   const {
+    moveFeedToTop,
     removeFeed,
     toggleFeedSummary,
     toggleFeedResearch,
@@ -420,6 +421,7 @@ export function useReactColumnsPreviewController({ wsUrl }: Args) {
     getBodyMode,
     getDefaultBodyMode,
     setBodyMode,
+    moveFeedToTop,
     removeFeed,
     toggleFeedSummary,
     toggleFeedResearch,

@@ -13,6 +13,7 @@ type Args = {
   setBodyMode: FeedColumnHandlers['setBodyMode'];
   setAdvancedControlsByUrl: React.Dispatch<React.SetStateAction<Record<string, boolean>>>;
   setVisibleByFeed: React.Dispatch<React.SetStateAction<Record<string, number>>>;
+  moveFeedToTop: FeedColumnHandlers['onMoveFeedToTop'];
   removeFeed: FeedColumnHandlers['onRemoveFeed'];
   toggleFeedSummary: FeedColumnHandlers['onToggleFeedSummary'];
   toggleFeedResearch: FeedColumnHandlers['onToggleFeedResearch'];
@@ -39,6 +40,7 @@ export function useFeedColumnHandlers({
   setBodyMode,
   setAdvancedControlsByUrl,
   setVisibleByFeed,
+  moveFeedToTop,
   removeFeed,
   toggleFeedSummary,
   toggleFeedResearch,
@@ -62,6 +64,7 @@ export function useFeedColumnHandlers({
     getDefaultBodyMode,
     setBodyMode,
     onTogglePinnedColumn: (feedUrl: string) => dispatch(togglePinned(feedUrl)),
+    onMoveFeedToTop: moveFeedToTop,
     onRemoveFeed: removeFeed,
     onToggleFeedControls: (feedUrl: string) => dispatch(toggleFeedControls(feedUrl)),
     onToggleFeedSummary: toggleFeedSummary,
@@ -87,5 +90,5 @@ export function useFeedColumnHandlers({
     onToggleAsk: (id, feedUrl) => dispatch(toggleAskOpen({ id, feedUrl })),
     onSetAskDraft: (id, feedUrl, draft) => dispatch(setAskDraft({ id, feedUrl, draft })),
     onAskSubmit: requestAsk
-  }), [copyLink, copyNewsPayload, dispatch, getBodyMode, getDefaultBodyMode, hideItem, removeFeed, removeOldInFeed, requestAsk, requestResearch, requestSummary, requestTitleTranslation, setAdvancedControlsByUrl, setBodyMode, setFeedBudget, setFeedFilterPreset, setFeedInterval, setFeedSortMode, setKeywords, setVisibleByFeed, shareNews, toggleFeedResearch, toggleFeedSummary]);
+  }), [copyLink, copyNewsPayload, dispatch, getBodyMode, getDefaultBodyMode, hideItem, moveFeedToTop, removeFeed, removeOldInFeed, requestAsk, requestResearch, requestSummary, requestTitleTranslation, setAdvancedControlsByUrl, setBodyMode, setFeedBudget, setFeedFilterPreset, setFeedInterval, setFeedSortMode, setKeywords, setVisibleByFeed, shareNews, toggleFeedResearch, toggleFeedSummary]);
 }

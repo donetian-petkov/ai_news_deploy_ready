@@ -33,7 +33,7 @@ export function TopMenuControlsQuickRow() {
           value={deleteAgeAll}
           onChange={onDeleteAgeChange}
           layout={isMobile ? 'stacked' : 'inline'}
-          wrapperClassName="topMenuQuickSelect"
+          wrapperClassName="topMenuQuickSelect topMenuField"
           options={[
             { value: 'yesterday', label: labels.ageYesterday },
             { value: 'week', label: labels.agePastWeek },
@@ -42,7 +42,7 @@ export function TopMenuControlsQuickRow() {
           ]}
         />
         <UiButton className="topMenuQuickAction" id="deleteAgeAllBtn" variant="danger" onClick={actions.onDeleteOldAllColumns}>{labels.deleteOldAllColumns}</UiButton>
-        <label className={isMobile ? 'checkbox topMenuQuickToggle' : 'checkbox'} title="Embeddings matching, AI dedupe, summaries, research">
+        <label className="checkbox topMenuQuickToggle topMenuField" title="Embeddings matching, AI dedupe, summaries, research">
           {quickRow.aiAvailable ? (
             <>
               <input

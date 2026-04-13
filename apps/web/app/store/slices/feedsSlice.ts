@@ -1,5 +1,6 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import type { BudgetMode, FeedInfo, SortMode } from '../types';
+import { FILTERED_FEED_URL } from '../constants';
 
 type FeedsState = {
   feeds: FeedInfo[];
@@ -135,6 +136,29 @@ const feedsSlice = createSlice({
       next.splice(toIdx, 0, moved);
       state.orderByUrl = next;
     },
+    moveFeedToTopAfterSpecials(state, action: PayloadAction<string>) {
+      const feedUrl = String(action.payload || '').trim();
+      if (!feedUrl || feedUrl === FILTERED_FEED_URL) return;
+
+      const feedUrls = state.feeds.map(f => f.url);
+      const feedUrlSet = new Set(feedUrls);
+      if (!feedUrlSet.has(feedUrl)) return;
+
+      const baseOrder = [
+        ...state.orderByUrl.filter(url => feedUrlSet.has(url)),
+        ...feedUrls.filter(url => !state.orderByUrl.includes(url))
+      ];
+
+      const regularOrder = baseOrder.filter(url => url !== FILTERED_FEED_URL);
+      const nextRegular = [
+        feedUrl,
+        ...regularOrder.filter(url => url !== feedUrl)
+      ];
+
+      state.orderByUrl = baseOrder.includes(FILTERED_FEED_URL)
+        ? [FILTERED_FEED_URL, ...nextRegular]
+        : nextRegular;
+    },
     hydrateFeedUiState(state, action: PayloadAction<Partial<Pick<FeedsState, 'pinnedByUrl' | 'controlsOpenByUrl' | 'deleteAgeByUrl' | 'orderByUrl'>>>) {
       const next = action.payload || {};
       const urls = new Set(state.feeds.map(f => f.url));
@@ -183,6 +207,7 @@ export const {
   setFeedIntervalSetting,
   setFeedColumnSettings,
   reorderFeeds,
+  moveFeedToTopAfterSpecials,
   hydrateFeedUiState
 } = feedsSlice.actions;
 export default feedsSlice.reducer;
