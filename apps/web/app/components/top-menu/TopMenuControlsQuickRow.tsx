@@ -1,5 +1,6 @@
 'use client';
 
+import { Box, FormControlLabel, Switch } from '@mui/material';
 import { UiButton } from '../design-system/UiButton';
 import { TopMenuSelectField } from './TopMenuSelectField';
 import { useTopMenuContext } from './context/useTopMenuContext';
@@ -42,22 +43,26 @@ export function TopMenuControlsQuickRow() {
           ]}
         />
         <UiButton className="topMenuQuickAction" id="deleteAgeAllBtn" variant="danger" onClick={actions.onDeleteOldAllColumns}>{labels.deleteOldAllColumns}</UiButton>
-        <label className="checkbox topMenuQuickToggle topMenuField" title="Embeddings matching, AI dedupe, summaries, research">
+        <Box className="topMenuQuickToggle topMenuField" title="Embeddings matching, AI dedupe, summaries, research">
           {quickRow.aiAvailable ? (
-            <>
-              <input
-                id="aiEnabled"
-                type="checkbox"
-                checked={quickRow.aiEnabled}
-                disabled={!quickRow.aiAvailable}
-                onChange={e => actions.onToggleAiEnabled(e.target.checked)}
-              />
-              <span id="aiEnabledLabel">{labels.aiEnabledLabel}</span>
-            </>
+            <FormControlLabel
+              control={(
+                <Switch
+                  id="aiEnabled"
+                  size="small"
+                  checked={quickRow.aiEnabled}
+                  disabled={!quickRow.aiAvailable}
+                  onChange={e => actions.onToggleAiEnabled(e.target.checked)}
+                  sx={{ ml: 0.25, mr: 0.75 }}
+                />
+              )}
+              label={<span id="aiEnabledLabel">{labels.aiEnabledLabel}</span>}
+              sx={{ alignItems: 'center', m: 0, width: '100%', '.MuiFormControlLabel-label': { minWidth: 0, flex: 1 } }}
+            />
           ) : (
             <span id="aiUnavailableLabel">{labels.aiUnavailable}</span>
           )}
-        </label>
+        </Box>
         <UiButton className="topMenuQuickAction" id="helpBtn" onClick={actions.onOpenHelp}>{labels.helpTitle}</UiButton>
       </div>
     </div>
