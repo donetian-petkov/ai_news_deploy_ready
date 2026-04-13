@@ -8,6 +8,7 @@
   ],
   "scripts": {
     "dev": "npm run dev -w @ai-news/api & npm run dev -w @ai-news/web",
+    "dev:local": "bash ./scripts/dev-local.sh",
     "dev:web": "npm run dev -w @ai-news/web",
     "dev:api": "npm run dev -w @ai-news/api",
     "build": "npm run build -w @ai-news/shared && npm run build -w @ai-news/api && npm run build -w @ai-news/web",
@@ -18,8 +19,11 @@
     "test:smoke": "npm run test:api && npm run test:e2e",
     "capture:readme": "node scripts/capture-readme-screenshots.js",
     "start": "npm run start -w @ai-news/api & npm run start -w @ai-news/web",
+    "start:local": "bash ./scripts/start-local.sh",
     "install:server": "bash ./scripts/install.sh",
     "start:server": "bash ./scripts/start.sh",
+    "stop:local": "bash ./scripts/stop-local.sh",
+    "restart:local": "bash ./scripts/restart-local.sh",
     "prisma:generate": "npm run prisma:generate -w @ai-news/api",
     "prisma:migrate": "npm run prisma:migrate -w @ai-news/api"
   }

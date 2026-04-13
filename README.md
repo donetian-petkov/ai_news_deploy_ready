@@ -168,8 +168,10 @@ ai_news_next_node/
 ## Quick Start
 
 ### 1) Prerequisites
-- Node.js `20+`
-- npm `10+`
+- Node.js `20.19+` or `22.12+`
+- npm `10.x`
+
+Older Node 20 releases and npm 11 may install partially or emit engine errors with the current dependency set.
 
 ### 2) Configure environment
 Copy `.env.example` to `.env`:
@@ -211,6 +213,39 @@ Endpoints:
 - Web: `http://localhost:3000`
 - API health: `http://localhost:4000/health`
 - WebSocket: `ws://localhost:4000`
+
+### Stop and start again
+
+Stop a foreground run with `Ctrl+C`.
+
+If the services are already running in the background, stop them with:
+
+```bash
+npm run stop:local
+```
+
+Start the production build again with:
+
+```bash
+cd /path/to/ai_news_deploy_ready
+npm run start:local
+```
+
+For local development with reload:
+
+```bash
+cd /path/to/ai_news_deploy_ready
+npm run dev:local
+```
+
+Restart a stopped or backgrounded production run with:
+
+```bash
+cd /path/to/ai_news_deploy_ready
+npm run restart:local
+```
+
+The local helper scripts set the Prisma cache directory automatically and prefer `$HOME/.nvm/versions/node/v22.11.0/bin` when it exists.
 
 ## Run With Docker (Everything Included)
 
