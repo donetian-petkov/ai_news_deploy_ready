@@ -71,6 +71,7 @@ const DEFAULT_AI_FEATURES: AiInsightFeatureSettings = {
 
 type FeedSettingsWire = {
   summaryEnabled?: unknown;
+  translationEnabled?: unknown;
   researchEnabled?: unknown;
   budget?: unknown;
   sortMode?: unknown;
@@ -363,6 +364,7 @@ function parseFeedInfos(v: unknown, feedSettingsRaw: unknown): FeedInfo[] {
       kind: isFeedKind(m.kind) && m.kind !== FeedKindValue.Rss ? m.kind : FeedKindValue.Rss,
       intervalSec: isNumber(m.intervalSec) ? m.intervalSec : 120,
       summaryEnabled: isBoolean(rawSettings.summaryEnabled) ? rawSettings.summaryEnabled : false,
+      translationEnabled: isBoolean(rawSettings.translationEnabled) ? rawSettings.translationEnabled : true,
       researchEnabled: isBoolean(rawSettings.researchEnabled) ? rawSettings.researchEnabled : false,
       budget,
       sortMode,
@@ -393,6 +395,7 @@ function parseFeedInfos(v: unknown, feedSettingsRaw: unknown): FeedInfo[] {
       kind: FeedKindValue.Rss,
       intervalSec: 0,
       summaryEnabled: isBoolean(filteredSettings.summaryEnabled) ? filteredSettings.summaryEnabled : false,
+      translationEnabled: isBoolean(filteredSettings.translationEnabled) ? filteredSettings.translationEnabled : true,
       researchEnabled: isBoolean(filteredSettings.researchEnabled) ? filteredSettings.researchEnabled : false,
       budget,
       sortMode,

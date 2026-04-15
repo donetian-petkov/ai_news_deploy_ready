@@ -46,6 +46,17 @@ export function FeedColumnCoreActions() {
         <Button
           size="small"
           variant="outlined"
+          startIcon={<VerticalAlignTopIcon />}
+          onClick={() => onMoveFeedToTop(feed.url)}
+          sx={compactBtnSx}
+        >
+          {labels.moveToTop}
+        </Button>
+      ) : null}
+      {!isMatchColumn && !isEmergingColumn ? (
+        <Button
+          size="small"
+          variant="outlined"
           color="error"
           startIcon={<DeleteOutlineIcon />}
           onClick={() => onRemoveFeed(feed.url)}

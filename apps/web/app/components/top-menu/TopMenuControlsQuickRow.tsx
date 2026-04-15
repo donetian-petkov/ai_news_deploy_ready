@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useMemo, useState } from 'react';
 import { Box, FormControlLabel, Switch } from '@mui/material';
 import { UiButton } from '../design-system/UiButton';
 import { TopMenuSelectField } from './TopMenuSelectField';
@@ -14,8 +15,17 @@ export function TopMenuControlsQuickRow() {
       actions
     }
   } = useTopMenuContext();
-
+  const presetStoryCounts = useMemo(() => [5, 10, 15, 20], []);
+  const storiesPerColumn = quickRow.storiesPerColumn;
+  const [customStoriesDraft, setCustomStoriesDraft] = useState(String(storiesPerColumn));
   const onDeleteAgeChange = (next: typeof deleteAgeAll) => actions.onDeleteAgeAllChange(next);
+  const selectedStoryPreset = presetStoryCounts.includes(storiesPerColumn) ? String(storiesPerColumn) : 'custom';
+  const parsedCustomStories = Math.floor(Number(customStoriesDraft));
+  const customStoriesValid = Number.isFinite(parsedCustomStories) && parsedCustomStories >= 1;
+
+  useEffect(() => {
+    setCustomStoriesDraft(String(storiesPerColumn));
+  }, [storiesPerColumn]);
 
   return (
     <div className="controlsCompactRow controlsRow">
@@ -26,6 +36,51 @@ export function TopMenuControlsQuickRow() {
         </UiButton>
         <UiButton className="topMenuQuickAction" id="resetNewsShownAllBtn" onClick={actions.onResetNewsShownAll}>
           {labels.resetNewsShownAll}
+        </UiButton>
+        <TopMenuSelectField
+          id="storiesPerColumnSelect"
+          label={labels.storiesPerColumnPrefix}
+          title="Set the maximum stories shown per column"
+          value={selectedStoryPreset}
+          onChange={value => {
+            if (value === 'custom') return;
+            actions.onSetStoriesPerColumn(Number(value) || storiesPerColumn);
+          }}
+          layout={isMobile ? 'stacked' : 'inline'}
+          wrapperClassName="topMenuQuickSelect topMenuField"
+          options={[
+            ...presetStoryCounts.map(count => ({ value: String(count), label: String(count) })),
+            { value: 'custom', label: labels.storiesCustom }
+          ]}
+        />
+        <label className={isMobile ? 'checkbox topMenuQuickToggle topMenuField' : 'checkbox topMenuField'} title="Set a custom stories-per-column limit">
+          <span>{labels.storiesCustom}</span>
+          <input
+            id="storiesPerColumnCustom"
+            className="input"
+            type="number"
+            min="1"
+            step="1"
+            value={customStoriesDraft}
+            placeholder={labels.storiesCustomPlaceholder}
+            onChange={e => setCustomStoriesDraft(e.target.value)}
+            onKeyDown={e => {
+              if (e.key !== 'Enter' || !customStoriesValid) return;
+              actions.onSetStoriesPerColumn(parsedCustomStories);
+            }}
+            style={{ width: isMobile ? '100%' : 96 }}
+          />
+        </label>
+        <UiButton
+          className="topMenuQuickAction"
+          id="storiesPerColumnApplyBtn"
+          onClick={() => {
+            if (!customStoriesValid) return;
+            actions.onSetStoriesPerColumn(parsedCustomStories);
+          }}
+          disabled={!customStoriesValid || parsedCustomStories === storiesPerColumn}
+        >
+          {labels.applyStoriesLimit}
         </UiButton>
         <TopMenuSelectField
           id="deleteAgeSelect"

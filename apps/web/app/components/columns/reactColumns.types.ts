@@ -159,6 +159,7 @@ export type FeedColumnViewModel = {
   searchQuery: string;
   hideAllResearch: boolean;
   hideAllSummaries: boolean;
+  storiesPerColumn: number;
   aiEnabled: boolean;
   aiAvailable: boolean;
   insightFeatures: AiInsightFeatureSettings;
@@ -204,6 +205,7 @@ export type FeedColumnHandlers = {
   onRemoveFeed: (feedUrl: string) => void;
   onToggleFeedControls: (feedUrl: string) => void;
   onToggleFeedSummary: (feed: FeedInfo) => void;
+  onToggleFeedTranslation: (feed: FeedInfo) => void;
   onToggleFeedResearch: (feed: FeedInfo) => void;
   onSetFeedBudget: (feed: FeedInfo, budget: BudgetMode) => void;
   onSetFeedInterval: (feed: FeedInfo, intervalSec: number) => void;

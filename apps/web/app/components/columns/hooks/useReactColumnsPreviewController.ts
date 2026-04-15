@@ -287,6 +287,7 @@ export function useReactColumnsPreviewController({ wsUrl }: Args) {
           kind: 'rss',
           intervalSec: 0,
           summaryEnabled: false,
+          translationEnabled: true,
           researchEnabled: false,
           budget: 'high',
           sortMode: 'matched',
@@ -317,6 +318,7 @@ export function useReactColumnsPreviewController({ wsUrl }: Args) {
         kind: 'rss' as const,
         intervalSec: 120,
         summaryEnabled: false,
+        translationEnabled: true,
         researchEnabled: false,
         budget: 'standard' as const,
         sortMode: 'newest' as const,
@@ -331,6 +333,7 @@ export function useReactColumnsPreviewController({ wsUrl }: Args) {
 
   const { visibleByFeed, setVisibleByFeed, hydratedColumns } = useColumnHydration({
     renderedFeeds,
+    storyLimit: ui.storiesPerColumn,
     showMoreNewsAllSeq: ui.showMoreNewsAllSeq,
     resetNewsShownAllSeq: ui.resetNewsShownAllSeq,
     columnNodesRef
@@ -359,6 +362,7 @@ export function useReactColumnsPreviewController({ wsUrl }: Args) {
     moveFeedToTop,
     removeFeed,
     toggleFeedSummary,
+    toggleFeedTranslation,
     toggleFeedResearch,
     setFeedBudget,
     setFeedInterval,
@@ -392,6 +396,7 @@ export function useReactColumnsPreviewController({ wsUrl }: Args) {
       searchQuery: ui.searchQuery,
       hideAllResearch: ui.hideAllResearch,
       hideAllSummaries: ui.hideAllSummaries,
+      storiesPerColumn: ui.storiesPerColumn,
       aiEnabled: ui.aiEnabled,
       aiAvailable: ui.aiAvailable,
       insightFeatures: ui.insightFeatures,
@@ -424,6 +429,7 @@ export function useReactColumnsPreviewController({ wsUrl }: Args) {
     moveFeedToTop,
     removeFeed,
     toggleFeedSummary,
+    toggleFeedTranslation,
     toggleFeedResearch,
     setFeedBudget,
     setFeedInterval,
