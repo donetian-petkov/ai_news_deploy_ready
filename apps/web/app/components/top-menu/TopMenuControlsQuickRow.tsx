@@ -38,8 +38,8 @@ export function TopMenuControlsQuickRow() {
         <UiButton className="topMenuQuickAction" id="resetBtn" onClick={actions.onResetAllNewest}>
           {t('topMenu.resetAllToNewestCount', { count: storiesPerColumn })}
         </UiButton>
-        <UiButton className="topMenuQuickAction" id="showMoreNewsAllBtn" onClick={actions.onShowMoreNewsAll} disabled={showMoreAllCount < 1}>
-          {showMoreAllCount > 0 ? t('topMenu.showMoreNewsAllCount', { count: showMoreAllCount }) : labels.showMoreNewsAll}
+        <UiButton className="topMenuQuickAction" id="showMoreNewsAllBtn" onClick={actions.onShowMoreNewsAll}>
+          {t('topMenu.showMoreNewsAllCount', { count: showMoreAllCount })}
         </UiButton>
         <UiButton className="topMenuQuickAction" id="resetNewsShownAllBtn" onClick={actions.onResetNewsShownAll}>
           {t('topMenu.resetNewsShownAllCount', { count: resetShownCount })}
