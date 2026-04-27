@@ -780,6 +780,19 @@ app.put('/api/account/settings', async (req, res) => {
   }
 });
 
+app.get('/', (_req, res) => {
+  res.json({
+    ok: true,
+    service: 'ai-news-api',
+    message: 'API server is running.',
+    links: {
+      web: 'http://localhost:3000',
+      health: '/health',
+      websocket: `ws://localhost:${PORT}`
+    }
+  });
+});
+
 app.get('/health', (_req, res) => {
   res.json({ ok: true, service: 'ai-news-api' });
 });
