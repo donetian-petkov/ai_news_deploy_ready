@@ -4172,13 +4172,14 @@ function shouldHaveResearch(it: NewsInternal): boolean {
 
 // ---------------- AI JOB QUEUE (non-blocking) ----------------
 type AiJobKind = 'summary' | 'title_translate' | 'research' | 'mood' | 'news_type';
-type AiJobInput = { kind: AiJobKind; id: string; feedUrl: string; manual?: boolean };
+type AiJobInput = { kind: AiJobKind; id: string; feedUrl: string; manual?: boolean; viewport?: boolean };
 type AiJob = AiJobInput & { enqueuedAtMs: number };
 type DeadLetterAiJob = {
   kind: AiJobKind;
   id: string;
   feedUrl: string;
   manual?: boolean;
+  viewport?: boolean;
   enqueuedAtMs: number;
   droppedAtMs: number;
   reason: string;
@@ -4288,6 +4289,10 @@ const AI_RESEARCH_TIMEOUT_MS = Math.max(8_000, Number.parseInt(process.env.AI_RE
 const AI_RESEARCH_TIMEOUT_MANUAL_MS = Math.max(
   AI_RESEARCH_TIMEOUT_MS,
   Number.parseInt(process.env.AI_RESEARCH_TIMEOUT_MANUAL_MS ?? '60_000', 10) || 60_000
+);
+const AI_RESEARCH_ARTICLE_MAX_CHARS = Math.max(
+  800,
+  Number.parseInt(process.env.AI_RESEARCH_ARTICLE_MAX_CHARS ?? '1600', 10) || 1600
 );
 const AI_CLASSIFY_TIMEOUT_MS = Math.max(6_000, Number.parseInt(process.env.AI_CLASSIFY_TIMEOUT_MS ?? '22_000', 10) || 22_000);
 const AI_ERROR_TOAST_COOLDOWN_MS = Math.max(5_000, Number.parseInt(process.env.AI_ERROR_TOAST_COOLDOWN_MS ?? '20_000', 10) || 20_000);
@@ -4425,6 +4430,7 @@ function pushDeadLetter(job: AiJob, reason: string) {
     id: job.id,
     feedUrl: job.feedUrl,
     manual: job.manual,
+    viewport: job.viewport,
     enqueuedAtMs: job.enqueuedAtMs,
     droppedAtMs: Date.now(),
     reason
@@ -4873,7 +4879,7 @@ async function runOneJob(job: AiJob) {
     }
 
     if (job.kind === 'title_translate') {
-      if (!job.manual && budget !== 'high') {
+      if (!job.manual && !job.viewport && budget !== 'high') {
         markSkip('budget_not_high');
         return;
       }
@@ -5002,7 +5008,7 @@ async function runOneJob(job: AiJob) {
       let linkText = it.__linkText || '';
       if (!linkText) {
         try {
-          linkText = await fetchArticleText(it.link, 2600);
+          linkText = await fetchArticleText(it.link, AI_RESEARCH_ARTICLE_MAX_CHARS);
         } catch {
           linkText = '';
         }
@@ -5223,7 +5229,6 @@ async function processFeed(fi: FeedInfo) {
 
   const s = feedSettings.get(fi.url)!;
   const rt = feedRuntime.get(fi.url)!;
-  const budget = s.budget || 'standard';
 
   // compute interval (per-feed override)
   const intervalSec = Math.max(20, Math.min(3600, Number(s.intervalSec || fi.intervalSec || defaultIntervalForKind(fi.kind))));
@@ -5342,27 +5347,6 @@ async function processFeed(fi: FeedInfo) {
       if (recent.length > MAX_RECENT_ITEMS) recent.shift();
       refreshDerivedDataForItem(pkt);
 
-      // enqueue AI jobs (auto per-column)
-      if (aiEnabled && aiAvailable) {
-        const wantFeedSummary = s.summaryEnabled;
-        const wantFilteredSummary =
-          feedSettings.get(FILTERED_FEED_URL)?.summaryEnabled && filteredOk;
-
-        const wantFeedResearch = s.researchEnabled;
-        const wantFilteredResearch =
-          feedSettings.get(FILTERED_FEED_URL)?.researchEnabled && filteredOk;
-
-        if ((wantFeedSummary || wantFilteredSummary) && isPublishedInRecentSummaryWindow(publishedMs)) {
-          enqueueJob({ kind: 'summary', id, feedUrl: fi.url });
-        }
-        if (budget === 'high' && isTranslationEnabledForFeed(fi.url)) {
-          enqueueJob({ kind: 'title_translate', id, feedUrl: fi.url });
-        }
-        enqueueJob({ kind: 'mood', id, feedUrl: fi.url });
-        enqueueJob({ kind: 'news_type', id, feedUrl: fi.url });
-        if (wantFeedResearch || wantFilteredResearch) enqueueJob({ kind: 'research', id, feedUrl: fi.url });
-      }
-
       broadcastNewsUpdate(pkt);
     }
 
@@ -5382,9 +5366,6 @@ async function schedulerTick() {
 
   // run AI queue
   try { await tickAiQueue(); } catch {}
-  try { enqueueSummaryRecoveryPass(); } catch {}
-  try { enqueueTitleTranslateRecoveryPass(); } catch {}
-  try { enqueueResearchRecoveryPass(); } catch {}
 
   const now = Date.now();
   for (const fi of feedsList) {
@@ -5656,9 +5637,6 @@ wss.on('connection', (ws: WebSocket) => {
       aiInFlight.clear();
 
       await initKeywordEmbeddings();
-      if (aiEnabled && aiAvailable) {
-        enqueueTitleTranslateBackfill({ max: 360 });
-      }
       broadcastConfig();
       markDirty();
       return;
@@ -5708,9 +5686,6 @@ wss.on('connection', (ws: WebSocket) => {
       aiInFlight.clear();
 
       await initKeywordEmbeddings();
-      if (aiEnabled && aiAvailable) {
-        enqueueTitleTranslateBackfill({ max: 360 });
-      }
       if (REQUIRE_LOGIN_AND_KEY_FOR_NEWS && !newsAccessUnlocked) {
         newsAccessUnlocked = true;
       }
@@ -5786,44 +5761,12 @@ wss.on('connection', (ws: WebSocket) => {
       if (lang === 'bg' || lang === 'en' || lang === 'bilingual') {
         const prev = summaryLang;
         summaryLang = lang;
-        let normalizedNow = 0;
-        for (const it of recent) {
-          if (!it.summary || !it.summary.trim()) continue;
-          const nextSummary = enforceSummaryLanguage(it.summary, lang);
-          if (nextSummary === it.summary) continue;
-          it.summary = nextSummary;
-          broadcastNewsUpdate(it);
-          normalizedNow++;
-        }
         broadcastConfig();
-
-        // Re-render existing summaries in the newly selected global language.
-        if (prev !== lang && aiEnabled && aiAvailable && activeModel('summary') !== 'none') {
-          const MAX = 260;
-          const list = recent.slice().sort((a, b) => b.publishedMs - a.publishedMs);
-          let done = 0;
-          for (const it of list) {
-            if (done >= MAX) break;
-            if (hiddenIds.has(it.id)) continue;
-            if (!shouldHaveSummary(it)) continue;
-            if (!it.summary || !it.summary.trim()) continue;
-
-            it.summary = '';
-            enqueueJob({ kind: 'summary', id: it.id, feedUrl: it.feedUrl });
-            broadcastNewsUpdate(it);
-            done++;
-          }
-          if (done > 0) {
-            ws.send(JSON.stringify({
-              type: 'ok',
-              message: `Refreshing ${done} summaries for ${lang.toUpperCase()}`
-            }));
-          } else if (normalizedNow > 0) {
-            ws.send(JSON.stringify({
-              type: 'ok',
-              message: `Adjusted ${normalizedNow} summaries to ${lang.toUpperCase()}`
-            }));
-          }
+        if (prev !== lang) {
+          ws.send(JSON.stringify({
+            type: 'ok',
+            message: `Summary language set to ${lang.toUpperCase()}. Existing summaries are preserved; newly visible or manually refreshed items will use the new language.`
+          }));
         }
 
         markDirty();
@@ -5916,24 +5859,6 @@ wss.on('connection', (ws: WebSocket) => {
       feedSettings.get(feedUrl)!.summaryEnabled = enabled;
       broadcastConfig();
 
-      // enqueue bounded backfill
-      if (enabled && aiEnabled && aiAvailable && activeModel('summary') !== 'none') {
-        const MAX = 220;
-        const list = recent.slice().sort((a, b) => b.publishedMs - a.publishedMs);
-        let done = 0;
-        for (const it of list) {
-          if (done >= MAX) break;
-          if (!eligibleForFeed(it, feedUrl)) continue;
-          if (!isPublishedInRecentSummaryWindow(it.publishedMs)) continue;
-          if (it.summary && it.summary.trim()) continue;
-          const before = hasSummaryJobQueuedOrRunning(it.id, it.feedUrl);
-          enqueueJob({ kind: 'summary', id: it.id, feedUrl: it.feedUrl });
-          const after = hasSummaryJobQueuedOrRunning(it.id, it.feedUrl);
-          if (!before && after) done++;
-          broadcastNewsUpdate(it);
-        }
-      }
-
       if (!enabled) {
         // ensure summaryPending is cleared on UI for this feed when summary is turned off
         for (const it of recent) {
@@ -5955,44 +5880,14 @@ wss.on('connection', (ws: WebSocket) => {
         feedSettings.set(feedUrl, defaultSettingsForFeed({ url: feedUrl, label: feedUrl, kind: 'rss', intervalSec: 120 }));
       }
 
-      const settings = feedSettings.get(feedUrl)!;
-      const previous = settings.translationEnabled !== false;
-      settings.translationEnabled = enabled;
+      feedSettings.get(feedUrl)!.translationEnabled = enabled;
       broadcastConfig();
-
-      let refreshedSummaries = 0;
-      if (previous !== enabled && aiEnabled && aiAvailable && activeModel('summary') !== 'none') {
-        const MAX = 260;
-        const list = recent.slice().sort((a, b) => b.publishedMs - a.publishedMs);
-        for (const it of list) {
-          if (refreshedSummaries >= MAX) break;
-          if (!eligibleForFeed(it, feedUrl)) continue;
-
-          const hasSummary = !!String(it.summary || '').trim();
-          const shouldBackfillMissing = !hasSummary
-            && shouldHaveSummary(it)
-            && isPublishedInRecentSummaryWindow(it.publishedMs);
-          if (!hasSummary && !shouldBackfillMissing) continue;
-
-          if (hasSummary) it.summary = '';
-          const before = hasSummaryJobQueuedOrRunning(it.id, it.feedUrl);
-          enqueueJob({ kind: 'summary', id: it.id, feedUrl: it.feedUrl });
-          const after = hasSummaryJobQueuedOrRunning(it.id, it.feedUrl);
-          if (!before && after) refreshedSummaries++;
-          broadcastNewsUpdate(it);
-        }
-      }
-
-      let queuedTitleTranslations = 0;
-      if (enabled && previous !== enabled) {
-        queuedTitleTranslations = enqueueTitleTranslateBackfill({ feedUrl, max: 220 });
-      }
 
       ws.send(JSON.stringify({
         type: 'ok',
         message: enabled
-          ? `Translations enabled. Refreshing ${refreshedSummaries} summaries and queued ${queuedTitleTranslations} title translations.`
-          : `Translations disabled. Refreshing ${refreshedSummaries} summaries in their original language.`
+          ? 'Translations enabled. Existing text is preserved; newly visible or manually refreshed items will translate on demand.'
+          : 'Translations disabled. Existing translated text is preserved, and future auto translation is paused for this column.'
       }));
 
       markDirty();
@@ -6010,28 +5905,12 @@ wss.on('connection', (ws: WebSocket) => {
 
       feedSettings.get(feedUrl)!.researchEnabled = enabled;
       broadcastConfig();
-
-      for (const it of recent) {
-        if (!eligibleForFeed(it, feedUrl)) continue;
-        if (!it.summary && !it.research) continue;
-        it.summary = '';
-        it.research = '';
-        broadcastNewsUpdate(it);
-      }
-
-      // bounded backfill research
-      if (enabled && aiEnabled && aiAvailable && activeModel('research') !== 'none') {
-        const MAX = 120;
-        const list = recent.slice().sort((a, b) => b.publishedMs - a.publishedMs);
-        let done = 0;
-        for (const it of list) {
-          if (done >= MAX) break;
-          if (!eligibleForFeed(it, feedUrl)) continue;
-          if (it.research && it.research.trim()) continue;
-          enqueueJob({ kind: 'research', id: it.id, feedUrl: it.feedUrl });
-          done++;
-        }
-      }
+      ws.send(JSON.stringify({
+        type: 'ok',
+        message: enabled
+          ? 'Research enabled. Existing research is preserved; newly visible or manually requested items will analyze on demand.'
+          : 'Research disabled for this column. Existing research is preserved.'
+      }));
 
       markDirty();
       return;
@@ -6055,20 +5934,6 @@ wss.on('connection', (ws: WebSocket) => {
         broadcastNewsUpdate(it);
       });
 
-      if (budget === 'high' && aiEnabled && aiAvailable && activeModel('summary') !== 'none') {
-        const MAX = 260;
-        const list = recent.slice().sort((a, b) => b.publishedMs - a.publishedMs);
-        let done = 0;
-        for (const it of list) {
-          if (done >= MAX) break;
-          if (!eligibleForFeed(it, feedUrl)) continue;
-          if (!isTranslationEnabledForFeed(it.feedUrl)) continue;
-          if (!needsTitleTranslation(it.title, it.titleBg, it.titleEn)) continue;
-          enqueueJob({ kind: 'title_translate', id: it.id, feedUrl: it.feedUrl });
-          done++;
-        }
-      }
-
       broadcastConfig();
       markDirty();
       return;
@@ -6087,19 +5952,6 @@ wss.on('connection', (ws: WebSocket) => {
 
       if (feedSettings.has(FILTERED_FEED_URL)) {
         feedSettings.get(FILTERED_FEED_URL)!.budget = budget;
-      }
-
-      if (budget === 'high' && aiEnabled && aiAvailable && activeModel('summary') !== 'none') {
-        const MAX = 420;
-        const list = recent.slice().sort((a, b) => b.publishedMs - a.publishedMs);
-        let done = 0;
-        for (const it of list) {
-          if (done >= MAX) break;
-          if (!isTranslationEnabledForFeed(it.feedUrl)) continue;
-          if (!needsTitleTranslation(it.title, it.titleBg, it.titleEn)) continue;
-          enqueueJob({ kind: 'title_translate', id: it.id, feedUrl: it.feedUrl });
-          done++;
-        }
       }
 
       recent.forEach(it => {
@@ -6187,14 +6039,13 @@ wss.on('connection', (ws: WebSocket) => {
       const id = String(msg.id || '').trim();
       if (!id) return;
 
-      const it = recent.find(x => x.id === id);
-      if (it) {
-        it.research = '';
-        broadcastNewsUpdate(it);
-        markDirty();
-      }
+      const it = recent.find(x => x.id === id && x.feedUrl === String(msg.feedUrl || '').trim()) || recent.find(x => x.id === id);
+      if (!it) return;
+      it.research = '';
+      broadcastNewsUpdate(it);
+      markDirty();
 
-      enqueueJob({ kind: 'research', id, feedUrl: String(msg.feedUrl || ''), manual: true });
+      enqueueJob({ kind: 'research', id: it.id, feedUrl: it.feedUrl, manual: true });
       return;
     }
 
@@ -6203,14 +6054,63 @@ wss.on('connection', (ws: WebSocket) => {
       const id = String(msg.id || '').trim();
       if (!id) return;
 
-      const it = recent.find(x => x.id === id);
-      if (it) {
-        it.summary = '';
+      const it = recent.find(x => x.id === id && x.feedUrl === String(msg.feedUrl || '').trim()) || recent.find(x => x.id === id);
+      if (!it) return;
+      it.summary = '';
+      enqueueJob({ kind: 'summary', id: it.id, feedUrl: it.feedUrl, manual: true });
+      broadcastNewsUpdate(it);
+      markDirty();
+      return;
+    }
+
+    if (msg.type === 'run_item_auto') {
+      if (!aiEnabled || !aiAvailable) return;
+      const id = String(msg.id || '').trim();
+      const requestedFeedUrl = String(msg.feedUrl || '').trim();
+      if (!id) return;
+
+      const it = recent.find(x => x.id === id && x.feedUrl === requestedFeedUrl) || recent.find(x => x.id === id);
+      if (!it || hiddenIds.has(it.id)) return;
+
+      const summaryModelReady = activeModel('summary') !== 'none';
+      const researchModelReady = activeModel('research') !== 'none';
+      const budget = feedSettings.get(it.feedUrl)?.budget || 'standard';
+      let queuedSomething = false;
+
+      if (msg.summary && summaryModelReady && isAutoSummaryEligible(it) && !String(it.summary || '').trim() && !hasSummaryJobQueuedOrRunning(it.id, it.feedUrl)) {
+        enqueueJob({ kind: 'summary', id: it.id, feedUrl: it.feedUrl });
+        queuedSomething = hasSummaryJobQueuedOrRunning(it.id, it.feedUrl) || queuedSomething;
       }
-      enqueueJob({ kind: 'summary', id, feedUrl: String(msg.feedUrl || ''), manual: true });
-      if (it) {
+
+      if (msg.research && researchModelReady) {
+        const wantsFeedResearch = !!feedSettings.get(it.feedUrl)?.researchEnabled;
+        const wantsFilteredResearch =
+          !!feedSettings.get(FILTERED_FEED_URL)?.researchEnabled &&
+          !!it.isMatch &&
+          it.filteredOk !== false;
+        if ((wantsFeedResearch || wantsFilteredResearch) && !String(it.research || '').trim() && !hasResearchJobQueuedOrRunning(it.id, it.feedUrl) && budgetAllowsAutoResearch(budget)) {
+          enqueueJob({ kind: 'research', id: it.id, feedUrl: it.feedUrl });
+          queuedSomething = hasResearchJobQueuedOrRunning(it.id, it.feedUrl) || queuedSomething;
+        }
+      }
+
+      if (msg.titleTranslate && summaryModelReady && isTranslationEnabledForFeed(it.feedUrl) && needsTitleTranslation(it.title, it.titleBg, it.titleEn) && !hasTitleTranslateJobQueuedOrRunning(it.id, it.feedUrl)) {
+        enqueueJob({ kind: 'title_translate', id: it.id, feedUrl: it.feedUrl, viewport: true });
+        queuedSomething = hasTitleTranslateJobQueuedOrRunning(it.id, it.feedUrl) || queuedSomething;
+      }
+
+      if (msg.mood && researchModelReady && !it.mood) {
+        enqueueJob({ kind: 'mood', id: it.id, feedUrl: it.feedUrl, viewport: true });
+        queuedSomething = true;
+      }
+
+      if (msg.newsType && researchModelReady && !it.newsType) {
+        enqueueJob({ kind: 'news_type', id: it.id, feedUrl: it.feedUrl, viewport: true });
+        queuedSomething = true;
+      }
+
+      if (queuedSomething) {
         broadcastNewsUpdate(it);
-        markDirty();
       }
       return;
     }
@@ -6417,9 +6317,6 @@ wss.on('connection', (ws: WebSocket) => {
 
   // load embeddings once
   if (aiEnabled) await initKeywordEmbeddings();
-  if (aiEnabled && aiAvailable) {
-    enqueueTitleTranslateBackfill({ max: 420 });
-  }
 
   // start scheduler
   startScheduler();

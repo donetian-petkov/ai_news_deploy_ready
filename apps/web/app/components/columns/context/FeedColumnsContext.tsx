@@ -39,6 +39,7 @@ export type FeedColumnsContextValue = {
   state: FeedColumnStateModel;
   handlers: FeedColumnHandlers;
   renderedFeeds: FeedInfo[];
+  autoActionBypassFeedUrls: string[];
   onGridDragOver: (e: DragEvent<HTMLDivElement>) => void;
   onGridDrop: (e: DragEvent<HTMLDivElement>) => void;
   buildDragState: (feed: FeedInfo, canDrag: boolean) => FeedColumnDragState;

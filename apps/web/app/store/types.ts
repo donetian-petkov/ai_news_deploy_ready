@@ -201,6 +201,7 @@ export type NewsItem = {
   title: string;
   titleBg?: string;
   titleEn?: string;
+  originFeedUrl?: string;
   coverUrl?: string;
   source?: string;
   link: string;
