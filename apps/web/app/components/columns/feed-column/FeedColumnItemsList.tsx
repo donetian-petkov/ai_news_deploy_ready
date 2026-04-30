@@ -453,7 +453,7 @@ export function FeedColumnItemsList() {
               onResetNewsToTen(feed.url);
             }}
           >
-            {t('columns.resetNewsTopCount', { count: resetVisibleCount })}
+            {t('columns.resetToFirstCount', { count: resetVisibleCount })}
           </Button>
         </Stack>
       ) : null}
