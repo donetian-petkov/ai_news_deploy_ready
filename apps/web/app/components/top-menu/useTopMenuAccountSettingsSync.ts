@@ -245,9 +245,6 @@ export function useTopMenuAccountSettingsSync({ dispatch, ui, account }: Args) {
             const titleDisplayLanguage = maybeString('titleDisplayLanguage');
             if (titleDisplayLanguage === 'original' || titleDisplayLanguage === 'bg' || titleDisplayLanguage === 'en') {
               dispatch(setTitleDisplayLanguage(titleDisplayLanguage));
-              if (titleDisplayLanguage !== 'original') {
-                sendWsMessage({ type: 'run_title_translate_backfill', max: 220 });
-              }
             }
 
             const insightFeatures = isRecord(remote.insightFeatures)
