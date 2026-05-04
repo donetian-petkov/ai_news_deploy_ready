@@ -5503,6 +5503,12 @@ async function fetchFeedXml(fi: FeedInfo): Promise<{ xml: string | null; notModi
       return { xml, notModified: false };
     } catch (e) {
       rt.failCount += 1;
+      const message = e instanceof Error ? e.message : String(e);
+      const waitMs = rt.failCount >= 6 ? 10 * 60 * 1000 : rt.failCount >= 3 ? 2 * 60 * 1000 : 0;
+      console.warn(
+        `[feed-fetch] attempt ${attempt}/${maxAttempts} failed for ${fi.url}: ${message} ` +
+        `(failCount=${rt.failCount}${waitMs ? `, breaker=${Math.round(waitMs / 1000)}s` : ''})`
+      );
 
       // circuit breaker: after 6 fails, pause longer
       if (rt.failCount >= 6) {
@@ -5512,6 +5518,10 @@ async function fetchFeedXml(fi: FeedInfo): Promise<{ xml: string | null; notModi
       }
 
       if (attempt >= maxAttempts) {
+        console.error(
+          `[feed-fetch] exhausted retries for ${fi.url}: ${message} ` +
+          `(failCount=${rt.failCount}, disabledUntilMs=${rt.disabledUntilMs ?? 0})`
+        );
         throw e;
       }
 
