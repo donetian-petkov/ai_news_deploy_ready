@@ -94,6 +94,7 @@ type AiModelsByProvider = {
   openai: AiModelOptions;
   claude: AiModelOptions;
   openrouter: AiModelOptions;
+  local: AiModelOptions;
 };
 type AiUsageKind = 'summary' | 'research' | 'ask';
 type AiUsageKindStats = {
@@ -307,6 +308,7 @@ function parseAvailableModels(raw: unknown): AiModelsByProvider | undefined {
     openai?: AiModelOptionsWire;
     claude?: AiModelOptionsWire;
     openrouter?: AiModelOptionsWire;
+    local?: AiModelOptionsWire;
   };
   return {
     openai: isRecord(modelMap.openai)
@@ -328,6 +330,13 @@ function parseAvailableModels(raw: unknown): AiModelsByProvider | undefined {
         summary: parseModelList(modelMap.openrouter.summary),
         research: parseModelList(modelMap.openrouter.research),
         ask: parseModelList(modelMap.openrouter.ask)
+      }
+      : { summary: [], research: [], ask: [] },
+    local: isRecord(modelMap.local)
+      ? {
+        summary: parseModelList(modelMap.local.summary),
+        research: parseModelList(modelMap.local.research),
+        ask: parseModelList(modelMap.local.ask)
       }
       : { summary: [], research: [], ask: [] }
   };
@@ -621,7 +630,8 @@ function openWsConnection(dispatch: AppDispatch, nextUrl: string, isReconnect: b
         allBudget: deriveAllBudget(parsedFeeds),
         insightFeatures: parseAiFeatureSettings(msg.aiFeatures),
         localImpactRegion: isString(msg.localRegion) ? msg.localRegion : undefined,
-        trackedTopics: parseTrimmedList(msg.trackedTopics, 80)
+        trackedTopics: parseTrimmedList(msg.trackedTopics, 80),
+        localLlmBaseUrl: isString(msg.localLlmBaseUrl) ? msg.localLlmBaseUrl : undefined
       }));
       newsAccessLockedCurrent = !!msg.newsAccessLocked;
       if (newsAccessLockedCurrent) {

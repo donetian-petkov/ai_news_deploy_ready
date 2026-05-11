@@ -27,6 +27,7 @@ type AccountSettingsPayload = PersistedUiPrefs & {
   summaryModel: string;
   researchModel: string;
   askModel: string;
+  localLlmBaseUrl: string;
   keywords: string[];
   insightFeatures: RootState['ui']['insightFeatures'];
   localImpactRegion: RootState['ui']['localImpactRegion'];
@@ -134,8 +135,9 @@ export function useTopMenuAccountSettingsSync({ dispatch, ui, account }: Args) {
     summaryModel: ui.summaryModel,
     researchModel: ui.researchModel,
     askModel: ui.askModel,
+    localLlmBaseUrl: ui.localLlmBaseUrl,
     keywords: Array.isArray(ui.keywords) ? ui.keywords : []
-  }), [ui.addStreamVisible, ui.aiProvider, ui.allBudget, ui.allColumnControlsHidden, ui.askModel, ui.buttonMode, ui.colorMode, ui.controlsCollapsed, ui.dailyBriefingAudio, ui.dailyBriefingDelivery, ui.dailyBriefingEmail, ui.dailyBriefingFeedUrls, ui.dailyBriefingFormat, ui.dateFormat, ui.effectIntensity, ui.font, ui.fontSize, ui.insightFeatures, ui.keywords, ui.language, ui.localImpactRegion, ui.menuCollapsed, ui.menuHintMode, ui.moodFilter, ui.notifyEnabled, ui.notifyMode, ui.performanceMode, ui.researchLang, ui.researchModel, ui.scheme, ui.searchVisible, ui.showNewsCovers, ui.soundEnabled, ui.soundTheme, ui.summaryLang, ui.summaryModel, ui.timezone, ui.titleDisplayLanguage, ui.trackedTopics, ui.typeFilter, ui.vibe]);
+  }), [ui.addStreamVisible, ui.aiProvider, ui.allBudget, ui.allColumnControlsHidden, ui.askModel, ui.buttonMode, ui.colorMode, ui.controlsCollapsed, ui.dailyBriefingAudio, ui.dailyBriefingDelivery, ui.dailyBriefingEmail, ui.dailyBriefingFeedUrls, ui.dailyBriefingFormat, ui.dateFormat, ui.effectIntensity, ui.font, ui.fontSize, ui.insightFeatures, ui.keywords, ui.language, ui.localImpactRegion, ui.localLlmBaseUrl, ui.menuCollapsed, ui.menuHintMode, ui.moodFilter, ui.notifyEnabled, ui.notifyMode, ui.performanceMode, ui.researchLang, ui.researchModel, ui.scheme, ui.searchVisible, ui.showNewsCovers, ui.soundEnabled, ui.soundTheme, ui.summaryLang, ui.summaryModel, ui.timezone, ui.titleDisplayLanguage, ui.trackedTopics, ui.typeFilter, ui.vibe]);
 
   useEffect(() => {
     const userId = account.user?.id ?? null;
@@ -255,6 +257,7 @@ export function useTopMenuAccountSettingsSync({ dispatch, ui, account }: Args) {
                 )
               : undefined;
             const localImpactRegion = maybeString('localImpactRegion');
+            const localLlmBaseUrl = maybeString('localLlmBaseUrl');
             const trackedTopics = Array.isArray(remote.trackedTopics)
               ? remote.trackedTopics.map(v => String(v || '').trim()).filter(Boolean).slice(0, 80)
               : undefined;
@@ -269,6 +272,7 @@ export function useTopMenuAccountSettingsSync({ dispatch, ui, account }: Args) {
             dispatch(hydrateUiSettings({
               ...(insightFeatures ? { insightFeatures } : {}),
               ...(typeof localImpactRegion === 'string' ? { localImpactRegion } : {}),
+              ...(typeof localLlmBaseUrl === 'string' ? { localLlmBaseUrl } : {}),
               ...(trackedTopics ? { trackedTopics } : {}),
               ...(dailyBriefingDelivery === 'site' || dailyBriefingDelivery === 'email' ? { dailyBriefingDelivery } : {}),
               ...(typeof dailyBriefingEmail === 'string' ? { dailyBriefingEmail } : {}),
@@ -276,17 +280,18 @@ export function useTopMenuAccountSettingsSync({ dispatch, ui, account }: Args) {
               ...(typeof dailyBriefingAudio === 'boolean' ? { dailyBriefingAudio } : {}),
               ...(dailyBriefingFeedUrls ? { dailyBriefingFeedUrls } : {})
             }));
-            if (insightFeatures || localImpactRegion || trackedTopics) {
+            if (insightFeatures || localImpactRegion || trackedTopics || localLlmBaseUrl) {
               sendWsMessage({
                 type: 'set_ai_features',
                 ...(insightFeatures ? { features: insightFeatures } : {}),
                 ...(typeof localImpactRegion === 'string' ? { localRegion: localImpactRegion } : {}),
-                ...(trackedTopics ? { trackedTopics } : {})
+                ...(trackedTopics ? { trackedTopics } : {}),
+                ...(typeof localLlmBaseUrl === 'string' ? { localBaseUrl: localLlmBaseUrl } : {})
               });
             }
 
             const aiProvider = maybeString('aiProvider');
-            if (aiProvider === 'openai' || aiProvider === 'claude' || aiProvider === 'openrouter') {
+            if (aiProvider === 'openai' || aiProvider === 'claude' || aiProvider === 'openrouter' || aiProvider === 'local') {
               sendWsMessage({ type: 'set_ai_provider', provider: aiProvider as TopMenuAiProvider, authToken: token });
               dispatch(setAiSettings({ aiProvider: aiProvider as TopMenuAiProvider }));
             }

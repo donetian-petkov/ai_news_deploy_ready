@@ -28,6 +28,13 @@ export function useTopMenuAiActions({ dispatch, t, labels, feeds }: Args) {
   }, [dispatch, feeds]);
 
   const changeAiProvider = useCallback((provider: TopMenuAiProvider) => {
+    if (provider === 'local') {
+      const ok = sendWsMessage({ type: 'set_ai_provider', provider });
+      if (!ok) {
+        dispatch(enqueueToast({ kind: 'error', message: labels.noServerConnection }));
+      }
+      return;
+    }
     const authToken = getStoredAuthToken();
     if (!authToken) {
       dispatch(enqueueToast({ kind: 'error', message: labels.authSignInRequired }));
