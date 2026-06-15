@@ -10,6 +10,14 @@
 
 A real-time, multi-column news intelligence dashboard with AI summaries, AI research, Ask-Agent Q&A, advanced feed controls, and theme/vibe customization.
 
+## Recent Additions
+
+- Per-feed Discord webhook delivery. Add one webhook per feed to send newly ingested stories into a Discord channel.
+- Discord posts now follow the feed’s AI toggles. If summary, translation, or research is enabled for that feed, those sections are included in the Discord message.
+- Local LLM provider support. You can point the app at an OpenAI-compatible local server and use it without a provider API key.
+- Auth gate clarity. Cloud providers still need a signed-in account plus a saved provider key. Local provider mode unlocks after sign-in.
+- Feed error logs are persisted so repeated fetch failures can be inspected later.
+
 ## Product Snapshot
 
 | Area | What you get |
@@ -36,7 +44,8 @@ A real-time, multi-column news intelligence dashboard with AI summaries, AI rese
 ### AI Behaviors
 - Account-based AI provider key storage (encrypted at rest in SQLite).
 - Account-based preferences profile (auto-saves summary/research/title language, vibe, color mode, and other UI settings).
-- AI provider switching from UI (`OpenAI`, `Claude`, `OpenRouter`) using the signed-in account's saved key.
+- AI provider switching from UI (`OpenAI`, `Claude`, `OpenRouter`, `Local`).
+- Cloud providers use the signed-in account's saved key; local provider uses an OpenAI-compatible endpoint and does not need a key.
 - Summary and Research language controls.
 - Per-column AI budget (`low`, `standard`, `high`) + global apply-all budget.
 - Ask Agent per news item with remaining-question limits and contextual replies.
@@ -73,6 +82,7 @@ A real-time, multi-column news intelligence dashboard with AI summaries, AI rese
   - only pinned columns
   - all columns
 - Stackable dismissible toasts for connection/feed problems.
+- Per-feed Discord webhook field in the feed controls.
 - EN/BG interface.
 - Responsive mobile drawer for top controls.
 
@@ -205,8 +215,9 @@ npm run dev
 ### 5) Create account + save provider key
 - Open the app and expand Top Controls.
 - In `Account`, register/sign in.
-- Paste API key for selected provider and click `Save Key`.
+- Paste API key for a cloud provider and click `Save Key`.
 - Change provider from the provider dropdown (or `Apply Provider`).
+- If you use the local provider, set the local endpoint and model names instead of a provider key.
 - Major preferences are auto-saved per account (including summary/research/title language, vibe, and color mode).
 
 Endpoints:
