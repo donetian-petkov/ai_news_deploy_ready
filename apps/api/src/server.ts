@@ -2140,9 +2140,6 @@ function buildDiscordEmbed(item: NewsInternal, feed: FeedInfo, feedConfig: FeedS
 
   const summaryText = compactDiscordText(item.summary || '', 1800);
   const researchText = compactDiscordText(item.research || '', 1800);
-  if (summaryEnabled && summaryText) {
-    fields.push({ name: 'Summary', value: summaryText });
-  }
   if (researchEnabled && researchText) {
     fields.push({ name: 'Research', value: researchText });
   }
