@@ -83,6 +83,11 @@ export function NewsAccessGate() {
   }, [refreshSession]);
 
   const unlocked = !!user && hasSavedKey;
+  const gateSubtitle = !user
+    ? (labels.accessGateSubtitle || 'News fetching starts only after account login and provider API key setup.')
+    : hasSavedKey
+      ? (labels.accessGateUnlocked || 'You are signed in and the provider key is saved. Fetching should start now.')
+      : (labels.accessGateNeedKey || 'You are signed in. Save an API key for the selected provider to unlock fetching.');
   const authActionButtonSx = useMemo(
     () => ({
       whiteSpace: 'nowrap',
@@ -238,7 +243,7 @@ export function NewsAccessGate() {
               {labels.accessGateTitle || 'Sign in to unlock live news'}
             </Typography>
             <Typography variant="body2" sx={{ color: 'rgba(219, 233, 255, 0.82)' }}>
-              {labels.accessGateSubtitle || 'News fetching starts only after account login and provider API key setup.'}
+              {gateSubtitle}
             </Typography>
             <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
               <Chip size="small" label={`${labels.accessGateProvider || 'Provider'}: ${String(aiProvider || '').toUpperCase()}`} variant="outlined" />
