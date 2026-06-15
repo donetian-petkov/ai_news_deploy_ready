@@ -31,6 +31,7 @@ export function NewsAccessGate() {
   const labels = useMemo(() => t('topMenu', { returnObjects: true }) as Record<string, string>, [t]);
   const aiProvider = useAppSelector(state => state.ui.aiProvider);
   const connected = useAppSelector(state => state.connection.connected);
+  const isLocalProvider = aiProvider === 'local';
 
   const [user, setUser] = useState<AuthUser | null>(null);
   const [hasSavedKey, setHasSavedKey] = useState(false);
@@ -54,7 +55,7 @@ export function NewsAccessGate() {
     setChecking(true);
     try {
       const me = await fetchCurrentUser(token);
-      const hasKey = await fetchProviderKeyStatus(token, aiProvider);
+      const hasKey = isLocalProvider ? true : await fetchProviderKeyStatus(token, aiProvider);
       setUser(me);
       setHasSavedKey(hasKey);
     } catch {
@@ -65,7 +66,7 @@ export function NewsAccessGate() {
     } finally {
       setChecking(false);
     }
-  }, [aiProvider]);
+  }, [aiProvider, isLocalProvider]);
 
   useEffect(() => {
     void refreshSession();
@@ -82,10 +83,12 @@ export function NewsAccessGate() {
     };
   }, [refreshSession]);
 
-  const unlocked = !!user && hasSavedKey;
+  const unlocked = !!user && (isLocalProvider || hasSavedKey);
   const gateSubtitle = !user
     ? (labels.accessGateSubtitle || 'News fetching starts only after account login and provider API key setup.')
-    : hasSavedKey
+    : isLocalProvider
+      ? (labels.accessGateUnlockedLocal || 'You are signed in and using the local provider. Fetching should start now.')
+      : hasSavedKey
       ? (labels.accessGateUnlocked || 'You are signed in and the provider key is saved. Fetching should start now.')
       : (labels.accessGateNeedKey || 'You are signed in. Save an API key for the selected provider to unlock fetching.');
   const authActionButtonSx = useMemo(
@@ -248,7 +251,7 @@ export function NewsAccessGate() {
             <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
               <Chip size="small" label={`${labels.accessGateProvider || 'Provider'}: ${String(aiProvider || '').toUpperCase()}`} variant="outlined" />
               <Chip size="small" color={user ? 'success' : 'default'} label={user ? `${labels.authSignedInAs || 'Signed in as'}: ${user.username}` : (labels.authSignInRequired || 'Sign in is required.')} />
-              <Chip size="small" color={hasSavedKey ? 'success' : 'default'} label={hasSavedKey ? (labels.authKeyStoredYes || 'Saved key exists for selected provider.') : (labels.authKeyStoredNo || 'No saved key for selected provider.')} />
+              <Chip size="small" color={isLocalProvider || hasSavedKey ? 'success' : 'default'} label={isLocalProvider ? (labels.authKeyStoredLocal || 'Local provider does not need a key.') : (hasSavedKey ? (labels.authKeyStoredYes || 'Saved key exists for selected provider.') : (labels.authKeyStoredNo || 'No saved key for selected provider.'))} />
             </Stack>
 
             {!user ? (
