@@ -246,6 +246,7 @@ export function useTopMenuAccountSettingsSync({ dispatch, ui, account }: Args) {
 
             const titleDisplayLanguage = maybeString('titleDisplayLanguage');
             if (titleDisplayLanguage === 'original' || titleDisplayLanguage === 'bg' || titleDisplayLanguage === 'en') {
+              sendWsMessage({ type: 'set_title_display_language', titleDisplayLanguage });
               dispatch(setTitleDisplayLanguage(titleDisplayLanguage));
             }
 
