@@ -212,6 +212,16 @@ npm run install:server
 npm run dev
 ```
 
+Run in the background:
+
+```bash
+npm run server -- --background
+npm run server -- status
+npm run stop
+```
+
+The background server runs both API and web services through the existing `npm run start` command. It writes `.data/server.pid` and `.data/server.log`; `npm run stop` sends `SIGTERM` to the process group so both services shut down together. Use `npm run server -- --dev --background` to background the dev runner instead.
+
 ### 5) Create account + save provider key
 - Open the app and expand Top Controls.
 - In `Account`, register/sign in.
