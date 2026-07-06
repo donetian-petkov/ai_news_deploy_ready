@@ -14,6 +14,16 @@ type AuthSuccess = {
   user: AuthUser;
 };
 
+export class ApiRequestError extends Error {
+  status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = 'ApiRequestError';
+    this.status = status;
+  }
+}
+
 const AUTH_TOKEN_KEY = 'ai_news_auth_token';
 
 function trimTrailingSlash(url: string): string {
@@ -67,10 +77,15 @@ async function requestJson<T>(path: string, init: RequestInit = {}, token?: stri
 
   if (!response.ok) {
     const error = String(body?.error || `Request failed (${response.status})`);
-    throw new Error(error);
+    throw new ApiRequestError(error, response.status);
   }
 
   return body as T;
+}
+
+export function isUnauthorizedRequestError(error: unknown): boolean {
+  const status = Number((error as { status?: unknown } | null)?.status);
+  return status === 401 || status === 403;
 }
 
 export async function registerUser(username: string, password: string): Promise<AuthSuccess> {

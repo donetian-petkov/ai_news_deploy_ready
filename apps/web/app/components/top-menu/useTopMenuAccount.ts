@@ -7,6 +7,7 @@ import {
   fetchCurrentUser,
   fetchProviderKeyStatus,
   getStoredAuthToken,
+  isUnauthorizedRequestError,
   loginUser,
   registerUser,
   saveProviderKey,
@@ -48,10 +49,12 @@ export function useTopMenuAccount({ provider, labels, onSwitchProvider }: Args) 
       setUser(me);
       const hasKey = await fetchProviderKeyStatus(currentToken, provider);
       setHasSavedKey(hasKey);
-    } catch {
-      clearStoredAuthToken();
-      setUser(null);
-      setHasSavedKey(false);
+    } catch (error) {
+      if (isUnauthorizedRequestError(error)) {
+        clearStoredAuthToken();
+        setUser(null);
+        setHasSavedKey(false);
+      }
     }
   }, [provider]);
 

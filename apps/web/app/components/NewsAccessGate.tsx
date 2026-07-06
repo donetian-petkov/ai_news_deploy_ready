@@ -10,6 +10,7 @@ import {
   fetchCurrentUser,
   fetchProviderKeyStatus,
   getStoredAuthToken,
+  isUnauthorizedRequestError,
   loginUser,
   registerUser,
   saveProviderKey,
@@ -58,11 +59,13 @@ export function NewsAccessGate() {
       const hasKey = isLocalProvider ? true : await fetchProviderKeyStatus(token, aiProvider);
       setUser(me);
       setHasSavedKey(hasKey);
-    } catch {
-      clearStoredAuthToken();
-      emitAuthChanged();
-      setUser(null);
-      setHasSavedKey(false);
+    } catch (error) {
+      if (isUnauthorizedRequestError(error)) {
+        clearStoredAuthToken();
+        emitAuthChanged();
+        setUser(null);
+        setHasSavedKey(false);
+      }
     } finally {
       setChecking(false);
     }
@@ -84,6 +87,8 @@ export function NewsAccessGate() {
   }, [refreshSession]);
 
   const unlocked = !!user && (isLocalProvider || hasSavedKey);
+  const hasStoredToken = !!getStoredAuthToken();
+  const awaitingSessionRestore = !user && hasStoredToken;
   const gateSubtitle = !user
     ? (labels.accessGateSubtitle || 'News fetching starts only after account login and provider API key setup.')
     : isLocalProvider
@@ -254,7 +259,7 @@ export function NewsAccessGate() {
               <Chip size="small" color={isLocalProvider || hasSavedKey ? 'success' : 'default'} label={isLocalProvider ? (labels.authKeyStoredLocal || 'Local provider does not need a key.') : (hasSavedKey ? (labels.authKeyStoredYes || 'Saved key exists for selected provider.') : (labels.authKeyStoredNo || 'No saved key for selected provider.'))} />
             </Stack>
 
-            {!user ? (
+            {!user && !awaitingSessionRestore ? (
               <Stack spacing={1}>
                 <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
                   <TextField
@@ -284,7 +289,7 @@ export function NewsAccessGate() {
                   </Button>
                 </Stack>
               </Stack>
-            ) : (
+            ) : user ? (
               <Stack spacing={1}>
                 <TextField
                   size="small"
@@ -310,9 +315,15 @@ export function NewsAccessGate() {
                   </Button>
                 </Stack>
               </Stack>
-            )}
+            ) : null}
 
-            {checking ? (
+            {awaitingSessionRestore ? (
+              <Typography variant="body2" sx={{ color: 'rgba(219, 233, 255, 0.82)' }}>
+                {labels.accessGateChecking || 'Checking account access...'}
+              </Typography>
+            ) : null}
+
+            {checking && !awaitingSessionRestore ? (
               <Typography variant="caption" sx={{ color: 'rgba(219, 233, 255, 0.75)' }}>
                 {labels.accessGateChecking || 'Checking account access...'}
               </Typography>
