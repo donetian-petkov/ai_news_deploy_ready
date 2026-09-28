@@ -33,7 +33,7 @@ const baseUiPrefs = {
   searchVisible: false,
   addStreamVisible: false,
   allColumnControlsHidden: false,
-  buttonMode: 'text',
+  buttonMode: 'icons',
   font: 'system',
   fontSize: 'md',
   scheme: 'classic',
@@ -148,6 +148,8 @@ async function waitForApp(page) {
   await page.getByRole('heading', { name: /Live News Stream|Поток Новини На Живо/i }).waitFor({ timeout: 60000 });
   await page.waitForSelector('.feed-column-shell', { timeout: 90000 });
   await page.waitForSelector('.news-item-card', { timeout: 90000 });
+  // The sign-in overlay covers the columns until the saved login is confirmed after each load.
+  await page.getByText(/Sign in to unlock live news/i).first().waitFor({ state: 'hidden', timeout: 60000 });
   await wait(3000);
 }
 
@@ -202,31 +204,65 @@ async function captureVibeShot(page, vibe, name) {
   });
 }
 
+// Pin the card by its news id: live updates re-render the list, and a positional locator
+// would jump to a different card (or a detached node) between steps.
+function pinCard(page, card) {
+  return card.getAttribute('data-news-id').then(newsId => (
+    newsId
+      ? page.locator(`.news-item-card[data-news-id="${newsId.replace(/"/g, '\\"')}"]`).first()
+      : card
+  ));
+}
+
 async function findCardWithResearch(page) {
+  // Match by button name, not visible text: in icon mode the card buttons show icons with tooltip labels.
   const researchCard = page.locator('.news-item-card').filter({
-    hasText: /Research|Изследване/i
+    has: page.getByRole('button', { name: /^(Research|Изследване)$/i })
   }).first();
 
-  if (await researchCard.count()) return researchCard;
+  if (await researchCard.count()) return pinCard(page, researchCard);
 
   const summaryCard = page.locator('.news-item-card').filter({
-    hasText: /Summary|Резюме/i
+    has: page.getByRole('button', { name: /Summary|Резюме/i })
   }).first();
-  if (await summaryCard.count()) return summaryCard;
+  if (await summaryCard.count()) return pinCard(page, summaryCard);
 
-  return page.locator('.news-item-card').first();
+  return pinCard(page, page.locator('.news-item-card').first());
 }
 
 async function captureDesktop(token) {
-  const browser = await chromium.launch({ headless: true });
+  const browser = await launchBrowser();
   const context = await browser.newContext({
     viewport: { width: 1720, height: 1180 },
     colorScheme: 'dark'
   });
 
   await context.addInitScript(({ token, authTokenStorageKey, uiPrefsStorageKey, prefs }) => {
-    window.localStorage.setItem(authTokenStorageKey, token);
-    window.localStorage.setItem(uiPrefsStorageKey, JSON.stringify(prefs));
+    // Seed only on the first load, so later reloads keep the prefs each shot patched in.
+    if (!window.sessionStorage.getItem('readmeCaptureSeeded')) {
+      window.sessionStorage.setItem('readmeCaptureSeeded', '1');
+      window.localStorage.setItem(authTokenStorageKey, token);
+      window.localStorage.setItem(uiPrefsStorageKey, JSON.stringify(prefs));
+    }
+    // Hide the Next.js dev error badge so it does not end up in the screenshots.
+    document.addEventListener('DOMContentLoaded', () => {
+      const style = document.createElement('style');
+      style.textContent = 'nextjs-portal { display: none !important; }';
+      document.head.appendChild(style);
+      // The app briefly warns that sign-in is required while it confirms the saved login; keep that out of the shots.
+      const hideLoginRace = () => {
+        document.querySelectorAll('.MuiAlert-root').forEach(node => {
+          if (/Sign in is required before starting/i.test(node.textContent || '')) node.style.display = 'none';
+        });
+      };
+      new MutationObserver(hideLoginRace).observe(document.body, { childList: true, subtree: true });
+      // Per-feed Discord webhook URLs are secrets; blur any field holding one.
+      window.setInterval(() => {
+        document.querySelectorAll('input, textarea').forEach(node => {
+          if (/webhooks?\//i.test(node.value || '')) node.style.filter = 'blur(6px)';
+        });
+      }, 100);
+    });
   }, {
     token,
     authTokenStorageKey,
@@ -235,6 +271,10 @@ async function captureDesktop(token) {
   });
 
   const page = await context.newPage();
+  page.on('pageerror', error => console.warn(`Page error: ${error.message}`));
+  page.on('console', message => {
+    if (message.type() === 'error') console.warn(`Console error: ${message.text()}`);
+  });
   await gotoApp(page);
 
   const overlay = await openDesktopOverlay(page);
@@ -259,9 +299,9 @@ async function captureDesktop(token) {
     fullPage: false
   });
 
-  await reloadWithPrefs(page, { vibe: 'cyberwitch', performanceMode: false, buttonMode: 'text' });
+  await reloadWithPrefs(page, { vibe: 'cyberwitch', performanceMode: false });
   const detailCard = await findCardWithResearch(page);
-  await detailCard.scrollIntoViewIfNeeded();
+  await detailCard.evaluate(node => node.scrollIntoView({ block: 'center' }));
   await wait(400);
   const aiToggle = detailCard.getByRole('button', { name: /Show AI analysis|Hide AI analysis|Покажи AI анализа|Скрий AI анализа/i }).first();
   if (await aiToggle.count()) {
@@ -285,26 +325,53 @@ async function captureDesktop(token) {
 }
 
 async function captureMobile(token) {
-  const browser = await chromium.launch({ headless: true });
+  const browser = await launchBrowser();
   const context = await browser.newContext({
     ...devices['iPhone 13'],
     colorScheme: 'dark'
   });
 
   await context.addInitScript(({ token, authTokenStorageKey, uiPrefsStorageKey, prefs }) => {
-    window.localStorage.setItem(authTokenStorageKey, token);
-    window.localStorage.setItem(uiPrefsStorageKey, JSON.stringify(prefs));
+    // Seed only on the first load, so later reloads keep the prefs each shot patched in.
+    if (!window.sessionStorage.getItem('readmeCaptureSeeded')) {
+      window.sessionStorage.setItem('readmeCaptureSeeded', '1');
+      window.localStorage.setItem(authTokenStorageKey, token);
+      window.localStorage.setItem(uiPrefsStorageKey, JSON.stringify(prefs));
+    }
+    // Hide the Next.js dev error badge so it does not end up in the screenshots.
+    document.addEventListener('DOMContentLoaded', () => {
+      const style = document.createElement('style');
+      style.textContent = 'nextjs-portal { display: none !important; }';
+      document.head.appendChild(style);
+      // The app briefly warns that sign-in is required while it confirms the saved login; keep that out of the shots.
+      const hideLoginRace = () => {
+        document.querySelectorAll('.MuiAlert-root').forEach(node => {
+          if (/Sign in is required before starting/i.test(node.textContent || '')) node.style.display = 'none';
+        });
+      };
+      new MutationObserver(hideLoginRace).observe(document.body, { childList: true, subtree: true });
+      // Per-feed Discord webhook URLs are secrets; blur any field holding one.
+      window.setInterval(() => {
+        document.querySelectorAll('input, textarea').forEach(node => {
+          if (/webhooks?\//i.test(node.value || '')) node.style.filter = 'blur(6px)';
+        });
+      }, 100);
+    });
   }, {
     token,
     authTokenStorageKey,
     uiPrefsStorageKey,
     prefs: buildUiPrefs({
       vibe: 'cyberwitch',
-      buttonMode: 'text'
+      buttonMode: 'icons'
     })
   });
 
   const page = await context.newPage();
+  page.on('pageerror', error => console.warn(`Page error: ${error.message}`));
+  page.on('console', message => {
+    if (message.type() === 'error') console.warn(`Console error: ${message.text()}`);
+  });
   await gotoApp(page);
 
   const column = page.locator('.feed-column-shell').first();
@@ -324,11 +391,38 @@ async function captureMobile(token) {
   await browser.close();
 }
 
+// A failed pass skips its own browser.close(), which would keep node alive after the run.
+const openBrowsers = new Set();
+
+async function launchBrowser() {
+  const browser = await chromium.launch({ headless: true });
+  openBrowsers.add(browser);
+  browser.on('disconnected', () => openBrowsers.delete(browser));
+  return browser;
+}
+
+async function closeOpenBrowsers() {
+  await Promise.all([...openBrowsers].map(browser => browser.close().catch(() => {})));
+}
+
+// Live news keeps re-rendering cards, so a step can lose its element mid-capture; retry the whole pass.
+async function withRetries(label, run, attempts = 3) {
+  for (let attempt = 1; ; attempt += 1) {
+    try {
+      return await run();
+    } catch (error) {
+      await closeOpenBrowsers();
+      if (attempt >= attempts) throw error;
+      console.warn(`${label} capture failed (attempt ${attempt}/${attempts}): ${error.message.split('\n')[0]}`);
+    }
+  }
+}
+
 async function main() {
   await ensureDir(screenshotDir);
   const { token, username } = await createCaptureSession();
-  await captureDesktop(token);
-  await captureMobile(token);
+  await withRetries('Desktop', () => captureDesktop(token));
+  await withRetries('Mobile', () => captureMobile(token));
   console.log(`Updated README screenshots in ${screenshotDir}`);
   console.log(`Capture account: ${username}`);
   console.log(`Files: ${screenshotNames.join(', ')}`);

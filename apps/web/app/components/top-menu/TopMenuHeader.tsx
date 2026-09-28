@@ -1,9 +1,10 @@
 'use client';
 
-import { Badge, Box, Button, IconButton, Stack, Typography } from '@mui/material';
+import { Badge, Box, IconButton, Stack, Typography } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import GridViewIcon from '@mui/icons-material/GridView';
+import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import MenuIcon from '@mui/icons-material/Menu';
 import NotificationsOutlinedIcon from '@mui/icons-material/NotificationsOutlined';
 import OpenWithIcon from '@mui/icons-material/OpenWith';
@@ -55,18 +56,10 @@ export function TopMenuHeader() {
         </Stack>
         {topHintAsButtons ? (
           <Stack className="subHintButtons" id="subHintButtons" direction="row" spacing={0.7} flexWrap="wrap">
-            <Button className="subHintBtn" size="small" variant="outlined" type="button" onClick={onScrollToColumns} startIcon={<OpenWithIcon fontSize="small" />}>
-              {labels.subHintDrag}
-            </Button>
-            <Button className="subHintBtn" size="small" variant="outlined" type="button" onClick={onOpenHelp}>
-              ? {labels.subHintHelp}
-            </Button>
-            <Button className="subHintBtn" size="small" variant="outlined" type="button" onClick={onToggleMenu} startIcon={<MenuIcon fontSize="small" />}>
-              M {labels.subHintMenu}
-            </Button>
-            <Button className="subHintBtn" size="small" variant="outlined" type="button" onClick={onToggleSearch} startIcon={<SearchIcon fontSize="small" />}>
-              / {labels.subHintSearch}
-            </Button>
+            <TopMenuActionButton id="subHintDragBtn" label={labels.subHintDrag} icon={<OpenWithIcon fontSize="small" />} onClick={onScrollToColumns} />
+            <TopMenuActionButton id="subHintHelpBtn" label={`? ${labels.subHintHelp}`} icon={<HelpOutlineIcon fontSize="small" />} onClick={onOpenHelp} />
+            <TopMenuActionButton id="subHintMenuBtn" label={`M ${labels.subHintMenu}`} icon={<MenuIcon fontSize="small" />} onClick={onToggleMenu} />
+            <TopMenuActionButton id="subHintSearchBtn" label={`/ ${labels.subHintSearch}`} icon={<SearchIcon fontSize="small" />} onClick={onToggleSearch} />
           </Stack>
         ) : (
           <div className="subHint" id="subHint">

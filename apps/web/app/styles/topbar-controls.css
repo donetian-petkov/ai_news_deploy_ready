@@ -49,7 +49,7 @@
 
 .headerRow {
   display: grid;
-  grid-template-columns: minmax(260px, 1fr) auto minmax(0, 1.45fr);
+  grid-template-columns: minmax(260px, 1fr) auto minmax(0, 2fr);
   align-items: flex-start;
   column-gap: 14px;
   row-gap: 12px;
@@ -94,24 +94,6 @@
 
 .subHintButtons {
   margin-top: 8px;
-}
-
-.topbar .MuiButton-root.subHintBtn {
-  color: var(--text-main) !important;
-  border-color: var(--panel-border) !important;
-  background: color-mix(in srgb, var(--field-bg) 88%, transparent) !important;
-  border-radius: 999px !important;
-  text-transform: none !important;
-  font-size: calc(0.78rem * var(--ui-font-scale)) !important;
-  font-weight: 700 !important;
-  line-height: 1 !important;
-  min-height: 28px !important;
-  padding: 4px 10px !important;
-}
-
-.topbar .MuiButton-root.subHintBtn:hover {
-  transform: translateY(var(--button-hover-lift));
-  box-shadow: var(--button-hover-shadow);
 }
 
 .headerRight {
@@ -1210,10 +1192,12 @@
     row-gap: 6px;
   }
 
-  .topbar .MuiButton-root.subHintBtn {
-    font-size: calc(0.72rem * var(--ui-font-scale)) !important;
-    min-height: 26px !important;
-    padding: 3px 8px !important;
+  .topbar .subHintButtons .MuiButton-root.topMenuActionBtnIconOnly {
+    width: var(--topMenu-mobile-iconButton-size) !important;
+    min-width: var(--topMenu-mobile-iconButton-size) !important;
+    height: var(--topMenu-mobile-iconButton-size) !important;
+    flex-basis: var(--topMenu-mobile-iconButton-size);
+    border-radius: 999px !important;
   }
 
   .viewportScrollDock {
