@@ -1,673 +1,171 @@
-# AI News Stream (Next.js + Node)
+# AI News Stream
 
-[![CI](https://github.com/donetian-petkov/ai_news_next_node/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/donetian-petkov/ai_news_next_node/actions/workflows/ci.yml)
+[![CI](https://github.com/donetian-petkov/ai_news_deploy_ready/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/donetian-petkov/ai_news_deploy_ready/actions/workflows/ci.yml)
 ![Next.js](https://img.shields.io/badge/Next.js-14.2-black?logo=next.js)
-![Node.js](https://img.shields.io/badge/Node.js-20+-339933?logo=node.js&logoColor=white)
+![Node.js](https://img.shields.io/badge/Node.js-20.19+-339933?logo=node.js&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)
 ![Prisma](https://img.shields.io/badge/Prisma-SQLite-2D3748?logo=prisma&logoColor=white)
-![Redux Toolkit](https://img.shields.io/badge/Redux_Toolkit-Enabled-764ABC?logo=redux&logoColor=white)
-![MUI](https://img.shields.io/badge/MUI-7-007FFF?logo=mui&logoColor=white)
 
-A real-time, multi-column news intelligence dashboard with AI summaries, AI research, Ask-Agent Q&A, advanced feed controls, and theme/vibe customization.
+A real-time, multi-column news dashboard. RSS, Reddit and YouTube feeds stream in live, and AI adds summaries, research, and a per-story chat.
 
-## Recent Additions
+![Switching vibes](./docs/recordings/vibe-switching.gif)
 
-- Per-feed Discord webhook delivery. Add one webhook per feed to send newly ingested stories into a Discord channel.
-- Discord posts now follow the feed’s AI toggles. If summary, translation, or research is enabled for that feed, those sections are included in the Discord message.
-- Local LLM provider support. You can point the app at an OpenAI-compatible local server and use it without a provider API key.
-- Auth gate clarity. Cloud providers still need a signed-in account plus a saved provider key. Local provider mode unlocks after sign-in.
-- Feed error logs are persisted so repeated fetch failures can be inspected later.
+## Features
 
-## Product Snapshot
+- **Live columns** — one column per feed, updated over WebSocket, with drag-and-drop ordering, pinning, per-column polling, sorting and filters, plus a Filtered column for stories matching your keywords.
+- **AI on every story** — summaries, long-form research and **Ask Agent**, a chat about one specific story. Optional insights: bias, headline risk, keywords, impact, perspectives, historical comparison, future scenarios, local impact.
+- **Any provider** — OpenAI, Claude, OpenRouter, or a local OpenAI-compatible server. Keys are saved per account and encrypted at rest.
+- **Discord delivery** — send each feed's new stories to its own Discord webhook, including the AI sections enabled for that feed.
+- **Make it yours** — vibes (Video Game, Sci-Fi, Fantasy, Cyber Witch and more), color schemes, fonts, icon or text buttons, EN/BG interface, keyboard shortcuts, and a performance mode for slower machines. Preferences follow your account.
 
-| Area | What you get |
+## See it in action
+
+**AI analysis and Ask Agent on a story**
+
+![AI analysis and Ask Agent](./docs/recordings/news-card-ai-and-ask-agent.gif)
+
+**Settings panel**
+
+![Settings panel](./docs/recordings/settings-menu.gif)
+
+**Search** and **column controls on mobile**
+
+<p>
+  <img src="./docs/recordings/search.gif" alt="Search" width="62%">
+  <img src="./docs/recordings/mobile-column-controls.gif" alt="Mobile column controls" width="30%">
+</p>
+
+**Vibes**
+
+| Video Game | Sci-Fi |
 |---|---|
-| Live ingestion | RSS / Reddit / YouTube streams over WebSocket |
-| AI workflows | Summary, Research, Ask Agent (per-news contextual chat) |
-| AI insights | Optional per-story bias, headline risk, keywords, impact, perspectives, comparisons, scenarios, local impact |
-| Stream control | Per-column budget, polling, sort, filters, pin/remove, age cleanup |
-| UX controls | Top menu + mobile drawer, shortcuts, notifications, EN/BG interface |
-| Personalization | Vibes, schemes, fonts, button modes, performance mode |
-| Persistence | Prisma + SQLite for app/server state, localStorage for UI prefs |
+| ![Video Game vibe](./docs/screenshots/vibe-video-game-columns.png) | ![Sci-Fi vibe](./docs/screenshots/vibe-scifi-columns.png) |
+| **Fantasy** | **Cyber Witch** |
+| ![Fantasy vibe](./docs/screenshots/vibe-fantasy-columns.png) | ![Cyber Witch vibe](./docs/screenshots/vibe-cyber-witch-columns.png) |
 
-## Core Features
+<details>
+<summary>More screenshots: performance mode, settings, news cards, mobile</summary>
 
-### News + Columns
-- Real-time column updates over WebSocket.
-- Drag-and-drop column reordering.
-- Filtered column for matched items.
-- Per-column news limit behavior:
-  - default visible count = 10
-  - show +5 incrementally
-  - reset back to 10 (column and global)
+![Performance mode](./docs/screenshots/performance-mode-view.png)
+![Settings expanded](./docs/screenshots/top-controls-expanded.png)
 
-### AI Behaviors
-- Account-based AI provider key storage (encrypted at rest in SQLite).
-- Account-based preferences profile (auto-saves summary/research/title language, vibe, color mode, and other UI settings).
-- AI provider switching from UI (`OpenAI`, `Claude`, `OpenRouter`, `Local`).
-- Cloud providers use the signed-in account's saved key; local provider uses an OpenAI-compatible endpoint and does not need a key.
-- Summary and Research language controls.
-- Per-column AI budget (`low`, `standard`, `high`) + global apply-all budget.
-- Ask Agent per news item with remaining-question limits and contextual replies.
-- Optional AI insight features per story:
-  - bias detection
-  - sensationalism / headline risk detection
-  - keyword extraction
-  - story impact
-  - perspective simulator
-  - topic tracking
-  - emerging story signal
-  - historical comparison
-  - future scenarios
-  - local impact
-- New AI insight features are off by default and can be enabled from the top menu.
-- AI analysis is collapsed by default on each card and rendered as a separate section below Summary / Research.
-- Cached stories are reprocessed immediately when AI insight settings or research language change, so already-loaded items update without waiting for a fresh poll.
-- Mood and Type filters (disabled automatically in performance mode).
-- AI-off fallback behavior (UI indicates unavailable AI features).
+<p>
+  <img src="./docs/screenshots/news-card-research-cyberwitch.png" alt="News card" width="32%">
+  <img src="./docs/screenshots/news-card-ask-agent.png" alt="Ask Agent" width="32%">
+  <img src="./docs/screenshots/mobile-column-controls.png" alt="Mobile column controls" width="32%">
+</p>
 
-### AI Insight Card Behavior
-- Summary remains the main story text.
-- Research remains a separate long-form block when available.
-- AI analysis is an optional collapsed section with its own heading and readiness state.
-- The `Keywords` block is intentionally lightweight and may list named entities / quoted fragments rather than full factual sentences.
-- Historical comparison shows the main comparison first, with any extra comparisons listed as secondary context.
-- Future scenario is explicitly marked as speculative.
+</details>
 
-### Interaction + UX
-- Top quick actions: Search, Add Stream, Toggle controls/menu, hide all research/summaries.
-- Notification modes:
-  - only matched
-  - matched + pinned columns
-  - only pinned columns
-  - all columns
-- Stackable dismissible toasts for connection/feed problems.
-- Per-feed Discord webhook field in the feed controls.
-- EN/BG interface.
-- Responsive mobile drawer for top controls.
+## Installation
 
-### Rendering + Performance
-- Batched WebSocket updates to reduce render churn.
-- Lazy hydration for below-fold columns.
-- Dedicated performance mode for reduced visual overhead.
-- Component split for maintainability (SOLID/DRY):
-  - `ReactColumnsPreview` orchestrator
-  - `FeedColumn` presenter
-  - `NewsCard` presenter
-  - extracted `top-menu/*` sections
+### What you need
 
-## Visual Walkthrough
+- **Node.js `22.12+`** (or `20.19+`) with **npm `10`**. Node 22 LTS includes npm 10; npm 11 may print engine errors.
+- **Git**.
+- An API key for OpenAI, Anthropic (Claude) or OpenRouter, or a local OpenAI-compatible model server.
 
-### Vibe Modes (same structure, different frame language)
-Video Game vibe:
-
-![Video Game vibe columns](./docs/screenshots/vibe-video-game-columns.png)
-
-Sci-Fi vibe:
-
-![Sci-Fi vibe columns](./docs/screenshots/vibe-scifi-columns.png)
-
-Fantasy vibe:
-
-![Fantasy vibe columns](./docs/screenshots/vibe-fantasy-columns.png)
-
-Cyber Witch vibe:
-
-![Cyber Witch vibe columns](./docs/screenshots/vibe-cyber-witch-columns.png)
-
-### Performance Mode
-Performance mode with reduced visual effects for lower render overhead:
-
-![Performance mode view](./docs/screenshots/performance-mode-view.png)
-
-### Top Controls (expanded settings)
-Expanded top controls panel with AI/appearance sections:
-
-![Top controls expanded](./docs/screenshots/top-controls-expanded.png)
-
-### News Card (ornamented frame + actions + AI detail panels)
-Example card in Cyber Witch with cover media, action rows, summary, and expanded AI detail panels:
-
-![News card with AI details](./docs/screenshots/news-card-research-cyberwitch.png)
-
-### Ask Agent (per-news contextual chat)
-Ask Agent panel below a news card:
-
-![Ask Agent panel](./docs/screenshots/news-card-ask-agent.png)
-
-### Column Controls (mobile layout)
-Per-column controls and card preview in mobile view:
-
-![Mobile column controls](./docs/screenshots/mobile-column-controls.png)
-
-### Screenshot File Map
-Store screenshots in `docs/screenshots/` with these exact names:
-- `vibe-video-game-columns.png`
-- `vibe-scifi-columns.png`
-- `vibe-fantasy-columns.png`
-- `vibe-cyber-witch-columns.png`
-- `performance-mode-view.png`
-- `top-controls-expanded.png`
-- `news-card-research-cyberwitch.png`
-- `news-card-ask-agent.png`
-- `mobile-column-controls.png`
-
-## Architecture
-
-```mermaid
-flowchart LR
-  A["Feeds: RSS / Reddit / YouTube"] --> B["API (Node + Express + ws)"]
-  B --> C["Matching + AI Jobs"]
-  C --> D["Prisma + SQLite state"]
-  B --> E["WebSocket stream"]
-  E --> F["Web App (Next.js + Redux Toolkit + MUI)"]
-  F --> G["Columns / News Cards / Ask Agent"]
-```
-
-## Monorepo Layout
-
-```text
-ai_news_next_node/
-  apps/
-    api/            # ingestion, matching, AI orchestration, websocket server
-    web/            # Next.js client app + Redux + MUI
-  packages/
-    shared/         # zod contracts + shared TS types
-```
-
-## Quick Start
-
-### 1) Prerequisites
-- Node.js `20.19+` or `22.12+`
-- npm `10.x`
-
-Older Node 20 releases and npm 11 may install partially or emit engine errors with the current dependency set.
-
-### 2) Configure environment
-Copy `.env.example` to `.env`:
+### macOS and Linux
 
 ```bash
+git clone https://github.com/donetian-petkov/ai_news_deploy_ready.git
+cd ai_news_deploy_ready
 cp .env.example .env
 ```
 
-Minimum required values:
-
-```env
-NEXT_PUBLIC_WS_URL=ws://localhost:4000
-NEXT_PUBLIC_API_URL=http://localhost:4000
-DATABASE_URL="file:./dev.db"
-AUTH_TOKEN_SECRET=change-me-super-secret
-KEY_ENCRYPTION_SECRET=change-me-encryption-secret
-```
-
-### 3) Install + initialize
+Open `.env` and replace `AUTH_TOKEN_SECRET` and `KEY_ENCRYPTION_SECRET` with two different random values. Run `openssl rand -hex 32` once for each. Add your `KEYWORDS` too if you want the Filtered column. Then:
 
 ```bash
-npm run install:server
+npm run install:server   # installs packages, creates the database, builds everything
+npm run dev              # starts the app with live reload
 ```
 
-### 4) Run locally
+Open **http://localhost:3000**. The API runs on http://localhost:4000; `http://localhost:4000/health` confirms it's up.
+
+### Windows
+
+The project's npm scripts are written for a bash shell, so on Windows they run through **Git Bash**, which comes with Git for Windows.
+
+1. Install Node.js and Git. In PowerShell:
+
+   ```powershell
+   winget install OpenJS.NodeJS.LTS
+   winget install Git.Git
+   ```
+
+2. Tell npm to run scripts with Git Bash. This setting applies to all your npm projects; `npm config delete script-shell` undoes it:
+
+   ```powershell
+   npm config set script-shell "C:\Program Files\Git\bin\bash.exe"
+   ```
+
+3. Open **Git Bash** from the Start menu and follow the macOS and Linux steps above. `openssl` is included in Git Bash, and `notepad .env` opens the file for editing.
+
+4. When Windows Firewall asks about Node.js the first time, allow it on private networks.
+
+Stop the app with `Ctrl+C`. If port 3000 or 4000 is still busy afterwards, close the Git Bash window. On Windows, use `npm run start` in a Git Bash window instead of the background mode below.
+
+### First run
+
+Open the menu (`M`), register in **Account**, and save the API key for your provider. News starts flowing once you're signed in with a saved key, or straight after sign-in if you use a local provider. Your settings are saved to your account.
+
+### Running it day to day
+
+- `npm run dev`: development mode with live reload.
+- `npm run build`, then `npm run start`: faster production mode. Rebuild after pulling changes or editing `NEXT_PUBLIC_*` values.
+- `npm run server -- --background`: production mode in the background on macOS and Linux. `npm run server -- status` checks it and `npm run stop` stops it.
+
+### With Docker
 
 ```bash
-npm run dev
-```
-
-Run in the background:
-
-```bash
-npm run server -- --background
-npm run server -- status
-npm run stop
-```
-
-The background server runs both API and web services through the existing `npm run start` command. It writes `.data/server.pid` and `.data/server.log`; `npm run stop` sends `SIGTERM` to the process group so both services shut down together. Use `npm run server -- --dev --background` to background the dev runner instead.
-
-### 5) Create account + save provider key
-- Open the app and expand Top Controls.
-- In `Account`, register/sign in.
-- Paste API key for a cloud provider and click `Save Key`.
-- Change provider from the provider dropdown (or `Apply Provider`).
-- If you use the local provider, set the local endpoint and model names instead of a provider key.
-- Major preferences are auto-saved per account (including summary/research/title language, vibe, and color mode).
-
-Endpoints:
-- Web: `http://localhost:3000`
-- API health: `http://localhost:4000/health`
-- WebSocket: `ws://localhost:4000`
-
-### Stop and start again
-
-Stop a foreground run with `Ctrl+C`.
-
-If the services are already running in the background, stop them with:
-
-```bash
-npm run stop:local
-```
-
-Start the production build again with:
-
-```bash
-cd /path/to/ai_news_deploy_ready
-npm run start:local
-```
-
-For local development with reload:
-
-```bash
-cd /path/to/ai_news_deploy_ready
-npm run dev:local
-```
-
-Restart a stopped or backgrounded production run with:
-
-```bash
-cd /path/to/ai_news_deploy_ready
-npm run restart:local
-```
-
-The local helper scripts set the Prisma cache directory automatically and prefer `$HOME/.nvm/versions/node/v22.11.0/bin` when it exists.
-
-## Run With Docker (Everything Included)
-
-This runs both services (`web` + `api`) with one command and persists SQLite data in a Docker volume.
-
-### 1) Prepare `.env`
-
-```bash
-cp .env.example .env
-```
-
-Set at least:
-
-```env
-OPENAI_API_KEY=...
-KEYWORDS=keyword1,keyword2
-NEXT_PUBLIC_WS_URL=ws://localhost:4000
-```
-
-### 2) Build and start containers
-
-```bash
+cp .env.example .env    # fill in the two secrets, as above
 docker compose up -d --build
 ```
 
-### 3) Verify
-- Web: `http://localhost:3000`
-- API health: `http://localhost:4000/health`
+This runs both services and keeps the database in a Docker volume. `docker compose logs -f api` shows the logs, `docker compose down` stops everything, and `docker compose down -v` also deletes the database.
 
-### 4) Logs
+## Hosting online
 
-```bash
-docker compose logs -f api
-docker compose logs -f web
-```
+The API must run all the time and keep a database file, so it needs a real server rather than a serverless host. The simplest setup is a small VPS (around €5 a month) with PM2 and Caddy for HTTPS. The free option is your own computer behind a Cloudflare Tunnel, which stays online only while the computer is awake.
 
-### 5) Stop
+Step-by-step guides: **[docs/hosting.md](./docs/hosting.md)**
 
-```bash
-docker compose down
-```
+## Configuration
 
-### 6) Reset everything (including SQLite volume)
-
-```bash
-docker compose down -v
-```
-
-### Notes
-- API container runs `prisma migrate deploy` automatically before starting server.
-- SQLite data persists in volume: `api_sqlite`.
-- For public domain deployment, set `NEXT_PUBLIC_WS_URL` to your public `wss://...` endpoint before `docker compose up --build`.
-
-## Host Online From Your Own Computer (Mac)
-
-This option exposes your local app to the internet without VPS costs, using Cloudflare Tunnel.
-
-### What you need
-- A domain in Cloudflare DNS
-- `cloudflared` installed
-- Your Mac kept awake and online
-
-### 1) Set production env values
-In root `.env`:
-
-```env
-PORT=4000
-OPENAI_API_KEY=YOUR_KEY
-KEYWORDS=keyword1,keyword2
-DATABASE_URL="file:/Users/<your-user>/ai_news/ai_news_next_node/apps/api/prisma/dev.db"
-NEXT_PUBLIC_WS_URL=wss://api.yourdomain.com
-```
-
-### 2) Install, migrate, build
-
-```bash
-npm install
-npm run prisma:generate
-npm run prisma:migrate
-npm run build
-```
-
-### 3) Start app locally (prod mode)
-
-```bash
-npm run start
-```
-
-Verify:
-
-```bash
-curl -s http://localhost:4000/health
-```
-
-### 4) Keep processes alive with PM2
-
-```bash
-npm i -g pm2
-pm2 start "npm run start -w @ai-news/api" --name ai-news-api
-pm2 start "npm run start -w @ai-news/web" --name ai-news-web
-pm2 save
-pm2 startup
-```
-
-### 5) Install and authenticate Cloudflare Tunnel
-
-```bash
-brew install cloudflared
-cloudflared tunnel login
-cloudflared tunnel create ai-news-home
-cloudflared tunnel route dns ai-news-home app.yourdomain.com
-cloudflared tunnel route dns ai-news-home api.yourdomain.com
-```
-
-### 6) Create tunnel config
-Create `~/.cloudflared/config.yml`:
-
-```yml
-tunnel: ai-news-home
-credentials-file: /Users/<your-user>/.cloudflared/<TUNNEL_ID>.json
-
-ingress:
-  - hostname: app.yourdomain.com
-    service: http://localhost:3000
-  - hostname: api.yourdomain.com
-    service: http://localhost:4000
-  - service: http_status:404
-```
-
-### 7) Run tunnel in background
-
-```bash
-pm2 start "cloudflared tunnel run ai-news-home" --name ai-news-tunnel
-pm2 save
-```
-
-### 8) Verify public endpoints
-- App: `https://app.yourdomain.com`
-- API health: `https://api.yourdomain.com/health`
-- WebSocket target from web: `wss://api.yourdomain.com`
-
-### 9) Update flow after changing env/build
-If `NEXT_PUBLIC_*` or frontend code changes:
-
-```bash
-npm run build
-pm2 restart ai-news-web ai-news-api
-```
-
-### Notes
-- If your Mac sleeps or shuts down, service goes offline.
-- Back up `apps/api/prisma/dev.db` regularly.
-- For heavier traffic, migrate from SQLite to Postgres.
-
-## Host Online From Your Own Computer (Windows 11)
-
-This option exposes your local app to the internet without VPS costs, using Cloudflare Tunnel.
-
-### What you need
-- A domain in Cloudflare DNS
-- `cloudflared` installed
-- Your Windows machine kept awake and online
-
-### 1) Set production env values
-In root `.env`:
-
-```env
-PORT=4000
-OPENAI_API_KEY=YOUR_KEY
-KEYWORDS=keyword1,keyword2
-DATABASE_URL="file:C:/Users/<your-user>/ai_news/ai_news_next_node/apps/api/prisma/dev.db"
-NEXT_PUBLIC_WS_URL=wss://api.yourdomain.com
-```
-
-### 2) Install, migrate, build
-
-```powershell
-npm install
-npm run prisma:generate
-npm run prisma:migrate
-npm run build
-```
-
-### 3) Start app locally (prod mode)
-
-```powershell
-npm run start
-```
-
-Verify:
-
-```powershell
-curl http://localhost:4000/health
-```
-
-### 4) Keep processes alive with PM2
-
-```powershell
-npm i -g pm2
-pm2 start "npm run start -w @ai-news/api" --name ai-news-api
-pm2 start "npm run start -w @ai-news/web" --name ai-news-web
-pm2 save
-```
-
-At login/startup, run:
-
-```powershell
-pm2 resurrect
-```
-
-### 5) Install and authenticate Cloudflare Tunnel
-
-```powershell
-winget install Cloudflare.cloudflared
-cloudflared tunnel login
-cloudflared tunnel create ai-news-home
-cloudflared tunnel route dns ai-news-home app.yourdomain.com
-cloudflared tunnel route dns ai-news-home api.yourdomain.com
-```
-
-### 6) Create tunnel config
-Create `%USERPROFILE%\.cloudflared\config.yml`:
-
-```yml
-tunnel: ai-news-home
-credentials-file: C:\Users\<your-user>\.cloudflared\<TUNNEL_ID>.json
-
-ingress:
-  - hostname: app.yourdomain.com
-    service: http://localhost:3000
-  - hostname: api.yourdomain.com
-    service: http://localhost:4000
-  - service: http_status:404
-```
-
-### 7) Run tunnel in background
-
-```powershell
-pm2 start "cloudflared tunnel run ai-news-home" --name ai-news-tunnel
-pm2 save
-```
-
-### 8) Verify public endpoints
-- App: `https://app.yourdomain.com`
-- API health: `https://api.yourdomain.com/health`
-- WebSocket target from web: `wss://api.yourdomain.com`
-
-### 9) Update flow after changing env/build
-If `NEXT_PUBLIC_*` or frontend code changes:
-
-```powershell
-npm run build
-pm2 restart ai-news-web ai-news-api
-```
-
-### Notes
-- If your PC sleeps, hibernates, or shuts down, service goes offline.
-- Ensure Windows Firewall allows local ports `3000` and `4000` for local loopback app access.
-- Back up `apps/api/prisma/dev.db` regularly.
-- For heavier traffic, migrate from SQLite to Postgres.
-
-## Scripts
-
-```bash
-# Development
-npm run dev
-npm run dev:web
-npm run dev:api
-
-# Build + start
-npm run build
-npm run start
-npm run install:server
-npm run start:server
-
-# Tests
-npm run test
-npm run test:all
-npm run test -w @ai-news/web
-npm run test -w @ai-news/shared
-
-# Prisma
-npm run prisma:generate
-npm run prisma:migrate
-```
-
-## Environment Reference
-
-### Core
-- `PORT` (default: `4000`)
-- `NEXT_PUBLIC_WS_URL` (default: `ws://localhost:4000`)
-- `DATABASE_URL` (example: `file:./dev.db`)
-
-### AI Provider + Keys
-- `AI_PROVIDER` (`openai` | `claude` | `openrouter`, default `openai`)
-- `OPENAI_API_KEY`
-- `ANTHROPIC_API_KEY` (or `CLAUDE_API_KEY`)
-- `OPENROUTER_API_KEY`
-- `OPENROUTER_BASE_URL` (optional override)
-- `AUTH_TOKEN_SECRET` (required for account login token signing)
-- `KEY_ENCRYPTION_SECRET` (required for provider API key encryption at rest)
-
-### Security Secrets
-- `AUTH_TOKEN_SECRET` signs user auth/session tokens.
-- `KEY_ENCRYPTION_SECRET` encrypts saved provider API keys in the local database.
-- Use long random values and keep them private.
-- Use different values for each secret.
-
-Generate secrets:
-
-```bash
-openssl rand -hex 32
-openssl rand -hex 32
-```
-
-Then set in `.env`:
-
-```env
-AUTH_TOKEN_SECRET=<first-random-value>
-KEY_ENCRYPTION_SECRET=<second-random-value>
-```
-
-### AI Behavior
-- `AI_ENABLED` (`true`/`false`)
-- `SUMMARY_LANG` (`bilingual` | `bg` | `en`)
-- `RESEARCH_LANG` (`bg` | `en`)
-- `OPENAI_EMBED_MODEL`
-- `OPENAI_SUMMARY_MODEL`
-- `OPENAI_RESEARCH_MODEL`
-- `OPENROUTER_SUMMARY_MODEL`
-- `OPENROUTER_RESEARCH_MODEL`
-
-### Matching / Dedupe
-- `KEYWORDS` (comma-separated)
-- `MATCH_THRESHOLD`
-- `DEDUPE_THRESHOLD`
-- `FILTERED_AI_DEDUPE`
-- `FILTERED_DEDUPE_THRESHOLD`
-
-## Keyboard Shortcuts
-
-| Shortcut | Action |
+| Variable | What it does |
 |---|---|
-| `?` / `H` | Open/close Help |
-| `M` | Toggle menu |
-| `C` | Toggle top controls |
-| `G` | Toggle all column controls |
-| `S` | Toggle Search section |
-| `/` | Focus Search |
-| `A` | Toggle Add Stream section |
-| `T` | Cycle color mode |
-| `V` | Cycle vibe |
-| `Esc` | Close Help |
+| `AUTH_TOKEN_SECRET`, `KEY_ENCRYPTION_SECRET` | **Required.** Sign login tokens and encrypt saved API keys. Use two different long random values. |
+| `KEYWORDS` | Comma-separated keywords for the Filtered column (`MATCH_THRESHOLD` tunes how strict matching is). |
+| `NEXT_PUBLIC_WS_URL`, `NEXT_PUBLIC_API_URL` | Where browsers reach the API. Built into the web app, so rebuild after changing them. |
+| `WEB_ORIGIN` | Allowed web origin for API requests (default `*`). Set it when hosting publicly. |
+| `DATABASE_URL` | SQLite file (default `file:./dev.db`, i.e. `apps/api/prisma/dev.db`). |
+| `PORT` | API port (default `4000`). |
+| `AI_ENABLED`, `SUMMARY_LANG`, `RESEARCH_LANG` | Turn AI on or off and pick the summary (`bilingual`, `bg`, `en`) and research (`bg`, `en`) languages. |
+| `OPENAI_*_MODEL`, `OPENROUTER_*_MODEL`, `OPENROUTER_BASE_URL` | Optional model and endpoint overrides. |
 
-## Testing Scope
+## Keyboard shortcuts
 
-Current automated coverage includes:
-- Redux slices: `ui`, `feeds`, `news`, `connection`, `aiUsage`
-- WebSocket client lifecycle + message mapping
-- Shared `zod` schema contracts in `packages/shared`
+`?` or `H` help · `M` menu · `C` top controls · `G` all column controls · `S` search panel · `/` focus search · `A` add stream · `T` color mode · `V` vibe · `Esc` close help
 
-Run:
+## Development
 
 ```bash
-npm run test
+npm run dev:web | npm run dev:api   # run one side only
+npm run test                        # web + shared unit tests
+npm run test:api                    # API integration tests
+npm run test:e2e                    # Playwright smoke tests
 ```
+
+The code is an npm workspace monorepo: `apps/api` (Express + ws: ingestion, matching, AI jobs, WebSocket), `apps/web` (Next.js + Redux Toolkit + MUI), and `packages/shared` (zod contracts shared by both). CI (`.github/workflows/ci.yml`) installs, migrates, tests and builds on every push.
+
+To refresh the README media, start the app and run `npm run capture:readme` for screenshots and `node scripts/capture-readme-recordings.js` for the GIFs (needs `ffmpeg`). Both accept `CAPTURE_BASE_URL` when the app isn't on port 3000.
 
 ## Troubleshooting
 
-### API is healthy but UI says `Disconnected`
-- Verify `NEXT_PUBLIC_WS_URL` points to the running API websocket host/port.
-- Ensure API is reachable from browser network context.
-- Check browser devtools for WS handshake errors.
+- **UI says Disconnected while the API is healthy** — the web app was built with the wrong API address. Check `NEXT_PUBLIC_WS_URL` in `.env`, rebuild, and look for WebSocket errors in the browser console.
+- **`bash` or `mkdir -p` errors on Windows** — npm isn't using Git Bash yet; see the Windows install steps.
+- **`Environment variable not found: DATABASE_URL`** — add it to `.env`, then run `npm run prisma:generate && npm run prisma:migrate`.
+- **AI shows as unavailable** — make sure a key is saved for the selected provider in **Account**, and restart the API after changing keys in `.env`.
+- **Slow on your machine** — turn on Performance mode under Appearance, or open fewer columns.
 
-### Prisma error: `Environment variable not found: DATABASE_URL`
-- Add `DATABASE_URL` in root `.env`.
-- Re-run:
-  - `npm run prisma:generate`
-  - `npm run prisma:migrate`
-
-### AI shows unavailable despite key
-- Confirm key exists for selected provider.
-- If provider changed in UI, provide key in the prompt dialog.
-- Restart API after changing env keys.
-
-### Slow rendering on local machine
-- Enable Performance mode in Appearance.
-- Reduce open columns and heavy auto-AI operations.
-- Keep tests/build watchers off when not needed.
-
-## CI
-
-Workflow: `.github/workflows/ci.yml`
-
-Pipeline runs:
-- dependency install
-- Prisma generate/migrate
-- unit tests
-- monorepo build
-
-## Release Notes
-
-- Active changelog: [RELEASE_NOTES.md](./RELEASE_NOTES.md)
-- Releases: [GitHub Releases](https://github.com/donetian-petkov/ai_news_next_node/releases)
+Changelog: [RELEASE_NOTES.md](./RELEASE_NOTES.md)

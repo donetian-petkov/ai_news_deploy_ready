@@ -20,11 +20,13 @@ services:
       context: .
       dockerfile: Dockerfile
       target: web
+      args:
+        NEXT_PUBLIC_WS_URL: ${NEXT_PUBLIC_WS_URL:-ws://localhost:4000}
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:4000}
     env_file:
       - .env
     environment:
       PORT: 3000
-      NEXT_PUBLIC_WS_URL: ${NEXT_PUBLIC_WS_URL:-ws://localhost:4000}
     depends_on:
       - api
     ports:

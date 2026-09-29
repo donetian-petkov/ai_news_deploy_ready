@@ -11,6 +11,13 @@ RUN npm ci
 FROM deps AS builder
 WORKDIR /app
 
+# Browsers reach the API at these addresses; Next bakes them into the web build, so they must be
+# known here. docker-compose passes them from .env (which is kept out of the build context).
+ARG NEXT_PUBLIC_WS_URL=ws://localhost:4000
+ARG NEXT_PUBLIC_API_URL=http://localhost:4000
+ENV NEXT_PUBLIC_WS_URL=$NEXT_PUBLIC_WS_URL
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+
 COPY tsconfig.base.json ./
 COPY apps ./apps
 COPY packages ./packages
