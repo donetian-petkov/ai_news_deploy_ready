@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 const fs = require('node:fs');
 const path = require('node:path');
+const net = require('node:net');
 const { spawn } = require('node:child_process');
 
 const rootDir = path.resolve(__dirname, '..');
@@ -15,7 +16,10 @@ const devMode = rawArgs.some(arg => arg === '--dev');
 const runScript = devMode ? 'dev' : 'start';
 
 if (command === 'status') {
-  status();
+  status().catch(error => {
+    console.error(`Status check failed: ${error.message || error}`);
+    process.exit(1);
+  });
 } else if (command === 'stop') {
   stop();
 } else if (background) {
@@ -82,7 +86,7 @@ function stop() {
   }
 }
 
-function status() {
+async function status() {
   const pid = runningPid();
   if (pid) {
     console.log(`Server running in background (pid ${pid})`);
@@ -90,6 +94,27 @@ function status() {
   } else {
     console.log('No background server is running.');
   }
+  const [api, web] = await Promise.all([
+    canConnect(4000),
+    canConnect(3000)
+  ]);
+  console.log(`API : ${api ? 'up' : 'down'} (http://127.0.0.1:4000)`);
+  console.log(`Web : ${web ? 'up' : 'down'} (http://127.0.0.1:3000)`);
+}
+
+function canConnect(port) {
+  return new Promise(resolve => {
+    const socket = net.createConnection({ host: '127.0.0.1', port });
+    const done = ok => {
+      socket.removeAllListeners();
+      try { socket.destroy(); } catch {}
+      resolve(ok);
+    };
+    socket.setTimeout(600);
+    socket.once('connect', () => done(true));
+    socket.once('timeout', () => done(false));
+    socket.once('error', () => done(false));
+  });
 }
 
 function readPid() {

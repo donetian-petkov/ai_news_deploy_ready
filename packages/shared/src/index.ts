@@ -34,6 +34,72 @@ export const feedPageCursorSchema = z.object({
   beforeId: z.string().trim().min(1)
 });
 
+export const productFeatureKindSchema = z.union([
+  z.literal('saved_story'),
+  z.literal('collection'),
+  z.literal('alert_rule'),
+  z.literal('schedule'),
+  z.literal('digest')
+]);
+
+export const productFeaturePayloadSchema = z.record(z.unknown()).default({});
+
+export const savedStoryPayloadSchema = z.object({
+  itemId: z.string().trim().min(1),
+  feedUrl: z.string().trim().min(1),
+  title: z.string().trim().min(1),
+  link: z.string().trim().optional(),
+  source: z.string().trim().optional(),
+  coverUrl: z.string().trim().optional(),
+  tags: z.array(z.string().trim().min(1)).max(40).default([]),
+  note: z.string().trim().max(2000).default(''),
+  read: z.boolean().default(false),
+  archived: z.boolean().default(false)
+});
+
+export const alertRulePayloadSchema = z.object({
+  enabled: z.boolean().default(true),
+  name: z.string().trim().min(1).max(120),
+  keywords: z.array(z.string().trim().min(1).max(80)).max(40).default([]),
+  sources: z.array(z.string().trim().min(1).max(160)).max(40).default([]),
+  moods: z.array(z.string().trim().min(1).max(40)).max(20).default([]),
+  newsTypes: z.array(z.string().trim().min(1).max(40)).max(20).default([]),
+  discordWebhookUrl: z.string().trim().max(500).default(''),
+  lastCheckedAtMs: z.number().finite().nonnegative().default(0)
+});
+
+export const schedulePayloadSchema = z.object({
+  enabled: z.boolean().default(true),
+  name: z.string().trim().min(1).max(120),
+  cadence: z.union([z.literal('hourly'), z.literal('daily'), z.literal('weekly')]).default('daily'),
+  time: z.string().trim().max(20).default('08:00'),
+  feedUrls: z.array(z.string().trim().min(1)).max(80).default([]),
+  format: briefingFormatSchema.default('executive'),
+  discordWebhookUrl: z.string().trim().max(500).default(''),
+  nextRunAtMs: z.number().finite().nonnegative().default(0),
+  lastRunAtMs: z.number().finite().nonnegative().default(0)
+});
+
+export const digestPayloadSchema = z.object({
+  storyIds: z.array(z.string().trim().min(1)).max(80).default([]),
+  feedUrls: z.array(z.string().trim().min(1)).max(80).default([]),
+  body: z.string().trim().max(20000).default(''),
+  format: briefingFormatSchema.default('executive'),
+  discordWebhookUrl: z.string().trim().max(500).default('')
+});
+
+export const opmlFeedSchema = z.object({
+  title: z.string().trim().min(1),
+  xmlUrl: z.string().trim().min(1),
+  htmlUrl: z.string().trim().optional()
+});
+
+export const shareKindSchema = z.union([
+  z.literal('story'),
+  z.literal('digest'),
+  z.literal('collection')
+]);
+
 export const clientMsgSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('toggle_ai'), enabled: z.boolean() }),
   z.object({

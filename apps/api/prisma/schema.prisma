@@ -63,6 +63,8 @@ model User {
   updatedAt    DateTime          @updatedAt
   providerKeys UserProviderKey[]
   settings     UserSettings?
+  featureRecords UserFeatureRecord[]
+  shareLinks   ShareLink[]
 }
 
 model UserProviderKey {
@@ -101,4 +103,52 @@ model ErrorLogRecord {
 
   @@index([category, createdAt])
   @@index([feedUrl, createdAt])
+}
+
+model UserFeatureRecord {
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  kind        String
+  title       String
+  payloadJson String
+  archived    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, kind, updatedAt])
+  @@index([kind, updatedAt])
+}
+
+model DeliveryHistoryRecord {
+  id          Int      @id @default(autoincrement())
+  userId      Int?
+  feedUrl     String?
+  itemId      String?
+  title       String?
+  source      String?
+  stage       String
+  status      String
+  reason      String?
+  detailsJson String?
+  createdAt   DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([feedUrl, createdAt])
+  @@index([stage, status, createdAt])
+}
+
+model ShareLink {
+  id          Int       @id @default(autoincrement())
+  token       String    @unique
+  userId      Int
+  kind        String
+  title       String
+  payloadJson String
+  createdAt   DateTime  @default(now())
+  expiresAt   DateTime?
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([kind, createdAt])
 }

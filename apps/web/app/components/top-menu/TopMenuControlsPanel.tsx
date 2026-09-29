@@ -5,6 +5,7 @@ import { TopMenuAccountSection } from './TopMenuAccountSection';
 import { TopMenuNotificationsSection } from './TopMenuNotificationsSection';
 import { TopMenuAiSettingsSection } from './TopMenuAiSettingsSection';
 import { TopMenuAppearanceSection } from './TopMenuAppearanceSection';
+import { ProductToolsSection } from './ProductToolsSection';
 import { useTopMenuContext } from './context/useTopMenuContext';
 
 export function TopMenuControlsPanel() {
@@ -21,6 +22,7 @@ export function TopMenuControlsPanel() {
       <div className="controlsGrid">
         <div className="controlsCell controlsCellNotifications">
           <div className="controlsCellStack">
+            <ProductToolsSection />
             <TopMenuAccountSection />
             <TopMenuNotificationsSection />
           </div>

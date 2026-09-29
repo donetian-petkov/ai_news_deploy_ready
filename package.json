@@ -22,7 +22,7 @@
     "test:e2e": "npm run test:e2e -w @ai-news/web",
     "test:smoke": "npm run test:api && npm run test:e2e",
     "capture:readme": "node scripts/capture-readme-screenshots.js",
-    "start": "npm run start -w @ai-news/api & npm run start -w @ai-news/web",
+    "start": "node scripts/run-stack.cjs",
     "start:local": "bash ./scripts/start-local.sh",
     "install:server": "bash ./scripts/install.sh",
     "start:server": "bash ./scripts/start.sh",

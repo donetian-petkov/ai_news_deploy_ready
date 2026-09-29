@@ -9,6 +9,7 @@ import OpenAI from 'openai';
 import { PrismaClient, type Prisma } from '@prisma/client';
 import { aiFeatureSettingsSchema, aiProviderSchema, clientMsgSchema, type ClientMsg } from '@ai-news/shared';
 import { z } from 'zod';
+import { registerProductFeatureApi, type ProductFeatureRuntime } from './productFeatures';
 
 function bootstrapEnv() {
   const envCandidates = [
@@ -58,6 +59,7 @@ const prisma = new PrismaClient({
     }
   }
 });
+let productFeatures: ProductFeatureRuntime | null = null;
 
 type SummaryLang = 'bg' | 'en' | 'bilingual';
 type ResearchLang = 'bg' | 'en';
@@ -390,7 +392,7 @@ app.use(express.json({ limit: '512kb' }));
 app.use((req, res, next) => {
   const allowOrigin = String(process.env.WEB_ORIGIN || '*').trim() || '*';
   res.setHeader('Access-Control-Allow-Origin', allowOrigin);
-  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   if (req.method === 'OPTIONS') {
     res.status(204).end();
@@ -804,6 +806,151 @@ app.put('/api/account/settings', async (req, res) => {
   }
 });
 
+productFeatures = registerProductFeatureApi({
+  app,
+  prisma,
+  requireAuthUser,
+  getFeeds: () => currentFeeds().map(feed => ({
+    ...feed,
+    discordWebhookUrl: feedSettings.get(feed.url)?.discordWebhookUrl || ''
+  })),
+  getRecentNews: () => recent.map(item => ({
+    id: item.id,
+    feedUrl: item.feedUrl,
+    title: item.title,
+    link: item.link,
+    source: item.source,
+    publishedMs: item.publishedMs,
+    summary: item.summary,
+    research: item.research,
+    mood: item.mood,
+    newsType: item.newsType,
+    isMatch: item.isMatch,
+    filteredOk: item.filteredOk
+  })),
+  getAiUsage: buildAiUsagePayload,
+  resetAiUsage: resetAiUsageCounters,
+  importFeeds: feeds => {
+    let added = 0;
+    for (const feed of feeds) {
+      const url = String(feed.xmlUrl || '').trim();
+      if (!url || feedsList.some(existing => existing.url === url)) continue;
+      const fi: FeedInfo = {
+        url,
+        label: String(feed.title || url).trim() || url,
+        kind: 'rss',
+        intervalSec: 120
+      };
+      feedsList.push(fi);
+      ensureFeedSettings(fi);
+      ensureFeedRuntime(fi.url);
+      added += 1;
+    }
+    if (added > 0) {
+      markDirty();
+      broadcastConfig();
+    }
+    return added;
+  }
+});
+
+app.post('/api/maintenance/regenerate', async (req, res) => {
+  const user = await requireAuthUser(req, res);
+  if (!user) return;
+  if (!aiEnabled || !aiAvailable) {
+    res.status(409).json({ error: 'AI is disabled or unavailable.' });
+    return;
+  }
+
+  const body = (req.body || {}) as Record<string, unknown>;
+  const kindRaw = String(body.kind || 'all').trim();
+  const kind = ['summary', 'translation', 'research', 'all'].includes(kindRaw) ? kindRaw as 'summary' | 'translation' | 'research' | 'all' : 'all';
+  const feedUrl = String(body.feedUrl || '').trim();
+  const limitRaw = Number(body.limit);
+  const limit = Number.isFinite(limitRaw) ? Math.max(1, Math.min(500, Math.floor(limitRaw))) : 80;
+  const missingOnly = body.missingOnly === true;
+  const jobs = new Set<AiJobKind>();
+  if (kind === 'summary' || kind === 'all') jobs.add('summary');
+  if (kind === 'translation' || kind === 'all') jobs.add('title_translate');
+  if (kind === 'research' || kind === 'all') jobs.add('research');
+
+  const selected = recent
+    .slice()
+    .sort((a, b) => b.publishedMs - a.publishedMs)
+    .filter(item => {
+      if (hiddenIds.has(item.id)) return false;
+      if (!feedUrl) return true;
+      if (feedUrl === FILTERED_FEED_URL) return item.isMatch && item.filteredOk !== false;
+      return item.feedUrl === feedUrl;
+    })
+    .slice(0, limit);
+
+  const queued = { summary: 0, translation: 0, research: 0 };
+  const skipped = { summary: 0, translation: 0, research: 0 };
+  const writes: Array<Promise<unknown>> = [];
+
+  for (const item of selected) {
+    let changed = false;
+    if (jobs.has('summary')) {
+      if (activeModel('summary') === 'none' || !shouldHaveSummary(item) || hasSummaryJobQueuedOrRunning(item.id, item.feedUrl) || (missingOnly && !!String(item.summary || '').trim())) {
+        skipped.summary += 1;
+      } else {
+        if (!missingOnly) item.summary = '';
+        summaryRetryCooldownUntilMs.delete(summaryItemKey(item.id, item.feedUrl));
+        enqueueJob({ kind: 'summary', id: item.id, feedUrl: item.feedUrl, manual: true });
+        if (hasSummaryJobQueuedOrRunning(item.id, item.feedUrl)) queued.summary += 1;
+        changed = true;
+      }
+    }
+
+    if (jobs.has('title_translate')) {
+      const hasTranslation = hasValidOppositeLanguageTitle(item.title, item.titleBg, item.titleEn);
+      if (activeModel('summary') === 'none' || !isTranslationEnabledForFeed(item.feedUrl) || hasTitleTranslateJobQueuedOrRunning(item.id, item.feedUrl) || (missingOnly && hasTranslation)) {
+        skipped.translation += 1;
+      } else {
+        if (!missingOnly) {
+          item.titleBg = undefined;
+          item.titleEn = undefined;
+        }
+        enqueueJob({ kind: 'title_translate', id: item.id, feedUrl: item.feedUrl, manual: true });
+        if (hasTitleTranslateJobQueuedOrRunning(item.id, item.feedUrl)) queued.translation += 1;
+        changed = true;
+      }
+    }
+
+    if (jobs.has('research')) {
+      if (activeModel('research') === 'none' || !shouldHaveResearch(item) || hasResearchJobQueuedOrRunning(item.id, item.feedUrl) || (missingOnly && !!String(item.research || '').trim())) {
+        skipped.research += 1;
+      } else {
+        if (!missingOnly) item.research = '';
+        enqueueJob({ kind: 'research', id: item.id, feedUrl: item.feedUrl, manual: true });
+        if (hasResearchJobQueuedOrRunning(item.id, item.feedUrl)) queued.research += 1;
+        changed = true;
+      }
+    }
+
+    if (changed) {
+      refreshDerivedDataForItem(item);
+      writes.push(upsertPersistedNewsItem(item).catch(() => undefined));
+      broadcastNewsUpdate(item);
+    }
+  }
+
+  await Promise.all(writes);
+  if (writes.length) {
+    markDirty();
+    broadcastConfig();
+  }
+  void productFeatures?.recordHistory({
+    userId: user.id,
+    stage: 'maintenance_regenerate',
+    status: 'queued',
+    reason: missingOnly ? 'Fill missing AI outputs.' : 'Regenerate selected AI outputs.',
+    details: { kind, feedUrl: feedUrl || null, limit, selected: selected.length, queued, skipped }
+  });
+  res.json({ ok: true, kind, feedUrl: feedUrl || null, limit, selected: selected.length, queued, skipped, missingOnly });
+});
+
 app.get('/', (_req, res) => {
   res.json({
     ok: true,
@@ -927,6 +1074,7 @@ function shutdown(reason: string) {
   try {
     stopAiJobLogFlushTimer();
     flushAiJobLogBufferNow();
+    productFeatures?.stop();
   } catch {}
   try {
     wss.clients.forEach((c: WebSocket) => {
@@ -943,8 +1091,10 @@ process.on('SIGTERM', () => shutdown('SIGTERM'));
 // ---------------------------------------------------------------------------
 
 const FILTERED_FEED_URL = '__filtered__';
-const CURRENT_STATE_VERSION = 3;
+const CURRENT_STATE_VERSION = 4;
 const IGN_FEED_URL = 'https://www.ign.com/rss/v2/articles/feed?categories=news';
+const LEGACY_CAPITAL_FEED_URL = 'https://capital.bg/rss';
+const CAPITAL_FEED_URL = 'https://www.capital.bg/rss/';
 const LEGACY_SVOBODNA_EVROPA_FEED_URL = 'https://www.svobodnaevropa.bg/api/epiqq';
 const SVOBODNA_TOCHKA_FEED_URL = 'https://svobodnatochka.bg/feed/';
 const SVOBODNA_TOCHKA_DEFAULT_FEED: FeedInfo = {
@@ -955,7 +1105,8 @@ const SVOBODNA_TOCHKA_DEFAULT_FEED: FeedInfo = {
 };
 const DEFAULT_FEED_MIGRATIONS: Record<number, string[]> = {
   2: [IGN_FEED_URL],
-  3: [SVOBODNA_TOCHKA_FEED_URL]
+  3: [SVOBODNA_TOCHKA_FEED_URL],
+  4: [CAPITAL_FEED_URL]
 };
 
 // ✅ Default feeds — ORDER MATTERS
@@ -963,7 +1114,7 @@ const defaultFeeds: FeedInfo[] = [
   { url: 'https://www.dnevnik.bg/rss/', label: 'dnevnik.bg', kind: 'rss', intervalSec: 75 },
   { url: 'https://standartnews.com/rss?p=1', label: 'standartnews.com', kind: 'rss', intervalSec: 90 },
   { url: 'https://www.bta.bg/en/rss/free', label: 'BTA', kind: 'rss', intervalSec: 120 },
-  { url: 'https://capital.bg/rss', label: 'capital.bg', kind: 'rss', intervalSec: 90 },
+  { url: CAPITAL_FEED_URL, label: 'capital.bg', kind: 'rss', intervalSec: 90 },
   { url: 'https://actualno.com/rss', label: 'actualno.com', kind: 'rss', intervalSec: 90 },
   { url: 'http://feeds.bbci.co.uk/news/world/rss.xml', label: 'BBC World', kind: 'rss', intervalSec: 120 },
   { url: 'https://rss.nytimes.com/services/xml/rss/nyt/World.xml', label: 'NYT World', kind: 'rss', intervalSec: 150 },
@@ -1466,6 +1617,38 @@ function buildAiUsagePayload() {
   };
 }
 
+function broadcastAiUsageSnapshot() {
+  const payload = JSON.stringify({
+    type: 'ai_usage',
+    inputTokens: aiUsageInputTokens,
+    outputTokens: aiUsageOutputTokens,
+    totalTokens: aiUsageTotalTokens,
+    runtimeStartedAt: aiUsageRuntimeStartedAt,
+    byKind: {
+      summary: { ...aiUsageByKind.summary },
+      research: { ...aiUsageByKind.research },
+      ask: { ...aiUsageByKind.ask }
+    },
+    recent: aiUsageRecent.map(entry => ({ ...entry }))
+  });
+  wss.clients.forEach((c: WebSocket) => {
+    if (c.readyState === WebSocket.OPEN) c.send(payload);
+  });
+}
+
+function resetAiUsageCounters() {
+  aiUsageInputTokens = 0;
+  aiUsageOutputTokens = 0;
+  aiUsageTotalTokens = 0;
+  aiUsageSequence = 0;
+  for (const kind of Object.keys(aiUsageByKind) as AiModelKind[]) {
+    aiUsageByKind[kind] = { requests: 0, inputTokens: 0, outputTokens: 0, totalTokens: 0 };
+  }
+  aiUsageRecent.length = 0;
+  broadcastAiUsageSnapshot();
+  return buildAiUsagePayload();
+}
+
 function trackUsage(
   kind: AiModelKind,
   model: string,
@@ -1505,22 +1688,7 @@ function trackUsage(
   });
   if (aiUsageRecent.length > AI_USAGE_LOG_LIMIT) aiUsageRecent.length = AI_USAGE_LOG_LIMIT;
 
-  const payload = JSON.stringify({
-    type: 'ai_usage',
-    inputTokens: aiUsageInputTokens,
-    outputTokens: aiUsageOutputTokens,
-    totalTokens: aiUsageTotalTokens,
-    runtimeStartedAt: aiUsageRuntimeStartedAt,
-    byKind: {
-      summary: { ...aiUsageByKind.summary },
-      research: { ...aiUsageByKind.research },
-      ask: { ...aiUsageByKind.ask }
-    },
-    recent: aiUsageRecent.map(entry => ({ ...entry }))
-  });
-  wss.clients.forEach((c: WebSocket) => {
-    if (c.readyState === WebSocket.OPEN) c.send(payload);
-  });
+  broadcastAiUsageSnapshot();
 }
 
 function trackUsageFromResponse(kind: AiModelKind, model: string, resp: any, labelRaw?: unknown) {
@@ -1714,7 +1882,21 @@ function migratedDefaultFeedUrlsForVersion(version: number): Set<string> {
   return urls;
 }
 
-function rewriteLegacySvobodnaFeed(feed: FeedInfo): FeedInfo {
+function normalizeLegacyFeedUrl(url: string) {
+  if (url === LEGACY_SVOBODNA_EVROPA_FEED_URL) return SVOBODNA_TOCHKA_FEED_URL;
+  if (url === LEGACY_CAPITAL_FEED_URL) return CAPITAL_FEED_URL;
+  return url;
+}
+
+function rewriteLegacyFeed(feed: FeedInfo): FeedInfo {
+  if (feed.url === LEGACY_CAPITAL_FEED_URL) {
+    return {
+      ...feed,
+      url: CAPITAL_FEED_URL,
+      label: feed.label || 'capital.bg',
+      kind: 'rss'
+    };
+  }
   if (feed.url !== LEGACY_SVOBODNA_EVROPA_FEED_URL) return feed;
   return {
     ...feed,
@@ -1729,7 +1911,7 @@ function mergeLoadedFeedsWithDefaultMigrations(version: number, loadedFeeds: Fee
   if (!migratedUrls.size) {
     const result: FeedInfo[] = [];
     const seen = new Set<string>();
-    for (const feed of loadedFeeds.map(rewriteLegacySvobodnaFeed)) {
+    for (const feed of loadedFeeds.map(rewriteLegacyFeed)) {
       if (seen.has(feed.url)) continue;
       seen.add(feed.url);
       result.push(feed);
@@ -1738,7 +1920,7 @@ function mergeLoadedFeedsWithDefaultMigrations(version: number, loadedFeeds: Fee
   }
 
   const loadedByUrl = new Map(loadedFeeds.map(feed => {
-    const normalized = rewriteLegacySvobodnaFeed(feed);
+    const normalized = rewriteLegacyFeed(feed);
     return [normalized.url, normalized] as const;
   }));
   const result: FeedInfo[] = [];
@@ -1751,7 +1933,7 @@ function mergeLoadedFeedsWithDefaultMigrations(version: number, loadedFeeds: Fee
     seen.add(defaultFeed.url);
   }
 
-  for (const feed of loadedFeeds.map(rewriteLegacySvobodnaFeed)) {
+  for (const feed of loadedFeeds.map(rewriteLegacyFeed)) {
     if (seen.has(feed.url)) continue;
     result.push(feed);
     seen.add(feed.url);
@@ -2183,10 +2365,48 @@ function feedSettingsObj(): Record<string, FeedSettings> {
   return obj;
 }
 
-async function postNewsToDiscord(item: NewsInternal, feed: FeedInfo): Promise<boolean> {
+type DiscordPostResult = {
+  ok: boolean;
+  retry: boolean;
+};
+
+const discordWebhookCooldownUntilMs = new Map<string, number>();
+const discordWebhookFailCount = new Map<string, number>();
+
+function discordWebhookCooldownMs(webhookUrl: string) {
+  const until = discordWebhookCooldownUntilMs.get(webhookUrl) || 0;
+  return Math.max(0, until - Date.now());
+}
+
+async function postNewsToDiscord(item: NewsInternal, feed: FeedInfo): Promise<DiscordPostResult> {
   const feedConfig = feedSettings.get(feed.url);
   const webhookUrl = normalizeDiscordWebhookUrl(feedConfig?.discordWebhookUrl);
-  if (!webhookUrl) return false;
+  if (!webhookUrl) {
+    void productFeatures?.recordHistory({
+      feedUrl: feed.url,
+      itemId: item.id,
+      title: item.title,
+      source: item.source || feed.label,
+      stage: 'discord_delivery',
+      status: 'skipped',
+      reason: 'No Discord webhook configured.'
+    });
+    return { ok: false, retry: false };
+  }
+
+  const cooldownMs = discordWebhookCooldownMs(webhookUrl);
+  if (cooldownMs > 0) {
+    void productFeatures?.recordHistory({
+      feedUrl: feed.url,
+      itemId: item.id,
+      title: item.title,
+      source: item.source || feed.label,
+      stage: 'discord_delivery',
+      status: 'skipped',
+      reason: `Discord webhook is cooling down for ${Math.ceil(cooldownMs / 1000)}s after rate limiting.`
+    });
+    return { ok: false, retry: false };
+  }
 
   const source = String(item.source || feed.label || feed.url).trim();
   const embed = buildDiscordEmbed(item, feed, feedConfig || defaultSettingsForFeed(feed));
@@ -2204,14 +2424,51 @@ async function postNewsToDiscord(item: NewsInternal, feed: FeedInfo): Promise<bo
     }, 7000);
     if (!res.ok) {
       console.warn(`[discord] webhook failed for ${feed.url}: HTTP ${res.status}`);
-      return false;
+      const retryAfterMs = parseRetryAfterMs(res.headers.get('retry-after'));
+      if (res.status === 429) {
+        const failCount = (discordWebhookFailCount.get(webhookUrl) || 0) + 1;
+        discordWebhookFailCount.set(webhookUrl, failCount);
+        const fallbackMs = Math.min(15 * 60 * 1000, Math.max(30_000, failCount * 60_000));
+        const nextCooldownMs = retryAfterMs || fallbackMs;
+        discordWebhookCooldownUntilMs.set(webhookUrl, Date.now() + nextCooldownMs);
+        console.warn(`[discord] cooling down webhook for ${feed.url}: ${Math.round(nextCooldownMs / 1000)}s`);
+      }
+      void productFeatures?.recordHistory({
+        feedUrl: feed.url,
+        itemId: item.id,
+        title: item.title,
+        source,
+        stage: 'discord_delivery',
+        status: 'failed',
+        reason: `Discord returned HTTP ${res.status}`
+      });
+      return { ok: false, retry: res.status >= 500 };
     }
   } catch (err) {
     console.warn(`[discord] webhook failed for ${feed.url}: ${(err as Error).message}`);
-    return false;
+    void productFeatures?.recordHistory({
+      feedUrl: feed.url,
+      itemId: item.id,
+      title: item.title,
+      source,
+      stage: 'discord_delivery',
+      status: 'failed',
+      reason: (err as Error).message
+    });
+    return { ok: false, retry: true };
   }
 
-  return true;
+  discordWebhookCooldownUntilMs.delete(webhookUrl);
+  discordWebhookFailCount.delete(webhookUrl);
+  void productFeatures?.recordHistory({
+    feedUrl: feed.url,
+    itemId: item.id,
+    title: item.title,
+    source,
+    stage: 'discord_delivery',
+    status: 'sent'
+  });
+  return { ok: true, retry: false };
 }
 
 function discordPostKey(item: NewsInternal, targetFeedUrl: string): string {
@@ -2300,10 +2557,10 @@ function scheduleDiscordPostForTarget(item: NewsInternal, targetFeedUrl: string)
       return;
     }
 
-    const ok = await postNewsToDiscord(current, feed);
+    const result = await postNewsToDiscord(current, feed);
     clearDiscordPostTimer(key);
 
-    if (!ok && elapsed < DISCORD_POST_MAX_WAIT_MS) {
+    if (!result.ok && result.retry && elapsed < DISCORD_POST_MAX_WAIT_MS) {
       discordPostAttemptStartedAtMs.set(key, Date.now() - elapsed);
       const timer = setTimeout(run, DISCORD_POST_RETRY_DELAY_MS);
       discordPostTimerByKey.set(key, timer);
@@ -2627,6 +2884,22 @@ async function initKeywordEmbeddings() {
   console.log(
     `AI enabled: ${aiEnabled}. Keyword embeddings loaded: ${keywordVecs.length}/${keywordSnapshot.length}`
   );
+}
+
+async function safeInitKeywordEmbeddings(ws?: WebSocket, context = 'AI keyword matching') {
+  try {
+    await initKeywordEmbeddings();
+    return true;
+  } catch (error) {
+    const message = (error as Error)?.message || 'Unknown embedding error.';
+    keywordVecs = [];
+    console.warn(`[ai] ${context} unavailable: ${message}`);
+    ws?.send(JSON.stringify({
+      type: 'error',
+      message: `${context} is unavailable right now. The server is still running; check provider connectivity or API key.`
+    }));
+    return false;
+  }
 }
 
 function substringHit(title: string): boolean {
@@ -3916,9 +4189,10 @@ function generateDailyBriefingPayload(
 }
 
 function summaryInstruction(lang: SummaryLang): string {
-  if (lang === 'bg') return 'Write ONE short sentence in Bulgarian (max 18 words). Do NOT include English text. Do NOT use "/" separators.';
-  if (lang === 'en') return 'Write ONE short sentence in English (max 18 words). Do NOT include Bulgarian text. Do NOT use "/" separators.';
-  return 'Write TWO short sentences: first Bulgarian (max 14 words), then English (max 14 words). Separate with " / ".';
+  const quality = 'Use the context/article text, not the headline alone. Add one concrete detail that is NOT already in the headline. If no extra factual detail is available, return exactly NO_SUMMARY.';
+  if (lang === 'bg') return `${quality} Write ONE short sentence in Bulgarian (max 22 words). Do NOT include English text. Do NOT use "/" separators.`;
+  if (lang === 'en') return `${quality} Write ONE short sentence in English (max 22 words). Do NOT include Bulgarian text. Do NOT use "/" separators.`;
+  return `${quality} Write TWO short sentences: first Bulgarian (max 18 words), then English (max 18 words). Separate with " / ".`;
 }
 
 function enforceSummaryLanguage(summaryRaw: string, lang: SummaryLang): string {
@@ -3933,13 +4207,14 @@ function enforceSummaryLanguage(summaryRaw: string, lang: SummaryLang): string {
 }
 
 function summaryInstructionWithoutTranslation(title: string): string {
+  const quality = 'Use the context/article text, not the headline alone. Add one concrete detail that is NOT already in the headline. If no extra factual detail is available, return exactly NO_SUMMARY.';
   if (looksBulgarianTitle(title)) {
-    return 'Write ONE short sentence in Bulgarian (max 18 words). Do not translate.';
+    return `${quality} Write ONE short sentence in Bulgarian (max 22 words). Do not translate.`;
   }
   if (looksEnglishTitle(title)) {
-    return 'Write ONE short sentence in English (max 18 words). Do not translate.';
+    return `${quality} Write ONE short sentence in English (max 22 words). Do not translate.`;
   }
-  return 'Write ONE short sentence in the same language as the original headline/context (max 18 words). Do not translate.';
+  return `${quality} Write ONE short sentence in the same language as the original headline/context (max 22 words). Do not translate.`;
 }
 
 function isTranslationEnabledForFeed(feedUrl: string): boolean {
@@ -3950,6 +4225,51 @@ function summaryInstructionForFeed(feedUrl: string, title: string): string {
   return isTranslationEnabledForFeed(feedUrl)
     ? summaryInstruction(summaryLang)
     : summaryInstructionWithoutTranslation(title);
+}
+
+const SUMMARY_STOPWORDS = new Set([
+  'the', 'and', 'for', 'from', 'with', 'that', 'this', 'into', 'over', 'after', 'before',
+  'about', 'will', 'would', 'could', 'should', 'only', 'news', 'said', 'says',
+  'както', 'като', 'след', 'преди', 'това', 'този', 'тази', 'тези', 'които', 'който',
+  'която', 'към', 'във', 'със', 'без', 'при', 'или', 'ако', 'има', 'няма', 'ще',
+  'беше', 'са', 'се', 'си', 'на', 'за', 'от', 'до', 'по', 'че', 'и', 'в', 'с', 'а', 'е'
+]);
+
+function summaryTokens(raw: string): string[] {
+  return String(raw || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
+    .split(/\s+/g)
+    .map(token => token.trim())
+    .filter(token => token.length >= 3 && !SUMMARY_STOPWORDS.has(token));
+}
+
+function usefulContextTokenCount(title: string, context: string): number {
+  const titleTokens = new Set(summaryTokens(title));
+  return Array.from(new Set(summaryTokens(context))).filter(token => !titleTokens.has(token)).length;
+}
+
+function hasUsefulSummaryContext(title: string, context: string): boolean {
+  const cleaned = String(context || '').replace(/\s+/g, ' ').trim();
+  if (!cleaned) return false;
+  if (cleaned.length >= 140) return true;
+  return usefulContextTokenCount(title, cleaned) >= 5;
+}
+
+function summaryRepeatsHeadline(title: string, summary: string): boolean {
+  const titleTokens = new Set(summaryTokens(title));
+  const summaryUnique = Array.from(new Set(summaryTokens(summary)));
+  if (summaryUnique.length < 4) return true;
+  const overlap = summaryUnique.filter(token => titleTokens.has(token)).length;
+  const novel = summaryUnique.length - overlap;
+  const coverage = overlap / summaryUnique.length;
+  const titleKey = normalizedTitleKey(title);
+  const summaryKey = normalizedTitleKey(summary);
+  if (!summaryKey) return true;
+  if (titleKey && (titleKey.includes(summaryKey) || summaryKey.includes(titleKey))) return true;
+  return coverage >= 0.68 && novel < 3;
 }
 
 // ---------------- Better Research Prompt ----------------
@@ -4451,13 +4771,19 @@ async function oneLineSummary(
   title: string,
   source: string,
   context: string,
+  articleText: string,
   budget: BudgetMode
 ): Promise<string | undefined> {
+  const usefulContext = hasUsefulSummaryContext(title, context) ? context : '';
+  const usefulArticle = hasUsefulSummaryContext(title, articleText) ? articleText : '';
+  if (!usefulContext && !usefulArticle) return undefined;
+
   const input =
     `${summaryInstructionForFeed(feedUrl, title)} No quotes.\n` +
     `Source: ${source}\n` +
     `Headline: ${title}\n` +
-    (context ? `Context: ${context}\n` : '');
+    (usefulContext ? `RSS context: ${usefulContext}\n` : '') +
+    (usefulArticle ? `Article text: ${usefulArticle}\n` : '');
 
   const generated = await generateAiText(
     'summary',
@@ -4468,7 +4794,10 @@ async function oneLineSummary(
     { itemId, feedUrl, source, title }
   );
   if (!generated) return generated;
-  return enforceSummaryLanguage(generated, summaryLang);
+  const summary = enforceSummaryLanguage(generated, summaryLang);
+  if (!summary || /^NO_SUMMARY\.?$/i.test(summary.trim())) return undefined;
+  if (summaryRepeatsHeadline(title, summary)) return undefined;
+  return summary;
 }
 
 async function translateTitleBilingual(
@@ -4952,6 +5281,10 @@ const AI_RESEARCH_TIMEOUT_MANUAL_MS = Math.max(
 const AI_RESEARCH_ARTICLE_MAX_CHARS = Math.max(
   800,
   Number.parseInt(process.env.AI_RESEARCH_ARTICLE_MAX_CHARS ?? '1600', 10) || 1600
+);
+const AI_SUMMARY_ARTICLE_MAX_CHARS = Math.max(
+  600,
+  Number.parseInt(process.env.AI_SUMMARY_ARTICLE_MAX_CHARS ?? '2200', 10) || 2200
 );
 const AI_CLASSIFY_TIMEOUT_MS = Math.max(6_000, Number.parseInt(process.env.AI_CLASSIFY_TIMEOUT_MS ?? '22_000', 10) || 22_000);
 const AI_ERROR_TOAST_COOLDOWN_MS = Math.max(5_000, Number.parseInt(process.env.AI_ERROR_TOAST_COOLDOWN_MS ?? '20_000', 10) || 20_000);
@@ -5505,6 +5838,11 @@ async function runOneJob(job: AiJob) {
       }
 
       const ctx = it.__ctx || '';
+      let linkText = it.__linkText || '';
+      if (!hasUsefulSummaryContext(it.title, ctx) && !hasUsefulSummaryContext(it.title, linkText) && it.link) {
+        linkText = await fetchArticleText(it.link, AI_SUMMARY_ARTICLE_MAX_CHARS);
+        if (linkText) it.__linkText = linkText;
+      }
       recordSummaryDebugEvent({
         atMs: Date.now(),
         isoTime: new Date().toISOString(),
@@ -5518,7 +5856,7 @@ async function runOneJob(job: AiJob) {
         promptPreview: previewText(`${it.source} | ${it.title}`)
       });
       const text = await withTimeout(
-        oneLineSummary(it.id, it.feedUrl, it.title, it.source, ctx, budget),
+        oneLineSummary(it.id, it.feedUrl, it.title, it.source, ctx, linkText, budget),
         AI_SUMMARY_TIMEOUT_MS,
         `summary:${it.id}`
       );
@@ -5861,6 +6199,16 @@ function shouldUseIgnHeaders(url: string) {
   }
 }
 
+function shouldUseBrowserFeedHeaders(url: string) {
+  try {
+    const parsed = new URL(url);
+    const host = parsed.hostname.replace(/^www\./i, '').toLowerCase();
+    return host === 'ign.com' || host === 'capital.bg';
+  } catch {
+    return false;
+  }
+}
+
 function sanitizeFeedXml(xml: string): string {
   return String(xml || '')
     .replace(/^\uFEFF/, '')
@@ -5886,8 +6234,11 @@ async function fetchFeedXml(fi: FeedInfo): Promise<{ xml: string | null; notModi
     headers['Accept'] = 'application/rss+xml, application/xml;q=0.9, text/xml;q=0.8, */*;q=0.1';
   }
 
-  if (shouldUseIgnHeaders(fi.url)) {
-    headers['User-Agent'] = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36';
+  if (shouldUseBrowserFeedHeaders(fi.url)) {
+    headers['User-Agent'] = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36';
+    headers['Accept'] = 'application/rss+xml, application/xml;q=0.9, text/xml;q=0.8, text/html;q=0.7, */*;q=0.1';
+    headers['Accept-Language'] = 'bg-BG,bg;q=0.9,en-US;q=0.8,en;q=0.7';
+    headers['Referer'] = `https://${new URL(fi.url).hostname}/`;
   }
 
   if (rt.etag) headers['If-None-Match'] = rt.etag;
@@ -5941,6 +6292,35 @@ async function fetchFeedXml(fi: FeedInfo): Promise<{ xml: string | null; notModi
         throw new Error(message);
       }
 
+      if (res.status === 401 || res.status === 403) {
+        rt.failCount += 1;
+        const cooldownMs = 6 * 60 * 60 * 1000;
+        rt.disabledUntilMs = now + cooldownMs;
+        rt.lastFetchMs = now;
+        const message = `HTTP ${res.status}`;
+        console.warn(
+          `[feed-fetch] access denied for ${fi.url}: ${message} ` +
+          `(cooldown=${Math.round(cooldownMs / 1000)}s)`
+        );
+        void appendErrorLog({
+          category: 'feed-fetch',
+          feedUrl: fi.url,
+          feedLabel: labelForFeed(fi),
+          attempt,
+          maxAttempts,
+          failCount: rt.failCount,
+          disabledUntilMs: rt.disabledUntilMs,
+          message,
+          details: {
+            kind: fi.kind,
+            retrying: false,
+            userAgent: headers['User-Agent'],
+            cooldownMs
+          }
+        });
+        throw new Error(message);
+      }
+
       if (!res.ok) {
         throw new Error(`HTTP ${res.status}`);
       }
@@ -5956,7 +6336,7 @@ async function fetchFeedXml(fi: FeedInfo): Promise<{ xml: string | null; notModi
 
       return { xml, notModified: false };
     } catch (e) {
-      if (e instanceof Error && e.message === 'HTTP 429') {
+      if (e instanceof Error && (e.message === 'HTTP 429' || e.message === 'HTTP 401' || e.message === 'HTTP 403')) {
         break;
       }
       rt.failCount += 1;
@@ -6276,7 +6656,7 @@ async function applyLoadedState(st: PersistedState | null) {
 
   if (st.feedSettings && typeof st.feedSettings === 'object') {
     for (const [url, s] of Object.entries(st.feedSettings)) {
-      const normalizedUrl = url === LEGACY_SVOBODNA_EVROPA_FEED_URL ? SVOBODNA_TOCHKA_FEED_URL : url;
+      const normalizedUrl = normalizeLegacyFeedUrl(url);
       const normalizedLabel = url === LEGACY_SVOBODNA_EVROPA_FEED_URL
         ? SVOBODNA_TOCHKA_DEFAULT_FEED.label
         : (typeof s?.label === 'string' ? s.label : url);
@@ -6296,7 +6676,16 @@ async function applyLoadedState(st: PersistedState | null) {
 
   if (st.feedRuntime && typeof st.feedRuntime === 'object') {
     for (const [url, rt] of Object.entries(st.feedRuntime)) {
-      const normalizedUrl = url === LEGACY_SVOBODNA_EVROPA_FEED_URL ? SVOBODNA_TOCHKA_FEED_URL : url;
+      const normalizedUrl = normalizeLegacyFeedUrl(url);
+      if (url === LEGACY_CAPITAL_FEED_URL) {
+        feedRuntime.set(normalizedUrl, {
+          failCount: 0,
+          disabledUntilMs: 0,
+          nextPollAtMs: 0,
+          lastFetchMs: 0
+        });
+        continue;
+      }
       feedRuntime.set(normalizedUrl, rt);
     }
   }
@@ -6308,9 +6697,12 @@ async function applyLoadedState(st: PersistedState | null) {
   const legacyRecent = Array.isArray(st.recent)
     ? st.recent
       .filter((it): it is NewsInternal => !!it?.id && !!it?.feedUrl && !!it?.title)
-      .map(it => (it.feedUrl === LEGACY_SVOBODNA_EVROPA_FEED_URL
-        ? { ...it, feedUrl: SVOBODNA_TOCHKA_FEED_URL }
-        : it))
+      .map(it => {
+        const normalizedFeedUrl = normalizeLegacyFeedUrl(it.feedUrl);
+        return normalizedFeedUrl !== it.feedUrl
+          ? { ...it, feedUrl: normalizedFeedUrl }
+          : it;
+      })
     : [];
 
   // ensure settings for all feeds
@@ -6433,7 +6825,7 @@ wss.on('connection', (ws: WebSocket) => {
       filteredDedupeWindow = [];
       keywordVecs = [];
 
-      await initKeywordEmbeddings();
+      await safeInitKeywordEmbeddings(ws, 'Keyword matching');
       await refreshMatchStateForRecent();
       broadcastConfig();
 
@@ -6537,7 +6929,7 @@ wss.on('connection', (ws: WebSocket) => {
       aiQueue.length = 0;
       aiInFlight.clear();
 
-      await initKeywordEmbeddings();
+      await safeInitKeywordEmbeddings(ws, 'AI keyword matching');
       broadcastConfig();
       markDirty();
       return;
@@ -6590,7 +6982,7 @@ wss.on('connection', (ws: WebSocket) => {
       aiQueue.length = 0;
       aiInFlight.clear();
 
-      await initKeywordEmbeddings();
+      await safeInitKeywordEmbeddings(ws, 'AI provider keyword matching');
       if (REQUIRE_LOGIN_AND_KEY_FOR_NEWS && !newsAccessUnlocked) {
         newsAccessUnlocked = true;
       }
@@ -6705,7 +7097,7 @@ wss.on('connection', (ws: WebSocket) => {
       filteredDedupeWindow = [];
       keywordVecs = [];
 
-      await initKeywordEmbeddings();
+      await safeInitKeywordEmbeddings(ws, 'Keyword matching');
       await refreshMatchStateForRecent();
       broadcastConfig();
       const afterMatchCount = recent.reduce((acc, it) => acc + (it.isMatch ? 1 : 0), 0);
@@ -6736,7 +7128,7 @@ wss.on('connection', (ws: WebSocket) => {
       if (shouldRebuildEmbeddings) {
         titleVecCache.clear();
         keywordVecs = [];
-        await initKeywordEmbeddings();
+        await safeInitKeywordEmbeddings(ws, 'AI keyword matching');
       }
       reprocessCachedItems(true);
       broadcastConfig();
@@ -7269,7 +7661,7 @@ wss.on('connection', (ws: WebSocket) => {
   for (const fi of feedsList) ensureFeedSettings(fi);
 
   // load embeddings once
-  if (aiEnabled) await initKeywordEmbeddings();
+  if (aiEnabled) await safeInitKeywordEmbeddings(undefined, 'Startup keyword matching');
 
   // Push the hydrated state to already-connected clients so they do not wait
   // for the browser replay to restore keywords and filtered-column state.

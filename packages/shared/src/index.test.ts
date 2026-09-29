@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { clientMsgSchema } from './index';
+import {
+  alertRulePayloadSchema,
+  clientMsgSchema,
+  digestPayloadSchema,
+  opmlFeedSchema,
+  savedStoryPayloadSchema,
+  schedulePayloadSchema,
+  shareKindSchema
+} from './index';
 
 describe('shared clientMsgSchema', () => {
   it('accepts provider switching messages with supported providers', () => {
@@ -161,5 +169,33 @@ describe('shared clientMsgSchema', () => {
     });
     expect(ok.success).toBe(true);
     expect(bad.success).toBe(false);
+  });
+
+  it('accepts product feature payloads', () => {
+    expect(savedStoryPayloadSchema.safeParse({
+      itemId: 'n1',
+      feedUrl: 'https://feed.example/rss',
+      title: 'Story',
+      tags: ['important']
+    }).success).toBe(true);
+    expect(alertRulePayloadSchema.safeParse({
+      name: 'NATO watch',
+      keywords: ['NATO', 'Ukraine'],
+      discordWebhookUrl: ''
+    }).success).toBe(true);
+    expect(schedulePayloadSchema.safeParse({
+      name: 'Morning brief',
+      cadence: 'daily',
+      time: '08:00'
+    }).success).toBe(true);
+    expect(digestPayloadSchema.safeParse({
+      storyIds: ['n1'],
+      body: 'Digest body'
+    }).success).toBe(true);
+    expect(opmlFeedSchema.safeParse({
+      title: 'Feed',
+      xmlUrl: 'https://example.com/rss'
+    }).success).toBe(true);
+    expect(shareKindSchema.safeParse('digest').success).toBe(true);
   });
 });
